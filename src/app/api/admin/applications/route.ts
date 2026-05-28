@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, redirectUris, grants, scopes } = body;
+    const { name, description, appUrl, redirectUris, grants, scopes } = body;
 
     if (!name || !redirectUris || !redirectUris.length) {
       return NextResponse.json({ error: '请填写必要字段' }, { status: 400 });
@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     const client = await createClient({
       name,
       description,
+      appUrl: appUrl || undefined,
       redirectUris,
       grants: grants || ['authorization_code', 'refresh_token'],
       scopes: scopes || ['profile', 'email'],

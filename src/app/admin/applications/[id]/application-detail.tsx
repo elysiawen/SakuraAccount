@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { parseIconConfig, resolveAppIcon } from '@/lib/app-icon';
 import Modal from '@/components/Modal';
 import {
   ArrowLeft,
@@ -29,10 +30,12 @@ interface OAuth2Client {
   secret: string;
   name: string;
   description?: string;
+  icon?: string;
+  appUrl?: string;
   redirectUris: string[];
   grants: string[];
   scopes: string[];
-  status: 'active' | 'disabled';
+  status?: 'active' | 'disabled';
   userId?: string;
   createdAt?: string;
 }
@@ -52,6 +55,42 @@ const SCOPE_LABELS: Record<string, { label: string; icon: typeof User }> = {
   email: { label: '电子邮箱', icon: Mail },
   openid: { label: 'OpenID Connect身份验证', icon: Fingerprint },
 };
+
+const AVATAR_COLORS = [
+  'from-pink-500/80 to-rose-500/80',
+  'from-violet-500/80 to-purple-500/80',
+  'from-sky-500/80 to-cyan-500/80',
+  'from-emerald-500/80 to-teal-500/80',
+  'from-amber-500/80 to-orange-500/80',
+];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function AppIcon({ client, size = 'w-12 h-12 text-lg' }: { client: Pick<OAuth2Client, 'name' | 'icon' | 'redirectUris'>; size?: string }) {
+  const [errored, setErrored] = useState(false);
+  const iconUrl = resolveAppIcon(client);
+
+  if (iconUrl && !errored) {
+    return (
+      <img
+        src={iconUrl}
+        alt={client.name}
+        className={`${size} rounded-xl object-cover bg-muted`}
+        onError={() => setErrored(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`${size} rounded-xl bg-gradient-to-br ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold shadow-lg shadow-black/10`}>
+      {client.name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
 
 const OAUTH_ENDPOINTS = [
   { label: '授权端点', path: '/oauth/authorize' },
@@ -86,14 +125,19 @@ export default function ApplicationDetail({ client: initialClient }: Application
   const { confirm } = useConfirm();
   const [client, setClient] = useState(initialClient);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({
     name: client.name,
     description: client.description || '',
+    appUrl: client.appUrl || '',
     redirectUris: client.redirectUris.join('\n'),
     scopes: client.scopes.join(' '),
     grants: client.grants,
     status: client.status || 'active',
   });
+  const [iconMode, setIconMode] = useState<'default' | 'auto' | 'custom'>(parseIconConfig(client.icon).mode);
+  const [iconUrl, setIconUrl] = useState(parseIconConfig(client.icon).url || '');
+  const [imgError, setImgError] = useState(false);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -127,6 +171,7 @@ export default function ApplicationDetail({ client: initialClient }: Application
       return;
     }
 
+    setSaving(true);
     try {
       const res = await fetch(`/api/admin/applications/${client.nanoId}`, {
         method: 'PATCH',
@@ -135,6 +180,8 @@ export default function ApplicationDetail({ client: initialClient }: Application
         body: JSON.stringify({
           name: editForm.name,
           description: editForm.description,
+          appUrl: editForm.appUrl || null,
+          icon: JSON.stringify({ mode: iconMode, url: iconMode === 'custom' ? iconUrl : undefined }),
           redirectUris: editForm.redirectUris.split('\n').map(u => u.trim()).filter(Boolean),
           scopes: editForm.scopes.split(' ').filter(Boolean),
           grants: editForm.grants,
@@ -153,6 +200,8 @@ export default function ApplicationDetail({ client: initialClient }: Application
       }
     } catch {
       error('更新失败');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -372,9 +421,7 @@ if __name__ == '__main__':
         <div className="p-6">
           {/* App Basic Info */}
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-20 h-20 bg-muted rounded-xl flex items-center justify-center">
-              <Box className="w-10 h-10 text-primary" />
-            </div>
+            <AppIcon client={client} size="w-20 h-20 text-2xl" />
             <div>
               <h3 className="text-xl font-bold text-text-primary">{client.name}</h3>
               <p className="text-sm text-text-tertiary mt-0.5">{client.description || '无描述'}</p>
@@ -428,14 +475,14 @@ if __name__ == '__main__':
             <div className="bg-muted/50 rounded-xl p-4">
               <h6 className="text-xs font-medium text-text-tertiary mb-2">应用网站</h6>
               <p className="text-sm text-text-primary">
-                {client.redirectUris[0] ? (
+                {client.appUrl || client.redirectUris[0] ? (
                   <a
-                    href={client.redirectUris[0]}
+                    href={client.appUrl || client.redirectUris[0]}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline inline-flex items-center gap-1"
                   >
-                    {client.redirectUris[0]}
+                    {client.appUrl || client.redirectUris[0]}
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 ) : (
@@ -514,14 +561,18 @@ if __name__ == '__main__':
           {/* Edit Button */}
           <button
             onClick={() => {
+              const cfg = parseIconConfig(client.icon);
               setEditForm({
                 name: client.name,
                 description: client.description || '',
+                appUrl: client.appUrl || '',
                 redirectUris: client.redirectUris.join('\n'),
                 scopes: client.scopes.join(' '),
                 grants: client.grants,
                 status: client.status || 'active',
               });
+              setIconMode(cfg.mode);
+              setIconUrl(cfg.url || '');
               setShowEditModal(true);
             }}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors"
@@ -623,14 +674,67 @@ if __name__ == '__main__':
             </button>
             <button
               onClick={handleEdit}
-              className="px-4 py-2 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors"
+              disabled={saving}
+              className="px-4 py-2 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50 flex items-center gap-2"
             >
-              保存
+              {saving && (
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              )}
+              {saving ? '保存中...' : '保存'}
             </button>
           </div>
         }
       >
         <div className="space-y-4 p-4">
+          {/* Icon Config */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">应用图标</label>
+            <div className="flex items-start gap-4">
+              <div className="shrink-0">
+                {iconMode === 'custom' && iconUrl ? (
+                  <img src={iconUrl} alt="预览" className="w-16 h-16 rounded-xl object-cover bg-muted border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                ) : iconMode === 'auto' && (editForm.appUrl || editForm.redirectUris.split('\n').filter(Boolean)[0]) ? (
+                  <img src={`/api/applications/favicon?domain=${encodeURIComponent(new URL(editForm.appUrl || editForm.redirectUris.split('\n').filter(Boolean)[0]).hostname)}`} alt="预览" className="w-16 h-16 rounded-xl object-cover bg-muted border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                ) : (
+                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${getAvatarColor(editForm.name || 'A')} flex items-center justify-center text-white text-xl font-bold`}>
+                    {(editForm.name || 'A').charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                {[
+                  { value: 'default', label: '默认', desc: '使用首字母渐变色' },
+                  { value: 'auto', label: '自动抓取', desc: '从应用域名获取 favicon' },
+                  { value: 'custom', label: '自定义 URL', desc: '提供图片链接' },
+                ].map((opt) => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="iconMode"
+                      checked={iconMode === opt.value}
+                      onChange={() => setIconMode(opt.value as any)}
+                      className="w-4 h-4 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm text-text-primary">{opt.label}</span>
+                    <span className="text-xs text-text-quaternary">{opt.desc}</span>
+                  </label>
+                ))}
+                {iconMode === 'custom' && (
+                  <input
+                    type="text"
+                    value={iconUrl}
+                    onChange={(e) => setIconUrl(e.target.value)}
+                    className="w-full px-3 py-2 border border-border-input rounded-lg bg-card text-text-primary text-sm focus:outline-none focus:border-accent-foreground transition-colors"
+                    placeholder="https://example.com/icon.png"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">应用名称 *</label>
             <input
@@ -649,6 +753,16 @@ if __name__ == '__main__':
               onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
               placeholder="输入应用描述"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用网站</label>
+            <input
+              type="url"
+              value={editForm.appUrl}
+              onChange={(e) => setEditForm({ ...editForm, appUrl: e.target.value })}
+              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
+              placeholder="https://example.com"
             />
           </div>
           <div>

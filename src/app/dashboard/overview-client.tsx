@@ -115,7 +115,7 @@ export default function OverviewClient({
           >
             <span className="text-2xl group-hover:scale-110 transition-transform">📱</span>
             <div>
-              <p className="font-medium text-text-primary">会话管理</p>
+              <p className="font-medium text-text-primary">登录会话管理</p>
               <p className="text-xs text-text-tertiary">查看和管理登录设备</p>
             </div>
           </Link>

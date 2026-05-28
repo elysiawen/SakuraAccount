@@ -83,7 +83,7 @@ export default function SessionsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">会话管理</h1>
+        <h1 className="text-2xl font-bold text-text-primary">登录会话管理</h1>
         {sessions.length > 1 && (
           <button
             onClick={handleRevokeAll}

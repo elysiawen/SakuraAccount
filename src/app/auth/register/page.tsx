@@ -1,29 +1,34 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastProvider';
 
-function GridLine({ orientation, position }: { orientation: 'h' | 'v'; position: string }) {
+function SakuraPetal({ delay, left, size, duration }: { delay: number; left: string; size: number; duration: number }) {
   return (
     <div
       className="absolute pointer-events-none"
-      style={
-        orientation === 'v'
-          ? { left: position, top: 0, bottom: 0, width: '1px', background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0.03) 70%, transparent)' }
-          : { top: position, left: 0, right: 0, height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0.03) 70%, transparent)' }
-      }
-    />
+      style={{
+        left,
+        top: '-20px',
+        animation: `petalFall ${duration}s linear ${delay}s infinite`,
+      }}
+    >
+      <svg width={size} height={size} viewBox="0 0 12 12" fill="none" style={{ opacity: 0.25 }}>
+        <path
+          d="M6 0C6 0 8 3 10 5C12 7 10 10 8 11C6 12 4 10 2 8C0 6 2 3 4 1.5C5 0.5 6 0 6 0Z"
+          fill="currentColor"
+          className="text-pink-400"
+        />
+      </svg>
+    </div>
   );
 }
 
 export default function RegisterPage() {
   const router = useRouter();
   const { success, error } = useToast();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
-  const [mounted, setMounted] = useState(false);
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -31,6 +36,8 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -42,49 +49,28 @@ export default function RegisterPage() {
     });
   }, [router]);
 
-  useEffect(() => {
-    const handleMouse = (e: MouseEvent) => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setMousePos({
-          x: (e.clientX - rect.left) / rect.width,
-          y: (e.clientY - rect.top) / rect.height,
-        });
-      }
-    };
-    window.addEventListener('mousemove', handleMouse);
-    return () => window.removeEventListener('mousemove', handleMouse);
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!username || !email || !password) {
       error('请填写所有必填字段');
       return;
     }
-
     if (password !== confirmPassword) {
       error('两次输入的密码不一致');
       return;
     }
-
     if (password.length < 8) {
       error('密码长度至少8位');
       return;
     }
-
     setLoading(true);
-
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password, nickname: nickname || username }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         success('注册成功');
         router.push('/dashboard');
@@ -96,182 +82,230 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [username, email, password, confirmPassword, nickname, router, success, error]);
+
+  const inputStyle = (field: string) => ({
+    borderColor: focused === field ? 'var(--accent-button)' : 'var(--border-input)',
+    boxShadow: focused === field ? '0 0 0 3px color-mix(in srgb, var(--accent-button) 12%, transparent)' : 'none',
+  });
 
   return (
     <>
       <style jsx global>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slideRight { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes petalFall {
+          0% { transform: translateY(-20px) rotate(0deg) translateX(0); opacity: 0; }
+          10% { opacity: 0.6; }
+          90% { opacity: 0.3; }
+          100% { transform: translateY(100vh) rotate(360deg) translateX(50px); opacity: 0; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
       `}</style>
 
-      <main ref={containerRef} className="min-h-screen relative overflow-hidden flex" style={{ background: '#08090d' }}>
-        {/* Background */}
+      <main className="min-h-screen relative overflow-hidden flex items-center justify-center bg-background">
+        {/* Ambient background */}
         <div className="absolute inset-0">
           <div
-            className="absolute w-[500px] h-[500px] rounded-full blur-[180px] transition-transform duration-[2000ms] ease-out"
+            className="absolute w-[600px] h-[600px] rounded-full blur-[200px] opacity-30 dark:opacity-20"
             style={{
-              background: 'radial-gradient(circle, rgba(244,114,182,0.06) 0%, transparent 70%)',
-              left: `${40 + mousePos.x * 8}%`,
-              top: `${30 + mousePos.y * 8}%`,
-              transform: 'translate(-50%, -50%)',
+              background: 'radial-gradient(circle, #f472b6 0%, transparent 70%)',
+              right: '-10%',
+              top: '-15%',
+              animation: 'float 9s ease-in-out infinite',
             }}
           />
           <div
-            className="absolute w-[400px] h-[400px] rounded-full blur-[140px] transition-transform duration-[2000ms] ease-out"
+            className="absolute w-[500px] h-[500px] rounded-full blur-[180px] opacity-20 dark:opacity-15"
             style={{
-              background: 'radial-gradient(circle, rgba(56,189,248,0.04) 0%, transparent 70%)',
-              right: `${10 + (1 - mousePos.x) * 6}%`,
-              bottom: `${10 + (1 - mousePos.y) * 6}%`,
+              background: 'radial-gradient(circle, var(--accent-button) 0%, transparent 70%)',
+              left: '-5%',
+              bottom: '-10%',
+              animation: 'float 11s ease-in-out 3s infinite',
             }}
           />
-          <GridLine orientation="v" position="33%" />
-          <GridLine orientation="v" position="66%" />
-          <GridLine orientation="h" position="50%" />
-          <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")` }} />
+
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]" style={{
+            backgroundImage: `linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+          }} />
+
+          <SakuraPetal delay={1} left="12%" size={9} duration={15} />
+          <SakuraPetal delay={4} left="28%" size={11} duration={13} />
+          <SakuraPetal delay={0} left="45%" size={8} duration={16} />
+          <SakuraPetal delay={7} left="62%" size={10} duration={14} />
+          <SakuraPetal delay={3} left="78%" size={12} duration={12} />
+          <SakuraPetal delay={9} left="92%" size={7} duration={17} />
         </div>
 
-        {/* Left side — branding */}
-        <div className="hidden lg:flex flex-1 flex-col justify-between p-16 relative z-10">
-          <div style={{ animation: mounted ? 'slideRight 0.6s ease-out 0.2s both' : 'none' }}>
-            <Link href="/" className="flex items-center gap-3">
-              <img src="/sakura.ico" alt="Sakura" className="w-7 h-7" />
-              <span className="text-sm font-medium text-white/80 tracking-wide">Sakura Account</span>
+        {/* Content */}
+        <div className="relative z-10 w-full max-w-[960px] mx-auto px-6 py-12 flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+          {/* Left — branding */}
+          <div
+            className="flex-1 text-center lg:text-left"
+            style={{
+              opacity: mounted ? 1 : 0,
+              transform: mounted ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s',
+            }}
+          >
+            <Link href="/" className="inline-flex items-center gap-2.5 mb-10">
+              <img src="/sakura.ico" alt="Sakura" className="w-8 h-8" />
+              <span className="text-base font-semibold text-foreground tracking-tight">Sakura Account</span>
             </Link>
-          </div>
 
-          <div style={{ animation: mounted ? 'slideRight 0.6s ease-out 0.4s both' : 'none' }}>
-            <h1 className="text-4xl xl:text-5xl font-light text-white leading-tight tracking-tight mb-6">
+            <h1 className="text-4xl lg:text-5xl font-light text-foreground leading-tight tracking-tight mb-4">
               创建账户
             </h1>
-            <p className="text-sm text-white/25 leading-relaxed max-w-sm">
+            <p className="text-base text-muted-foreground leading-relaxed max-w-sm mx-auto lg:mx-0 mb-10">
               注册 Sakura Account，获取统一身份认证能力。
             </p>
+
+            <div className="hidden lg:flex flex-col gap-3">
+              {[
+                '支持 Passkey 无密码登录',
+                'OAuth 2.0 / OIDC 标准协议',
+                '完整的安全审计日志',
+              ].map((text, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-pink-400/50" />
+                  <span className="text-sm text-muted-foreground/70">{text}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-3" style={{ animation: mounted ? 'fadeIn 0.6s ease-out 0.8s both' : 'none' }}>
-            {[
-              '支持 Passkey 无密码登录',
-              'OAuth 2.0 / OIDC 标准协议',
-              '完整的安全审计日志',
-            ].map((text, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-1 h-1 rounded-full bg-pink-400/30" />
-                <span className="text-xs text-white/20">{text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="hidden lg:block w-px bg-white/[0.04]" />
-
-        {/* Right side — form */}
-        <div className="flex-1 flex items-center justify-center p-8 relative z-10">
-          <div className="w-full max-w-sm">
-            {/* Mobile logo */}
-            <div className="lg:hidden mb-8" style={{ animation: mounted ? 'slideUp 0.5s ease-out 0.1s both' : 'none' }}>
-              <Link href="/" className="flex items-center gap-3 mb-6">
-                <img src="/sakura.ico" alt="Sakura" className="w-7 h-7" />
-                <span className="text-sm font-medium text-white/80 tracking-wide">Sakura Account</span>
-              </Link>
-            </div>
-
-            {/* Form header */}
-            <div className="mb-8" style={{ animation: mounted ? 'slideUp 0.5s ease-out 0.2s both' : 'none' }}>
-              <h2 className="text-xl font-light text-white mb-1.5">注册</h2>
-              <p className="text-sm text-white/25">创建您的新账户</p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4" style={{ animation: mounted ? 'slideUp 0.5s ease-out 0.3s both' : 'none' }}>
-              <div>
-                <label className="block text-xs text-white/30 mb-2 tracking-wider uppercase">用户名 <span className="text-pink-400/50">*</span></label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/[0.12] focus:bg-white/[0.04] transition-all"
-                  placeholder="请输入用户名"
-                  disabled={loading}
-                />
+          {/* Right — form card */}
+          <div
+            className="w-full max-w-[400px]"
+            style={{
+              opacity: mounted ? 1 : 0,
+              transform: mounted ? 'translateY(0)' : 'translateY(24px)',
+              transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.25s',
+            }}
+          >
+            <div className="bg-card/80 dark:bg-card/60 backdrop-blur-xl border border-border rounded-2xl p-8 shadow-lg shadow-black/[0.04] dark:shadow-black/20">
+              <div className="mb-7">
+                <h2 className="text-xl font-medium text-foreground mb-1">注册</h2>
+                <p className="text-sm text-muted-foreground">创建您的新账户</p>
               </div>
 
-              <div>
-                <label className="block text-xs text-white/30 mb-2 tracking-wider uppercase">邮箱 <span className="text-pink-400/50">*</span></label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/[0.12] focus:bg-white/[0.04] transition-all"
-                  placeholder="请输入邮箱"
-                  disabled={loading}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-white/30 mb-2 tracking-wider uppercase">昵称</label>
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/[0.12] focus:bg-white/[0.04] transition-all"
-                  placeholder="选填，默认使用用户名"
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs text-white/30 mb-2 tracking-wider uppercase">密码 <span className="text-pink-400/50">*</span></label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+                    用户名 <span className="text-pink-400">*</span>
+                  </label>
                   <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/[0.12] focus:bg-white/[0.04] transition-all"
-                    placeholder="至少8位"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onFocus={() => setFocused('username')}
+                    onBlur={() => setFocused(null)}
+                    className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+                    style={inputStyle('username')}
+                    placeholder="请输入用户名"
                     disabled={loading}
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs text-white/30 mb-2 tracking-wider uppercase">确认密码 <span className="text-pink-400/50">*</span></label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+                    邮箱 <span className="text-pink-400">*</span>
+                  </label>
                   <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/[0.12] focus:bg-white/[0.04] transition-all"
-                    placeholder="再次输入"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onFocus={() => setFocused('email')}
+                    onBlur={() => setFocused(null)}
+                    className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+                    style={inputStyle('email')}
+                    placeholder="请输入邮箱"
                     disabled={loading}
                   />
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-white text-[#08090d] rounded-lg font-medium text-sm hover:bg-white/90 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
-              >
-                {loading && (
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                )}
-                {loading ? '注册中...' : '创建账户'}
-              </button>
-            </form>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">昵称</label>
+                  <input
+                    type="text"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    onFocus={() => setFocused('nickname')}
+                    onBlur={() => setFocused(null)}
+                    className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+                    style={inputStyle('nickname')}
+                    placeholder="选填，默认使用用户名"
+                    disabled={loading}
+                  />
+                </div>
 
-            {/* Login link */}
-            <p
-              className="text-center text-sm text-white/20 mt-8"
-              style={{ animation: mounted ? 'fadeIn 0.5s ease-out 0.6s both' : 'none' }}
-            >
-              已有账号？{' '}
-              <Link href="/auth/login" className="text-white/50 hover:text-white/70 transition-colors">
-                登录
-              </Link>
-            </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+                      密码 <span className="text-pink-400">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onFocus={() => setFocused('password')}
+                      onBlur={() => setFocused(null)}
+                      className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+                      style={inputStyle('password')}
+                      placeholder="至少8位"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+                      确认密码 <span className="text-pink-400">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onFocus={() => setFocused('confirmPassword')}
+                      onBlur={() => setFocused(null)}
+                      className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+                      style={inputStyle('confirmPassword')}
+                      placeholder="再次输入"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 bg-accent-button text-white rounded-lg font-medium text-sm hover:bg-accent-button-hover transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+                >
+                  {loading && (
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {loading ? '注册中...' : '创建账户'}
+                </button>
+              </form>
+
+              <p className="text-center text-sm text-muted-foreground mt-7">
+                已有账号？{' '}
+                <Link href="/auth/login" className="text-accent-button hover:text-accent-button-hover transition-colors font-medium">
+                  登录
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </main>

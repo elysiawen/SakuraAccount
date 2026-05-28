@@ -51,14 +51,14 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, description, redirectUris, grants, scopes, status } = body;
+    const { name, description, icon, appUrl, redirectUris, grants, scopes, status } = body;
 
     const client = await getClientByNanoId(id);
     if (!client) {
       return NextResponse.json({ error: '应用不存在' }, { status: 404 });
     }
 
-    await updateClient(id, { name, description, redirectUris, grants, scopes, status });
+    await updateClient(id, { name, description, icon, appUrl, redirectUris, grants, scopes, status });
 
     const updated = await getClientByNanoId(id);
     return NextResponse.json({ client: updated });

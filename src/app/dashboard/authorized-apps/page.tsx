@@ -3,20 +3,66 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import { Plus, Settings, Box, Info, Shield, Code } from 'lucide-react';
+import { resolveAppIcon } from '@/lib/app-icon';
 
-interface App {
-  id: string;
+interface AuthorizedApp {
+  clientId: string;
   name: string;
   description: string;
+  icon?: string;
+  appUrl?: string;
+  redirectUris?: string[];
   scopes: string[];
-  createdAt: string;
+  tokenCount: number;
+  latestCreatedAt: string;
+}
+
+const SCOPE_LABELS: Record<string, string> = {
+  profile: '个人资料',
+  email: '电子邮箱',
+  openid: 'OpenID',
+};
+
+const AVATAR_COLORS = [
+  'from-pink-500/80 to-rose-500/80',
+  'from-violet-500/80 to-purple-500/80',
+  'from-sky-500/80 to-cyan-500/80',
+  'from-emerald-500/80 to-teal-500/80',
+  'from-amber-500/80 to-orange-500/80',
+];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function AppIcon({ app }: { app: AuthorizedApp }) {
+  const [errored, setErrored] = useState(false);
+  const iconUrl = resolveAppIcon(app);
+
+  if (iconUrl && !errored) {
+    return (
+      <img
+        src={iconUrl}
+        alt={app.name}
+        className="w-12 h-12 rounded-lg object-cover bg-muted shrink-0"
+        onError={() => setErrored(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarColor(app.name)} flex items-center justify-center text-white font-bold shadow-md shadow-black/10 shrink-0`}>
+      {app.name.charAt(0).toUpperCase()}
+    </div>
+  );
 }
 
 export default function AuthorizedAppsPage() {
   const { success, error } = useToast();
   const { confirm } = useConfirm();
-  const [apps, setApps] = useState<App[]>([]);
+  const [apps, setApps] = useState<AuthorizedApp[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,35 +73,21 @@ export default function AuthorizedAppsPage() {
     try {
       const res = await fetch('/api/applications/tokens');
       const data = await res.json();
-      // Group tokens by clientId to get unique apps
-      const tokenList = data.tokens || [];
-      const appMap = new Map<string, App>();
-      tokenList.forEach((token: any) => {
-        if (!appMap.has(token.clientId)) {
-          appMap.set(token.clientId, {
-            id: token.clientId,
-            name: token.clientId,
-            description: '',
-            scopes: token.scopes,
-            createdAt: token.expiresAt,
-          });
-        }
-      });
-      setApps(Array.from(appMap.values()));
-    } catch (err) {
-      console.error('Failed to fetch apps:', err);
+      setApps(data.apps || []);
+    } catch {
+      console.error('Failed to fetch apps');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRevoke = async (appId: string) => {
-    confirm('确定要撤销此应用的授权吗？该应用将无法再访问您的数据。', {
+  const handleRevoke = (app: AuthorizedApp) => {
+    confirm(`确定要撤销「${app.name}」的授权吗？该应用将无法再访问您的数据。`, {
       confirmText: '撤销授权',
       confirmColor: 'red',
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/applications/tokens?id=${appId}`, {
+          const res = await fetch(`/api/applications/tokens?clientId=${app.clientId}`, {
             method: 'DELETE',
           });
           if (res.ok) {
@@ -64,7 +96,7 @@ export default function AuthorizedAppsPage() {
           } else {
             error('撤销失败');
           }
-        } catch (err) {
+        } catch {
           error('撤销失败');
         }
       },
@@ -72,110 +104,80 @@ export default function AuthorizedAppsPage() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('zh-CN', {
+    return new Date(dateStr).toLocaleString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* My Apps */}
-      <div className="bg-card rounded-xl shadow-sm border border-border">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-text-primary">已授权应用</h2>
-        </div>
-        <div className="p-6">
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[1, 2].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-40 bg-muted rounded-xl"></div>
-                </div>
-              ))}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-text-primary">已授权应用</h1>
+        <p className="text-sm text-text-tertiary mt-1">管理已授权访问您账户的第三方应用</p>
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-20 bg-muted rounded-xl" />
             </div>
-          ) : apps.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {apps.map((app) => (
-                <div key={app.id} className="border border-border rounded-xl p-4 hover:border-accent-foreground/20 transition-colors">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                      <Box className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-text-primary">{app.name}</h3>
-                      <span className="text-xs px-2 py-0.5 bg-success text-success-foreground rounded-full">
-                        活跃
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-text-tertiary mb-3">
-                    {app.description || '无描述'}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-text-quaternary">
-                      授权于: {formatDate(app.createdAt)}
+          ))}
+        </div>
+      ) : apps.length > 0 ? (
+        <div className="space-y-3">
+          {apps.map((app) => (
+            <div
+              key={app.clientId}
+              className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-accent-foreground/20 transition-colors bg-card"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <AppIcon app={app} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-text-primary truncate">{app.name}</p>
+                    <span className="text-xs px-2 py-0.5 bg-success text-success-foreground rounded-full shrink-0">
+                      活跃
                     </span>
-                    <button
-                      onClick={() => handleRevoke(app.id)}
-                      className="text-xs text-destructive hover:bg-error px-2 py-1 rounded-lg transition-colors"
-                    >
-                      撤销授权
-                    </button>
                   </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-text-tertiary truncate">
+                      {app.description || '第三方应用'}
+                    </p>
+                    <span className="text-xs text-text-quaternary shrink-0">·</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {app.scopes.map((scope) => (
+                        <span key={scope} className="text-xs px-1.5 py-0.5 bg-muted text-text-secondary rounded">
+                          {SCOPE_LABELS[scope] || scope}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-text-quaternary mt-1">
+                    授权于 {formatDate(app.latestCreatedAt)}
+                  </p>
                 </div>
-              ))}
+              </div>
+              <button
+                onClick={() => handleRevoke(app)}
+                className="px-3 py-1.5 text-sm text-destructive hover:bg-error rounded-lg transition-colors shrink-0 ml-4"
+              >
+                撤销
+              </button>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <Box className="w-12 h-12 text-text-quaternary mx-auto mb-4" />
-              <p className="text-text-tertiary">暂无已授权的应用</p>
-              <p className="text-sm text-text-quaternary mt-1">当您使用第三方应用登录时，授权的应用会显示在这里</p>
-            </div>
-          )}
+          ))}
         </div>
-      </div>
-
-      {/* Documentation */}
-      <div className="bg-card rounded-xl shadow-sm border border-border">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-text-primary">接入说明</h2>
+      ) : (
+        <div className="text-center py-16">
+          <span className="text-4xl mb-4 block">🔗</span>
+          <p className="text-text-tertiary">暂无已授权的应用</p>
+          <p className="text-sm text-text-quaternary mt-1">当您使用第三方应用登录时，授权记录会显示在这里</p>
         </div>
-        <div className="p-6 space-y-6">
-          <div>
-            <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
-              <Info className="w-4 h-4 text-primary" />
-              什么是应用接入？
-            </h3>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              通过创建应用，您可以让您的网站或应用使用 Sakura Account 账号系统进行用户认证，无需自己开发和维护用户系统。
-            </p>
-          </div>
-
-          <div>
-            <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
-              <Shield className="w-4 h-4 text-primary" />
-              支持的认证方式
-            </h3>
-            <ul className="text-sm text-text-secondary space-y-1.5 ml-6">
-              <li><strong>OAuth 2.0</strong> - 标准的授权框架，用于授权第三方应用访问用户资源</li>
-              <li><strong>OpenID Connect</strong> - 基于 OAuth 2.0 的身份认证层，提供用户身份验证</li>
-              <li><strong>单点登录 (SSO)</strong> - 让用户一次登录，访问多个系统</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
-              <Code className="w-4 h-4 text-primary" />
-              开发资源
-            </h3>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              查看我们的 API 文档，了解如何在您的应用中集成 Sakura Account 账号系统。
-            </p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

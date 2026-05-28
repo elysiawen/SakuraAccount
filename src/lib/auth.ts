@@ -171,6 +171,10 @@ export async function updateUser(id: string, data: Partial<User>): Promise<void>
   const fields: string[] = [];
   const values: any[] = [];
 
+  if (data.username !== undefined) {
+    fields.push('username = ?');
+    values.push(data.username);
+  }
   if (data.nickname !== undefined) {
     fields.push('nickname = ?');
     values.push(data.nickname);

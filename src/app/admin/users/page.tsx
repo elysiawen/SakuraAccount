@@ -27,7 +27,7 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ nickname: '', email: '', newPassword: '' });
+  const [editForm, setEditForm] = useState({ username: '', nickname: '', email: '', newPassword: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -100,6 +100,7 @@ export default function AdminUsersPage() {
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setEditForm({
+      username: user.username || '',
       nickname: user.nickname || '',
       email: user.email || '',
       newPassword: '',
@@ -116,6 +117,7 @@ export default function AdminUsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: editingUser.id,
+          username: editForm.username,
           nickname: editForm.nickname,
           email: editForm.email,
           newPassword: editForm.newPassword || undefined,
@@ -278,11 +280,11 @@ export default function AdminUsersPage() {
             <label className="block text-sm font-medium text-text-secondary mb-1.5">用户名</label>
             <input
               type="text"
-              value={editingUser?.username || ''}
-              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-muted text-text-tertiary cursor-not-allowed"
-              disabled
+              value={editForm.username}
+              onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
+              placeholder="输入用户名"
             />
-            <p className="text-xs text-text-quaternary mt-1">用户名无法修改</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">昵称</label>

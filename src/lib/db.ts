@@ -269,6 +269,26 @@ class Database {
       }
     }
 
+    // Add icon column to existing oauth2_clients tables
+    try {
+      await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN icon ${textType}`);
+      console.log('Added icon column to oauth2_clients');
+    } catch (e: any) {
+      if (e?.code !== '42701' && e?.errno !== 1060) {
+        console.error('Failed to add icon column:', e);
+      }
+    }
+
+    // Add app_url column to existing oauth2_clients tables
+    try {
+      await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN app_url ${textType}`);
+      console.log('Added app_url column to oauth2_clients');
+    } catch (e: any) {
+      if (e?.code !== '42701' && e?.errno !== 1060) {
+        console.error('Failed to add app_url column:', e);
+      }
+    }
+
     // OAuth2 tokens table
     await this.execute(`
       CREATE TABLE IF NOT EXISTS oauth2_tokens (

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, logAudit } from '@/lib/auth';
+import { getSession, getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, getUserByUsername, logAudit } from '@/lib/auth';
 import { isValidEmail } from '@/lib/utils';
 import { cookies } from 'next/headers';
 
@@ -105,7 +105,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, nickname, email, newPassword } = body;
+    const { id, username, nickname, email, newPassword } = body;
 
     if (!id) {
       return NextResponse.json({ error: '缺少用户ID' }, { status: 400 });
@@ -115,8 +115,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: '请输入有效的邮箱地址' }, { status: 400 });
     }
 
+    // Check username uniqueness if changed
+    if (username) {
+      const existing = await getUserByUsername(username);
+      if (existing && String(existing.id) !== String(id)) {
+        return NextResponse.json({ error: '用户名已被占用' }, { status: 400 });
+      }
+    }
+
     // Update profile
-    await updateUser(id, { nickname, email });
+    await updateUser(id, { username, nickname, email });
 
     // Update password if provided
     if (newPassword) {

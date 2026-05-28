@@ -9,6 +9,7 @@ interface Toast {
   message: string;
   type: ToastType;
   isExiting?: boolean;
+  isVisible?: boolean;
 }
 
 interface ToastContextType {
@@ -50,7 +51,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const addToast = useCallback(
     (message: string, type: ToastType, duration: number = 3000) => {
       const id = Math.random().toString(36).substr(2, 9);
-      setToasts(prev => [...prev, { id, message, type }]);
+      setToasts(prev => [...prev, { id, message, type, isVisible: false }]);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setToasts(prev => prev.map(t => (t.id === id ? { ...t, isVisible: true } : t)));
+        });
+      });
 
       if (duration > 0 && duration !== Infinity) {
         setTimeout(() => {
@@ -73,12 +79,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ addToast, updateToast, removeToast, success, error, info }}>
       {children}
-      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2 pointer-events-none">
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`pointer-events-auto min-w-[200px] max-w-sm px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 transform transition-all duration-300 ${
-              toast.isExiting ? 'translate-x-full opacity-0' : 'animate-slide-in-right'
+            className={`pointer-events-auto min-w-[200px] max-w-sm px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 transition-all duration-300 ease-out ${
+              toast.isExiting || !toast.isVisible ? 'opacity-0 -translate-y-3 scale-95' : 'opacity-100 translate-y-0 scale-100'
             } ${
               toast.type === 'success' ? 'bg-card border-success text-success-foreground' : ''
             } ${toast.type === 'error' ? 'bg-card border-error text-error-foreground' : ''} ${

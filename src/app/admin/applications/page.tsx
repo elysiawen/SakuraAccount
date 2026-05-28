@@ -6,14 +6,54 @@ import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import Modal from '@/components/Modal';
 import { Plus, Settings, Box, Info, Shield, Code, Trash2 } from 'lucide-react';
+import { resolveAppIcon } from '@/lib/app-icon';
 
 interface OAuth2Client {
   nanoId: string;
   name: string;
   description: string;
+  icon?: string;
+  appUrl?: string;
+  redirectUris: string[];
   status: 'active' | 'disabled';
   userId: string;
   createdAt: string;
+}
+
+const AVATAR_COLORS = [
+  'from-pink-500/80 to-rose-500/80',
+  'from-violet-500/80 to-purple-500/80',
+  'from-sky-500/80 to-cyan-500/80',
+  'from-emerald-500/80 to-teal-500/80',
+  'from-amber-500/80 to-orange-500/80',
+];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function AppIconSmall({ client }: { client: OAuth2Client }) {
+  const [errored, setErrored] = useState(false);
+  const iconUrl = resolveAppIcon(client);
+
+  if (iconUrl && !errored) {
+    return (
+      <img
+        src={iconUrl}
+        alt={client.name}
+        className="w-12 h-12 rounded-lg object-cover bg-muted"
+        onError={() => setErrored(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold shadow-md shadow-black/10`}>
+      {client.name.charAt(0).toUpperCase()}
+    </div>
+  );
 }
 
 export default function AdminOAuth2Page() {
@@ -25,6 +65,7 @@ export default function AdminOAuth2Page() {
   const [newClient, setNewClient] = useState({
     name: '',
     description: '',
+    appUrl: '',
     redirectUris: '',
     scopes: 'profile email',
     grants: ['authorization_code', 'refresh_token'] as string[],
@@ -60,6 +101,7 @@ export default function AdminOAuth2Page() {
         body: JSON.stringify({
           name: newClient.name,
           description: newClient.description,
+          appUrl: newClient.appUrl || null,
           redirectUris: newClient.redirectUris.split('\n').map(u => u.trim()).filter(Boolean),
           grants: newClient.grants,
           scopes: newClient.scopes.split(' ').filter(Boolean),
@@ -71,7 +113,7 @@ export default function AdminOAuth2Page() {
       if (res.ok) {
         success('应用创建成功');
         setShowCreateModal(false);
-        setNewClient({ name: '', description: '', redirectUris: '', scopes: 'profile email', grants: ['authorization_code', 'refresh_token'] });
+        setNewClient({ name: '', description: '', appUrl: '', redirectUris: '', scopes: 'profile email', grants: ['authorization_code', 'refresh_token'] });
         fetchClients();
       } else {
         error(data.error || '创建失败');
@@ -146,9 +188,7 @@ export default function AdminOAuth2Page() {
                   className="border border-border rounded-xl p-4 hover:border-accent-foreground/20 hover:shadow-md transition-all block"
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                      <Box className="w-6 h-6 text-primary" />
-                    </div>
+                    <AppIconSmall client={client} />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-text-primary truncate">{client.name}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -170,6 +210,7 @@ export default function AdminOAuth2Page() {
                     <button
                       onClick={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         handleDeleteClient(client.nanoId, client.name);
                       }}
                       className="flex items-center gap-1 text-xs text-destructive hover:bg-error px-2 py-1 rounded-lg transition-colors"
@@ -272,6 +313,16 @@ export default function AdminOAuth2Page() {
               onChange={(e) => setNewClient({ ...newClient, description: e.target.value })}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
               placeholder="输入应用描述"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用网站</label>
+            <input
+              type="url"
+              value={newClient.appUrl}
+              onChange={(e) => setNewClient({ ...newClient, appUrl: e.target.value })}
+              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
+              placeholder="https://example.com"
             />
           </div>
           <div>

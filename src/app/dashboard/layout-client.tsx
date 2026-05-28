@@ -52,7 +52,7 @@ export default function DashboardLayoutClient({
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: '概览' },
     { href: '/dashboard/authorized-apps', icon: Link2, label: '已授权应用' },
-    { href: '/dashboard/sessions', icon: Smartphone, label: '会话管理' },
+    { href: '/dashboard/sessions', icon: Smartphone, label: '登录会话管理' },
     { href: '/dashboard/settings', icon: Settings, label: '设置' },
   ];
 

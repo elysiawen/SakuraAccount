@@ -13,10 +13,12 @@ export interface OAuth2Client {
   secret: string;
   name: string;
   description?: string;
+  icon?: string;
+  appUrl?: string;
   redirectUris: string[];
   grants: string[];
   scopes: string[];
-  status: 'active' | 'disabled';
+  status?: 'active' | 'disabled';
   userId?: string;
   createdAt?: string;
 }
@@ -47,9 +49,9 @@ export async function createClient(data: Omit<OAuth2Client, 'id' | 'nanoId' | 's
   const secret = nanoid(64);
 
   await db.execute(
-    `INSERT INTO oauth2_clients (id, nano_id, secret, name, description, redirect_uris, grants, scopes, user_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, nanoId, secret, data.name, data.description, JSON.stringify(data.redirectUris), JSON.stringify(data.grants), JSON.stringify(data.scopes), data.userId]
+    `INSERT INTO oauth2_clients (id, nano_id, secret, name, description, app_url, redirect_uris, grants, scopes, status, user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, nanoId, secret, data.name, data.description, data.appUrl || null, JSON.stringify(data.redirectUris), JSON.stringify(data.grants), JSON.stringify(data.scopes), data.status || 'active', data.userId]
   );
 
   return {
@@ -67,6 +69,8 @@ function mapClient(client: any): OAuth2Client {
     secret: client.secret,
     name: client.name,
     description: client.description,
+    icon: client.icon || undefined,
+    appUrl: client.app_url || undefined,
     redirectUris: safeJsonParse(client.redirect_uris),
     grants: safeJsonParse(client.grants),
     scopes: safeJsonParse(client.scopes),
@@ -271,19 +275,22 @@ export async function getAllClients(): Promise<OAuth2Client[]> {
   return Promise.all(clients.map(client => ensureNanoId(client)));
 }
 
-export async function getAllClientsSummary(): Promise<Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'status' | 'userId' | 'createdAt'>[]> {
+export async function getAllClientsSummary(): Promise<Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'appUrl' | 'redirectUris' | 'status' | 'userId' | 'createdAt'>[]> {
   let clients: any[];
   try {
-    clients = await db.query('SELECT nano_id, name, description, status, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
+    clients = await db.query('SELECT nano_id, name, description, icon, app_url, redirect_uris, status, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
   } catch {
-    // Fallback if status column doesn't exist yet
-    clients = await db.query('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
+    // Fallback if status/icon columns don't exist yet
+    clients = await db.query('SELECT nano_id, name, description, redirect_uris, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
   }
 
   return clients.map(c => ({
     nanoId: c.nano_id,
     name: c.name,
     description: c.description,
+    icon: c.icon || undefined,
+    appUrl: c.app_url || undefined,
+    redirectUris: safeJsonParse(c.redirect_uris),
     status: c.status || 'active',
     userId: c.user_id,
     createdAt: c.created_at,
@@ -291,6 +298,12 @@ export async function getAllClientsSummary(): Promise<Pick<OAuth2Client, 'nanoId
 }
 
 export async function deleteClient(nanoId: string): Promise<boolean> {
+  // Delete tokens first (cascade may not work if table was created before FK)
+  const client = await db.getOne('SELECT id FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
+  if (client) {
+    await db.execute('DELETE FROM oauth2_tokens WHERE client_id = ?', [client.id]);
+    await db.execute('DELETE FROM oauth2_authorization_codes WHERE client_id = ?', [client.id]);
+  }
   const result = await db.execute('DELETE FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
   return result.affectedRows > 0 || result.rowCount > 0;
 }
@@ -322,6 +335,14 @@ export async function updateClient(nanoId: string, data: Partial<OAuth2Client>):
   if (data.status !== undefined) {
     fields.push('status = ?');
     values.push(data.status);
+  }
+  if (data.icon !== undefined) {
+    fields.push('icon = ?');
+    values.push(data.icon);
+  }
+  if (data.appUrl !== undefined) {
+    fields.push('app_url = ?');
+    values.push(data.appUrl);
   }
 
   if (fields.length === 0) return;
