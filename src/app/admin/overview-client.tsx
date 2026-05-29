@@ -1,0 +1,92 @@
+'use client';
+
+import Link from 'next/link';
+
+interface AdminOverviewClientProps {
+  userCount: number;
+  sessionCount: number;
+  auditLogCount: number;
+}
+
+export default function AdminOverviewClient({
+  userCount,
+  sessionCount,
+  auditLogCount,
+}: AdminOverviewClientProps) {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-text-primary">管理后台概览</h1>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-2xl p-6 border border-blue-200 dark:border-blue-800 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200">总用户数</h3>
+            <span className="text-2xl">👥</span>
+          </div>
+          <p className="text-4xl font-bold text-blue-900 dark:text-blue-100">{userCount}</p>
+          <Link href="/admin/users" className="text-xs text-blue-700 dark:text-blue-300 mt-1 hover:underline">
+            管理用户 →
+          </Link>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-2xl p-6 border border-green-200 dark:border-green-800 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-green-900 dark:text-green-200">活跃会话</h3>
+            <span className="text-2xl">📱</span>
+          </div>
+          <p className="text-4xl font-bold text-green-900 dark:text-green-100">{sessionCount}</p>
+          <p className="text-xs text-green-700 dark:text-green-300 mt-1">当前在线用户</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-2xl p-6 border border-purple-200 dark:border-purple-800 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-purple-900 dark:text-purple-200">审计日志</h3>
+            <span className="text-2xl">📋</span>
+          </div>
+          <p className="text-4xl font-bold text-purple-900 dark:text-purple-100">{auditLogCount}</p>
+          <Link href="/admin/audit-logs" className="text-xs text-purple-700 dark:text-purple-300 mt-1 hover:underline">
+            查看日志 →
+          </Link>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+        <h2 className="text-lg font-semibold text-text-primary mb-4">快速操作</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link
+            href="/admin/users"
+            className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-accent-foreground/30 hover:bg-accent/50 transition-all group"
+          >
+            <span className="text-2xl group-hover:scale-110 transition-transform">👥</span>
+            <div>
+              <p className="font-medium text-text-primary">用户管理</p>
+              <p className="text-xs text-text-tertiary">查看和管理用户账号</p>
+            </div>
+          </Link>
+          <Link
+            href="/admin/applications"
+            className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-accent-foreground/30 hover:bg-accent/50 transition-all group"
+          >
+            <span className="text-2xl group-hover:scale-110 transition-transform">🔗</span>
+            <div>
+              <p className="font-medium text-text-primary">应用</p>
+              <p className="text-xs text-text-tertiary">管理 OAuth2 客户端应用</p>
+            </div>
+          </Link>
+          <Link
+            href="/admin/audit-logs"
+            className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-accent-foreground/30 hover:bg-accent/50 transition-all group"
+          >
+            <span className="text-2xl group-hover:scale-110 transition-transform">📋</span>
+            <div>
+              <p className="font-medium text-text-primary">审计日志</p>
+              <p className="text-xs text-text-tertiary">查看系统操作日志</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
