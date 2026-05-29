@@ -43,7 +43,7 @@
 | HTTP Status | 适用场景 | 业务码示例 | 前端拦截行为 |
 |-------------|----------|-----------|-------------|
 | **400** | 客户端引起的业务逻辑错误、输入参数校验失败 | `SYS_PARAM_INVALID`, `AUTH_PASSWORD_WRONG` | 弹出 message |
-| **401** | 未登录，或 Cookie/Session 已完全失效 | `AUTH_TOKEN_EXPIRED`, `AUTH_NOT_LOGGED_IN` | 清除缓存，重定向至 /login |
+| **401** | 未登录，或 Cookie/Session 已完全失效 | `AUTH_TOKEN_EXPIRED`, `AUTH_NOT_LOGGED_IN` | 清除缓存，重定向至 /auth/login |
 | **403** | 已登录，但角色/级别不足 | `PERMISSION_DENIED` | 提示无权访问 |
 | **404** | API 路由路径不存在，或特定数据库记录已被删除 | `SYS_RESOURCE_NOT_FOUND` | 提示资源不存在 |
 | **429** | 触发频率限制 | `SYS_RATE_LIMIT_EXCEEDED` | 提示操作过于频繁 |
