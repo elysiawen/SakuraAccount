@@ -1,51 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getUserById, verifyPassword, updateUserPassword, logAudit } from '@/lib/auth';
-import { cookies } from 'next/headers';
+import { getUserById, verifyPassword, updateUserPassword, getRequestMetadata, logAudit } from '@/lib/auth';
+import { requireAuthenticatedUser } from '@/lib/require-session';
+import { validatePassword } from '@/lib/utils';
+import { paramInvalid, authWeakPassword, userPasswordNotSet, authPasswordWrong, userPasswordChangeFailed } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
+
+const VALIDATION_KEY_MAP: Record<string, string> = {
+  'PASSWORD_TOO_SHORT': 'validation.passwordTooShort',
+  'PASSWORD_NEEDS_LETTER_AND_NUMBER': 'validation.passwordNeedsLetterAndNumber',
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('account_session')?.value;
-
-    if (!sessionId) {
-      return NextResponse.json({ error: '请先登录' }, { status: 401 });
-    }
-
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
-    const user = await getSession(sessionId, ip);
-
-    if (!user) {
-      return NextResponse.json({ error: '会话已过期' }, { status: 401 });
-    }
+    const result = await requireAuthenticatedUser();
+    if ('error' in result) return result.error;
+    const { user } = result;
 
     const body = await request.json();
     const { currentPassword, newPassword } = body;
 
     if (!currentPassword || !newPassword) {
-      return NextResponse.json({ error: '请填写所有字段' }, { status: 400 });
+      return paramInvalid(await tApi('sys.paramInvalid'));
     }
 
-    if (newPassword.length < 8) {
-      return NextResponse.json({ error: '新密码长度至少8位' }, { status: 400 });
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      const mapped = VALIDATION_KEY_MAP[passwordError];
+      return authWeakPassword(mapped ? await tApi(mapped) : passwordError);
     }
 
     const userDetails = await getUserById(user.id);
     if (!userDetails?.password_hash) {
-      return NextResponse.json({ error: '该账号未设置密码' }, { status: 400 });
+      return userPasswordNotSet();
     }
 
     const isValid = await verifyPassword(currentPassword, userDetails.password_hash);
     if (!isValid) {
-      return NextResponse.json({ error: '当前密码错误' }, { status: 401 });
+      return authPasswordWrong();
     }
 
     await updateUserPassword(user.id, newPassword);
 
-    await logAudit(user.id, 'password_changed', {}, ip, request.headers.get('user-agent') || 'unknown');
+    const { ip, userAgent } = getRequestMetadata(request);
+    await logAudit(user.id, 'password_changed', {}, ip, userAgent);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Change password error:', error);
-    return NextResponse.json({ error: '密码修改失败' }, { status: 500 });
+    return userPasswordChangeFailed();
   }
 }

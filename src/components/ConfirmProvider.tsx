@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface ConfirmOptions {
   title?: string;
@@ -25,6 +26,7 @@ export function useConfirm() {
 }
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations('common.confirm');
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [config, setConfig] = useState<{ message: string; options: ConfirmOptions }>({
@@ -69,9 +71,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   };
 
   const { message, options } = config;
-  const title = options.title || '确认操作';
-  const confirmText = options.confirmText || '确认';
-  const cancelText = options.cancelText || '取消';
+  const title = options.title || t('title');
+  const confirmText = options.confirmText || t('confirm');
+  const cancelText = options.cancelText || t('cancel');
   const isDestructive = options.confirmColor === 'red';
 
   return (
@@ -116,7 +118,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                     />
                   </svg>
                 )}
-                {isLoading ? '处理中...' : confirmText}
+                {isLoading ? t('processing') : confirmText}
               </button>
             </div>
           </div>

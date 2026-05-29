@@ -3,8 +3,10 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import {
   LayoutDashboard,
   Link2,
@@ -35,6 +37,7 @@ export default function DashboardLayoutClient({
 }: DashboardLayoutClientProps) {
   const pathname = usePathname();
   const { confirm } = useConfirm();
+  const t = useTranslations('dashboard.nav');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -43,6 +46,24 @@ export default function DashboardLayoutClient({
     }
   }, [sessionInvalid]);
 
+  // Periodic session validation — redirects to login if session is revoked
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (!data.user) {
+          window.location.href = '/auth/login';
+        }
+      } catch {
+        // Network error — don't redirect, just skip this check
+      }
+    };
+
+    const interval = setInterval(checkSession, 5 * 60 * 1000); // every 5 minutes
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
@@ -50,10 +71,10 @@ export default function DashboardLayoutClient({
   if (sessionInvalid) return null;
 
   const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: '概览' },
-    { href: '/dashboard/authorized-apps', icon: Link2, label: '已授权应用' },
-    { href: '/dashboard/sessions', icon: Smartphone, label: '登录会话管理' },
-    { href: '/dashboard/settings', icon: Settings, label: '设置' },
+    { href: '/dashboard', icon: LayoutDashboard, label: t('overview') },
+    { href: '/dashboard/authorized-apps', icon: Link2, label: t('authorizedApps') },
+    { href: '/dashboard/sessions', icon: Smartphone, label: t('sessions') },
+    { href: '/dashboard/settings', icon: Settings, label: t('settings') },
   ];
 
   const isActive = (href: string) => {
@@ -62,8 +83,8 @@ export default function DashboardLayoutClient({
   };
 
   const handleLogout = async () => {
-    confirm('确定要退出登录吗？', {
-      confirmText: '退出',
+    confirm(t('logoutConfirm'), {
+      confirmText: t('logoutConfirmBtn'),
       confirmColor: 'red',
       onConfirm: async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
@@ -80,7 +101,7 @@ export default function DashboardLayoutClient({
           <span className="text-2xl">🌸</span>
           <div>
             <span className="text-xl font-bold tracking-tight text-text-primary">Sakura Account</span>
-            <p className="text-xs text-text-tertiary mt-0.5">统一身份认证</p>
+            <p className="text-xs text-text-tertiary mt-0.5">{t('brandSubtitle')}</p>
           </div>
         </Link>
       </div>
@@ -110,13 +131,17 @@ export default function DashboardLayoutClient({
 
       {/* Footer */}
       <div className="p-4 border-t bg-muted/50 space-y-3">
-        {/* Theme Toggle */}
-        <div className="flex justify-center">
+        {/* Theme Toggle & Language Switcher */}
+        <div className="flex justify-center gap-2">
           <ThemeToggle />
+          <LanguageSwitcher />
         </div>
 
         {/* User Info */}
-        <div className="flex items-center gap-3 px-2 py-2">
+        <Link
+          href="/dashboard/settings"
+          className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-muted transition-colors"
+        >
           <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm overflow-hidden">
             {avatar ? (
               <img src={avatar} alt="头像" className="w-full h-full object-cover" />
@@ -126,9 +151,9 @@ export default function DashboardLayoutClient({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium text-text-primary truncate">{nickname || username}</div>
-            <div className="text-xs text-text-tertiary truncate">{role === 'admin' ? '管理员' : '用户'}</div>
+            <div className="text-xs text-text-tertiary truncate">{role === 'admin' ? t('admin') : t('user')}</div>
           </div>
-        </div>
+        </Link>
 
         {/* Buttons */}
         {role === 'admin' && (
@@ -137,7 +162,7 @@ export default function DashboardLayoutClient({
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-accent-foreground bg-accent border border-accent/60 rounded-xl hover:bg-accent-foreground/10 hover:border-accent-foreground/30 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
           >
             <Shield className="h-4 w-4" />
-            管理后台
+            {t('adminPanel')}
           </Link>
         )}
         <button
@@ -145,7 +170,7 @@ export default function DashboardLayoutClient({
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-destructive bg-card border border-border rounded-xl hover:bg-destructive/10 hover:border-destructive/30 hover:shadow-sm transition-all duration-200"
         >
           <LogOut className="h-4 w-4" />
-          退出登录
+          {t('logout')}
         </button>
       </div>
     </>
@@ -187,7 +212,7 @@ export default function DashboardLayoutClient({
           >
             <Menu className="h-6 w-6" />
           </button>
-          <span className="font-bold text-text-primary text-lg ml-3">Sakura Account</span>
+          <span className="font-bold text-text-primary text-lg ml-3">{t('brandName')}</span>
         </div>
 
         {/* Content Area */}

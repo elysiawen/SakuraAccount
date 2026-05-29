@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Pagination from '@/components/Pagination';
 
 interface AuditLog {
@@ -15,11 +17,22 @@ interface AuditLog {
 }
 
 export default function AuditLogsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuditLogsContent />
+    </Suspense>
+  );
+}
+
+function AuditLogsContent() {
+  const t = useTranslations('admin.auditLogs');
+  const searchParams = useSearchParams();
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '20');
+
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
 
   useEffect(() => {
     fetchLogs();
@@ -41,15 +54,15 @@ export default function AuditLogsPage() {
 
   const getActionLabel = (action: string) => {
     const labels: Record<string, string> = {
-      login_success: '登录成功',
-      login_failed: '登录失败',
-      register: '注册账号',
-      logout: '退出登录',
-      password_changed: '修改密码',
-      session_revoked: '撤销会话',
-      sessions_revoked_all: '撤销所有会话',
-      admin_delete_user: '删除用户',
-      admin_update_user_role: '修改用户角色',
+      login_success: t('actionLoginSuccess'),
+      login_failed: t('actionLoginFailed'),
+      register: t('actionRegister'),
+      logout: t('actionLogout'),
+      password_changed: t('actionChangePassword'),
+      session_revoked: t('actionRevokeSession'),
+      sessions_revoked_all: t('actionRevokeAllSessions'),
+      admin_delete_user: t('actionDeleteUser'),
+      admin_update_user_role: t('actionChangeRole'),
     };
     return labels[action] || action;
   };
@@ -69,7 +82,7 @@ export default function AuditLogsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">审计日志</h1>
+      <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
 
       <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         {loading ? (
@@ -86,11 +99,11 @@ export default function AuditLogsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">用户</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">操作</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">IP</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">详情</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">时间</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">{t('user')}</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">{t('action')}</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">{t('ip')}</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">{t('details')}</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">{t('timestamp')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -123,7 +136,7 @@ export default function AuditLogsPage() {
         ) : (
           <div className="text-center py-12">
             <span className="text-4xl mb-4 block">📋</span>
-            <p className="text-text-tertiary">暂无审计日志</p>
+            <p className="text-text-tertiary">{t('noLogs')}</p>
           </div>
         )}
       </div>

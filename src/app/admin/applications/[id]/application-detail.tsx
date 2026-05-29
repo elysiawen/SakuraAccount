@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import { parseIconConfig, resolveAppIcon } from '@/lib/app-icon';
+import { resolveAppIcon } from '@/lib/app-icon';
 import Modal from '@/components/Modal';
+import { getErrorMessage } from '@/lib/api-error';
 import {
   ArrowLeft,
   Trash2,
@@ -30,8 +32,8 @@ interface OAuth2Client {
   secret: string;
   name: string;
   description?: string;
-  icon?: string;
-  appUrl?: string;
+  icon?: string | null;
+  appUrl?: string | null;
   redirectUris: string[];
   grants: string[];
   scopes: string[];
@@ -44,17 +46,21 @@ interface ApplicationDetailProps {
   client: OAuth2Client;
 }
 
-const GRANT_LABELS: Record<string, { label: string; icon: typeof Key }> = {
-  authorization_code: { label: '授权码', icon: Key },
-  client_credentials: { label: '客户端凭证', icon: Lock },
-  refresh_token: { label: 'refresh_token', icon: RefreshCw },
-};
+function getGrantLabels(t: (key: string) => string): Record<string, { label: string; icon: typeof Key }> {
+  return {
+    authorization_code: { label: t('grantAuthorizationCode'), icon: Key },
+    client_credentials: { label: t('grantClientCredentials'), icon: Lock },
+    refresh_token: { label: t('grantRefreshToken'), icon: RefreshCw },
+  };
+}
 
-const SCOPE_LABELS: Record<string, { label: string; icon: typeof User }> = {
-  profile: { label: '个人资料', icon: User },
-  email: { label: '电子邮箱', icon: Mail },
-  openid: { label: 'OpenID Connect身份验证', icon: Fingerprint },
-};
+function getScopeLabels(t: (key: string) => string): Record<string, { label: string; icon: typeof User }> {
+  return {
+    profile: { label: t('scopeProfile'), icon: User },
+    email: { label: t('scopeEmail'), icon: Mail },
+    openid: { label: t('scopeOpenid'), icon: Fingerprint },
+  };
+}
 
 const AVATAR_COLORS = [
   'from-pink-500/80 to-rose-500/80',
@@ -70,9 +76,9 @@ function getAvatarColor(name: string) {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-function AppIcon({ client, size = 'w-12 h-12 text-lg' }: { client: Pick<OAuth2Client, 'name' | 'icon' | 'redirectUris'>; size?: string }) {
+function AppIcon({ client, size = 'w-12 h-12 text-lg' }: { client: Pick<OAuth2Client, 'name' | 'icon'>; size?: string }) {
   const [errored, setErrored] = useState(false);
-  const iconUrl = resolveAppIcon(client);
+  const iconUrl = resolveAppIcon(client.icon);
 
   if (iconUrl && !errored) {
     return (
@@ -92,27 +98,30 @@ function AppIcon({ client, size = 'w-12 h-12 text-lg' }: { client: Pick<OAuth2Cl
   );
 }
 
-const OAUTH_ENDPOINTS = [
-  { label: '授权端点', path: '/oauth/authorize' },
-  { label: '令牌端点', path: '/oauth/token' },
-  { label: '用户信息端点', path: '/oauth/userinfo' },
-  { label: 'OpenID Connect发现文档', path: '/oauth/.well-known/openid-configuration' },
-  { label: 'JWKS公钥', path: '/oauth/.well-known/jwks.json', note: '当启用RS256时，客户端应通过该地址获取公钥（JWKS）以验证ID Token的签名。' },
-];
+function getOAuthEndpoints(t: (key: string) => string) {
+  return [
+    { label: t('endpointAuthorize'), path: '/oauth/authorize' },
+    { label: t('endpointToken'), path: '/oauth/token' },
+    { label: t('endpointUserinfo'), path: '/oauth/userinfo' },
+    { label: t('endpointOpenIdConfig'), path: '/oauth/.well-known/openid-configuration' },
+    { label: t('endpointJwks'), path: '/oauth/.well-known/jwks.json', note: t('endpointJwksNote') },
+  ];
+}
 
 function CopyButton({ text }: { text: string }) {
+  const t = useTranslations('admin.applications');
   const { success } = useToast();
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
-    success('已复制到剪贴板');
+    success(t('copied'));
   };
 
   return (
     <button
       onClick={handleCopy}
       className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
-      title="复制"
+      title={t('copySecret')}
     >
       <Copy className="w-4 h-4 text-text-tertiary" />
     </button>
@@ -120,6 +129,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ApplicationDetail({ client: initialClient }: ApplicationDetailProps) {
+  const t = useTranslations('admin.applications');
   const router = useRouter();
   const { success, error } = useToast();
   const { confirm } = useConfirm();
@@ -135,9 +145,12 @@ export default function ApplicationDetail({ client: initialClient }: Application
     grants: client.grants,
     status: client.status || 'active',
   });
-  const [iconMode, setIconMode] = useState<'default' | 'auto' | 'custom'>(parseIconConfig(client.icon).mode);
-  const [iconUrl, setIconUrl] = useState(parseIconConfig(client.icon).url || '');
-  const [imgError, setImgError] = useState(false);
+  // iconMode: default=默认, custom=自定义图标
+  const [iconMode, setIconMode] = useState<'default' | 'custom'>(
+    client.icon && client.icon !== 'default' ? 'custom' : 'default'
+  );
+  const [iconUrl, setIconUrl] = useState(client.icon || '');
+  const [uploadingIcon, setUploadingIcon] = useState(false);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -146,20 +159,20 @@ export default function ApplicationDetail({ client: initialClient }: Application
   }, []);
 
   const handleDelete = () => {
-    confirm(`确定要删除应用 "${client.name}" 吗？此操作不可撤销。`, {
-      confirmText: '删除',
+    confirm(t('deleteConfirm', { name: client.name }), {
+      confirmText: t('deleteApp'),
       confirmColor: 'red',
       onConfirm: async () => {
         try {
           const res = await fetch(`/api/admin/applications/${client.nanoId}`, { method: 'DELETE', credentials: 'include' });
           if (res.ok) {
-            success('应用已删除');
+            success(t('appDeleted'));
             router.push('/admin/applications');
           } else {
-            error('删除失败');
+            error(t('deleteFailed'));
           }
         } catch {
-          error('删除失败');
+          error(t('deleteFailed'));
         }
       },
     });
@@ -167,11 +180,18 @@ export default function ApplicationDetail({ client: initialClient }: Application
 
   const handleEdit = async () => {
     if (!editForm.name || !editForm.redirectUris) {
-      error('请填写必要字段');
+      error(t('requiredFields'));
       return;
     }
 
     setSaving(true);
+
+    // 根据 iconMode 生成 icon 值
+    let iconValue = 'default';
+    if (iconMode === 'custom' && iconUrl) {
+      iconValue = iconUrl;
+    }
+
     try {
       const res = await fetch(`/api/admin/applications/${client.nanoId}`, {
         method: 'PATCH',
@@ -181,7 +201,7 @@ export default function ApplicationDetail({ client: initialClient }: Application
           name: editForm.name,
           description: editForm.description,
           appUrl: editForm.appUrl || null,
-          icon: JSON.stringify({ mode: iconMode, url: iconMode === 'custom' ? iconUrl : undefined }),
+          icon: iconValue,
           redirectUris: editForm.redirectUris.split('\n').map(u => u.trim()).filter(Boolean),
           scopes: editForm.scopes.split(' ').filter(Boolean),
           grants: editForm.grants,
@@ -193,13 +213,13 @@ export default function ApplicationDetail({ client: initialClient }: Application
         const data = await res.json();
         setClient(data.client);
         setShowEditModal(false);
-        success('应用信息已更新');
+        success(t('appUpdated'));
       } else {
         const data = await res.json().catch(() => ({}));
-        error(data.error || '更新失败');
+        error(getErrorMessage(data, t('updateFailed')));
       }
     } catch {
-      error('更新失败');
+      error(t('updateFailed'));
     } finally {
       setSaving(false);
     }
@@ -397,7 +417,7 @@ if __name__ == '__main__':
   return (
     <div className="space-y-6">
       {/* Title */}
-      <h1 className="text-2xl font-bold text-text-primary">应用详情</h1>
+      <h1 className="text-2xl font-bold text-text-primary">{t('appDetail')}</h1>
 
       {/* Header */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
@@ -407,14 +427,14 @@ if __name__ == '__main__':
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary bg-muted rounded-lg hover:bg-border-strong transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            返回列表
+            {t('backToList')}
           </Link>
           <button
             onClick={handleDelete}
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-destructive rounded-lg hover:opacity-90 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
-            删除应用
+            {t('deleteApp')}
           </button>
         </div>
 
@@ -424,17 +444,17 @@ if __name__ == '__main__':
             <AppIcon client={client} size="w-20 h-20 text-2xl" />
             <div>
               <h3 className="text-xl font-bold text-text-primary">{client.name}</h3>
-              <p className="text-sm text-text-tertiary mt-0.5">{client.description || '无描述'}</p>
+              <p className="text-sm text-text-tertiary mt-0.5">{client.description || t('noDescription')}</p>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   client.status === 'disabled'
                     ? 'bg-destructive text-destructive-foreground'
                     : 'bg-success text-success-foreground'
                 }`}>
-                  {client.status === 'disabled' ? '禁用' : '活跃'}
+                  {client.status === 'disabled' ? t('disabled') : t('active')}
                 </span>
                 <span className="text-xs px-2 py-0.5 bg-info text-info-foreground rounded-full">
-                  机密客户端
+                  {t('confidentialClient')}
                 </span>
               </div>
             </div>
@@ -444,7 +464,7 @@ if __name__ == '__main__':
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {/* Client ID */}
             <div className="bg-muted/50 rounded-xl p-4">
-              <h6 className="text-xs font-medium text-text-tertiary mb-2">客户端ID</h6>
+              <h6 className="text-xs font-medium text-text-tertiary mb-2">{t('clientId')}</h6>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -458,7 +478,7 @@ if __name__ == '__main__':
 
             {/* Client Secret */}
             <div className="bg-muted/50 rounded-xl p-4">
-              <h6 className="text-xs font-medium text-text-tertiary mb-2">客户端密钥</h6>
+              <h6 className="text-xs font-medium text-text-tertiary mb-2">{t('appSecret')}</h6>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -468,12 +488,12 @@ if __name__ == '__main__':
                 />
                 <CopyButton text={client.secret} />
               </div>
-              <p className="text-xs text-destructive mt-1.5">请妥善保管，不要泄露给他人</p>
+              <p className="text-xs text-destructive mt-1.5">{t('secretWarning')}</p>
             </div>
 
             {/* Website */}
             <div className="bg-muted/50 rounded-xl p-4">
-              <h6 className="text-xs font-medium text-text-tertiary mb-2">应用网站</h6>
+              <h6 className="text-xs font-medium text-text-tertiary mb-2">{t('appWebsite')}</h6>
               <p className="text-sm text-text-primary">
                 {client.appUrl || client.redirectUris[0] ? (
                   <a
@@ -486,14 +506,14 @@ if __name__ == '__main__':
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 ) : (
-                  <span className="text-text-quaternary">未设置</span>
+                  <span className="text-text-quaternary">{t('notSet')}</span>
                 )}
               </p>
             </div>
 
             {/* Created At */}
             <div className="bg-muted/50 rounded-xl p-4">
-              <h6 className="text-xs font-medium text-text-tertiary mb-2">创建时间</h6>
+              <h6 className="text-xs font-medium text-text-tertiary mb-2">{t('createdAt')}</h6>
               <p className="text-sm text-text-primary flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-text-quaternary" />
                 {formatDate(client.createdAt)}
@@ -503,7 +523,7 @@ if __name__ == '__main__':
 
           {/* Redirect URIs */}
           <div className="mb-6">
-            <h5 className="text-base font-semibold text-text-primary mb-3">重定向URI</h5>
+            <h5 className="text-base font-semibold text-text-primary mb-3">{t('redirectUri')}</h5>
             <ul className="space-y-2">
               {client.redirectUris.map((uri, index) => (
                 <li
@@ -520,10 +540,11 @@ if __name__ == '__main__':
           {/* Grant Types & Scopes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <h5 className="text-base font-semibold text-text-primary mb-3">授权类型</h5>
+              <h5 className="text-base font-semibold text-text-primary mb-3">{t('grantTypes')}</h5>
               <ul className="space-y-2">
                 {client.grants.map((grant) => {
-                  const info = GRANT_LABELS[grant] || { label: grant, icon: Key };
+                  const grantLabels = getGrantLabels(t);
+                  const info = grantLabels[grant] || { label: grant, icon: Key };
                   const Icon = info.icon;
                   return (
                     <li
@@ -539,10 +560,11 @@ if __name__ == '__main__':
             </div>
 
             <div>
-              <h5 className="text-base font-semibold text-text-primary mb-3">请求权限</h5>
+              <h5 className="text-base font-semibold text-text-primary mb-3">{t('scopes')}</h5>
               <ul className="space-y-2">
                 {client.scopes.map((scope) => {
-                  const info = SCOPE_LABELS[scope] || { label: scope, icon: Shield };
+                  const scopeLabels = getScopeLabels(t);
+                  const info = scopeLabels[scope] || { label: scope, icon: Shield };
                   const Icon = info.icon;
                   return (
                     <li
@@ -561,7 +583,6 @@ if __name__ == '__main__':
           {/* Edit Button */}
           <button
             onClick={() => {
-              const cfg = parseIconConfig(client.icon);
               setEditForm({
                 name: client.name,
                 description: client.description || '',
@@ -571,14 +592,20 @@ if __name__ == '__main__':
                 grants: client.grants,
                 status: client.status || 'active',
               });
-              setIconMode(cfg.mode);
-              setIconUrl(cfg.url || '');
+              // 根据 icon 值设置 iconMode
+              if (client.icon && client.icon !== 'default') {
+                setIconMode('custom');
+                setIconUrl(client.icon);
+              } else {
+                setIconMode('default');
+                setIconUrl('');
+              }
               setShowEditModal(true);
             }}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors"
           >
             <Edit className="w-4 h-4" />
-            编辑应用信息
+            {t('editApp')}
           </button>
         </div>
       </div>
@@ -586,10 +613,10 @@ if __name__ == '__main__':
       {/* OAuth Endpoints */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
         <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-text-primary">OAuth端点</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('oauthEndpoints')}</h2>
         </div>
         <div className="p-6 space-y-4">
-          {OAUTH_ENDPOINTS.map((endpoint) => {
+          {getOAuthEndpoints(t).map((endpoint) => {
             const url = `${getOrigin()}${endpoint.path}`;
             return (
               <div key={endpoint.path}>
@@ -615,7 +642,7 @@ if __name__ == '__main__':
       {/* Integration Examples */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
         <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-text-primary">集成示例</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('integrationExamples')}</h2>
         </div>
         <div className="p-6">
           {/* Tabs */}
@@ -663,14 +690,14 @@ if __name__ == '__main__':
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        title="编辑应用信息"
+        title={t('editApp')}
         footer={
           <div className="flex justify-end gap-3 p-4 border-t border-border">
             <button
               onClick={() => setShowEditModal(false)}
               className="px-4 py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
             >
-              取消
+              {t('cancel')}
             </button>
             <button
               onClick={handleEdit}
@@ -683,7 +710,7 @@ if __name__ == '__main__':
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
               )}
-              {saving ? '保存中...' : '保存'}
+              {saving ? t('saving') : t('save')}
             </button>
           </div>
         }
@@ -691,72 +718,152 @@ if __name__ == '__main__':
         <div className="space-y-4 p-4">
           {/* Icon Config */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">应用图标</label>
+            <label className="block text-sm font-medium text-text-secondary mb-2">{t('icon')}</label>
             <div className="flex items-start gap-4">
               <div className="shrink-0">
                 {iconMode === 'custom' && iconUrl ? (
-                  <img src={iconUrl} alt="预览" className="w-16 h-16 rounded-xl object-cover bg-muted border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                ) : iconMode === 'auto' && (editForm.appUrl || editForm.redirectUris.split('\n').filter(Boolean)[0]) ? (
-                  <img src={`/api/applications/favicon?domain=${encodeURIComponent(new URL(editForm.appUrl || editForm.redirectUris.split('\n').filter(Boolean)[0]).hostname)}`} alt="预览" className="w-16 h-16 rounded-xl object-cover bg-muted border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <img src={iconUrl} alt={t('preview')} className="w-16 h-16 rounded-xl object-cover bg-muted border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
                   <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${getAvatarColor(editForm.name || 'A')} flex items-center justify-center text-white text-xl font-bold`}>
                     {(editForm.name || 'A').charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
-              <div className="flex-1 space-y-2">
-                {[
-                  { value: 'default', label: '默认', desc: '使用首字母渐变色' },
-                  { value: 'auto', label: '自动抓取', desc: '从应用域名获取 favicon' },
-                  { value: 'custom', label: '自定义 URL', desc: '提供图片链接' },
-                ].map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+              <div className="flex-1 space-y-3">
+                {/* 默认图标 */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="iconMode"
+                    checked={iconMode === 'default'}
+                    onChange={() => { setIconMode('default'); setIconUrl(''); }}
+                    className="w-4 h-4 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-text-primary">{t('iconDefault')}</span>
+                </label>
+
+                {/* 自定义图标 */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="iconMode"
-                      checked={iconMode === opt.value}
-                      onChange={() => setIconMode(opt.value as any)}
+                      checked={iconMode === 'custom'}
+                      onChange={() => setIconMode('custom')}
                       className="w-4 h-4 text-primary focus:ring-primary"
                     />
-                    <span className="text-sm text-text-primary">{opt.label}</span>
-                    <span className="text-xs text-text-quaternary">{opt.desc}</span>
+                    <span className="text-sm text-text-primary">{t('iconCustom')}</span>
                   </label>
-                ))}
-                {iconMode === 'custom' && (
-                  <input
-                    type="text"
-                    value={iconUrl}
-                    onChange={(e) => setIconUrl(e.target.value)}
-                    className="w-full px-3 py-2 border border-border-input rounded-lg bg-card text-text-primary text-sm focus:outline-none focus:border-accent-foreground transition-colors"
-                    placeholder="https://example.com/icon.png"
-                  />
-                )}
+
+                  {iconMode === 'custom' && (
+                    <div className="ml-6 space-y-2">
+                      {/* 自动获取按钮 */}
+                      {editForm.appUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              const domain = new URL(editForm.appUrl).hostname;
+                              const faviconUrl = `/api/applications/favicon?domain=${encodeURIComponent(domain)}`;
+                              setIconUrl(faviconUrl);
+                              success(t('iconAutoFetched'));
+                            } catch {
+                              error(t('invalidAppUrl'));
+                            }
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary border border-border-input rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          {t('autoFetchIcon')}
+                        </button>
+                      )}
+
+                      {/* 上传按钮 */}
+                      <div className="flex items-center gap-2">
+                        <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border-input rounded-lg cursor-pointer hover:bg-muted transition-colors text-sm text-text-secondary">
+                          {uploadingIcon ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              {t('saving')}
+                            </>
+                          ) : (
+                            <>{t('uploadIcon')}</>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setUploadingIcon(true);
+                              try {
+                                const formData = new FormData();
+                                formData.append('icon', file);
+                                const res = await fetch(`/api/admin/applications/${client.nanoId}/icon`, {
+                                  method: 'POST',
+                                  credentials: 'include',
+                                  body: formData,
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                  setIconUrl(data.iconUrl);
+                                  success(t('iconUploadSuccess'));
+                                } else {
+                                  error(getErrorMessage(data, t('iconUploadFailed')));
+                                }
+                              } catch {
+                                error(t('iconUploadFailed'));
+                              } finally {
+                                setUploadingIcon(false);
+                              }
+                            }}
+                          />
+                        </label>
+                        {iconUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setIconUrl('')}
+                            className="px-3 py-2 text-sm text-destructive hover:bg-error rounded-lg transition-colors"
+                          >
+                            {t('clearIcon')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用名称 *</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('appNameLabel')}</label>
             <input
               type="text"
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入应用名称"
+              placeholder={t('appNamePlaceholder')}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用描述</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('description')}</label>
             <input
               type="text"
               value={editForm.description}
               onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入应用描述"
+              placeholder={t('descriptionPlaceholder')}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用网站</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('appWebsite')}</label>
             <input
               type="url"
               value={editForm.appUrl}
@@ -766,7 +873,7 @@ if __name__ == '__main__':
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Redirect URIs *（每行一个）</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('redirectUri')}</label>
             <textarea
               value={editForm.redirectUris}
               onChange={(e) => setEditForm({ ...editForm, redirectUris: e.target.value })}
@@ -775,12 +882,12 @@ if __name__ == '__main__':
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">授权类型</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('grantTypes')}</label>
             <div className="space-y-2">
               {[
-                { value: 'authorization_code', label: '授权码（推荐）' },
-                { value: 'client_credentials', label: '客户端凭证' },
-                { value: 'refresh_token', label: 'refresh_token' },
+                { value: 'authorization_code', label: t('grantAuthorizationCode') },
+                { value: 'client_credentials', label: t('grantClientCredentials') },
+                { value: 'refresh_token', label: t('grantRefreshToken') },
               ].map((grant) => (
                 <label key={grant.value} className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -801,12 +908,12 @@ if __name__ == '__main__':
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">请求权限</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('scopes')}</label>
             <div className="space-y-2">
               {[
-                { value: 'openid', label: 'OpenID Connect身份验证' },
-                { value: 'profile', label: '个人资料' },
-                { value: 'email', label: '电子邮箱' },
+                { value: 'openid', label: t('scopeOpenid') },
+                { value: 'profile', label: t('scopeProfile') },
+                { value: 'email', label: t('scopeEmail') },
               ].map((scope) => (
                 <label key={scope.value} className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -828,7 +935,7 @@ if __name__ == '__main__':
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用状态</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('appStatus')}</label>
             <button
               type="button"
               onClick={() => setEditForm({ ...editForm, status: editForm.status === 'active' ? 'disabled' : 'active' })}
@@ -843,7 +950,7 @@ if __name__ == '__main__':
                 }`} />
               </div>
               <span className="text-sm text-text-primary">
-                {editForm.status === 'active' ? '活跃' : '禁用'}
+                {editForm.status === 'active' ? t('active') : t('disabled')}
               </span>
             </button>
           </div>

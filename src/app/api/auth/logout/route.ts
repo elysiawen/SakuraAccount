@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteSession, logAudit } from '@/lib/auth';
+import { deleteSession, getRequestMetadata, logAudit } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { internalError } from '@/lib/api-response';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,16 +9,16 @@ export async function POST(request: NextRequest) {
     const sessionId = cookieStore.get('account_session')?.value;
 
     if (sessionId) {
+      const { ip, userAgent } = getRequestMetadata(request);
       await deleteSession(sessionId);
-      await logAudit(null, 'logout', { sessionId }, request.headers.get('x-forwarded-for') || 'unknown', request.headers.get('user-agent') || 'unknown');
+      await logAudit(null, 'logout', { sessionId }, ip, userAgent);
     }
 
     cookieStore.delete('account_session');
-
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Logout error:', error);
-    return NextResponse.json({ error: '登出失败' }, { status: 500 });
+    return internalError('登出失败');
   }
 }
 
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
 
     cookieStore.delete('account_session');
 
-    const callbackUrl = request.nextUrl.searchParams.get('callbackUrl') || '/';
+    const rawCallback = request.nextUrl.searchParams.get('callbackUrl') || '/';
+    const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//')
+      ? rawCallback
+      : '/';
     return NextResponse.redirect(new URL(callbackUrl, request.url));
   } catch (error) {
     console.error('Logout error:', error);

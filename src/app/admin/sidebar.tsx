@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import {
   LayoutDashboard,
   Users,
   Link2,
   FileText,
+  Settings,
   ArrowLeft,
 } from 'lucide-react';
 
@@ -19,12 +22,14 @@ interface SidebarProps {
 
 export default function AdminSidebar({ username, nickname, avatar }: SidebarProps) {
   const pathname = usePathname();
+  const t = useTranslations('admin.nav');
 
   const navItems = [
-    { href: '/admin', icon: LayoutDashboard, label: '概览' },
-    { href: '/admin/users', icon: Users, label: '用户管理' },
-    { href: '/admin/applications', icon: Link2, label: '应用' },
-    { href: '/admin/audit-logs', icon: FileText, label: '审计日志' },
+    { href: '/admin', icon: LayoutDashboard, label: t('overview') },
+    { href: '/admin/users', icon: Users, label: t('users') },
+    { href: '/admin/applications', icon: Link2, label: t('applications') },
+    { href: '/admin/audit-logs', icon: FileText, label: t('auditLogs') },
+    { href: '/admin/settings', icon: Settings, label: t('settings') },
   ];
 
   const isActive = (href: string) => {
@@ -36,8 +41,8 @@ export default function AdminSidebar({ username, nickname, avatar }: SidebarProp
     <aside className="w-64 h-screen bg-card border-r flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b">
-        <h1 className="text-xl font-bold text-text-primary">管理后台</h1>
-        <p className="text-xs text-text-tertiary mt-0.5">Sakura Account</p>
+        <h1 className="text-xl font-bold text-text-primary">{t('adminPanel')}</h1>
+        <p className="text-xs text-text-tertiary mt-0.5">{t('brandSubtitle')}</p>
       </div>
 
       {/* Navigation */}
@@ -65,9 +70,10 @@ export default function AdminSidebar({ username, nickname, avatar }: SidebarProp
 
       {/* Footer */}
       <div className="p-4 border-t bg-muted/50 space-y-3">
-        {/* Theme Toggle */}
-        <div className="flex justify-center">
+        {/* Theme Toggle + Language Switcher */}
+        <div className="flex justify-center gap-2">
           <ThemeToggle />
+          <LanguageSwitcher />
         </div>
 
         {/* User Info */}
@@ -91,7 +97,7 @@ export default function AdminSidebar({ username, nickname, avatar }: SidebarProp
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-accent-foreground bg-accent border border-accent/60 rounded-xl hover:bg-accent-foreground/10 hover:border-accent-foreground/30 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
         >
           <ArrowLeft className="h-4 w-4" />
-          返回控制台
+          {t('backToUser')}
         </Link>
       </div>
     </aside>

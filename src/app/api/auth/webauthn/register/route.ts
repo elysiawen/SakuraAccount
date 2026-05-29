@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
 import { generateRegistration, verifyRegistration } from '@/lib/webauthn';
-import { cookies } from 'next/headers';
+import { requireAuthenticatedUser } from '@/lib/require-session';
+import { passkeyInvalidRequest, passkeyInvalidOperation, passkeyOperationFailed } from '@/lib/api-response';
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('account_session')?.value;
-
-    if (!sessionId) {
-      return NextResponse.json({ error: '请先登录' }, { status: 401 });
-    }
-
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
-    const user = await getSession(sessionId, ip);
-
-    if (!user) {
-      return NextResponse.json({ error: '会话已过期' }, { status: 401 });
-    }
+    const result = await requireAuthenticatedUser();
+    if ('error' in result) return result.error;
+    const { user } = result;
 
     const body = await request.json();
     const { action, response, challenge } = body;
@@ -29,19 +19,16 @@ export async function POST(request: NextRequest) {
 
     if (action === 'verify') {
       if (!response || !challenge) {
-        return NextResponse.json({ error: '无效的请求' }, { status: 400 });
+        return passkeyInvalidRequest();
       }
 
       const verification = await verifyRegistration(user.id, response, challenge);
-
-      return NextResponse.json({
-        verified: verification.verified,
-      });
+      return NextResponse.json({ verified: verification.verified });
     }
 
-    return NextResponse.json({ error: '无效的操作' }, { status: 400 });
+    return passkeyInvalidOperation();
   } catch (error) {
     console.error('WebAuthn register error:', error);
-    return NextResponse.json({ error: '操作失败' }, { status: 500 });
+    return passkeyOperationFailed();
   }
 }

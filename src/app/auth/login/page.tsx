@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ToastProvider';
+import { getErrorMessage } from '@/lib/api-error';
+import { useTranslations } from 'next-intl';
+import { PublicNav } from '@/components/PublicNav';
 
 function SakuraPetal({ delay, left, size, duration }: { delay: number; left: string; size: number; duration: number }) {
   return (
@@ -27,10 +30,20 @@ function SakuraPetal({ delay, left, size, duration }: { delay: number; left: str
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
+  const t = useTranslations('auth.login');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { success, error } = useToast();
   const callbackUrl = searchParams.get('callbackUrl');
+  const reauth = searchParams.get('reauth') === '1';
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -41,17 +54,18 @@ export default function LoginPage() {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
+    if (reauth) return;
     fetch('/api/auth/session').then(res => res.json()).then(data => {
       if (data.user) {
         router.push(callbackUrl || '/dashboard');
       }
     });
-  }, [router, callbackUrl]);
+  }, [router, callbackUrl, reauth]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) {
-      error('请输入用户名和密码');
+      error(t('enterCredentials'));
       return;
     }
     setLoading(true);
@@ -63,13 +77,17 @@ export default function LoginPage() {
       });
       const data = await response.json();
       if (response.ok) {
-        success('登录成功');
-        router.push(callbackUrl || '/dashboard');
+        success(t('loginSuccess'));
+        if (callbackUrl) {
+          window.location.href = callbackUrl;
+        } else {
+          router.push('/dashboard');
+        }
       } else {
-        error(data.error || '登录失败');
+        error(getErrorMessage(data, t('loginFailed')));
       }
     } catch {
-      error('网络错误，请稍后重试');
+      error(t('networkError'));
     } finally {
       setLoading(false);
     }
@@ -92,14 +110,18 @@ export default function LoginPage() {
       });
       const data = await verifyRes.json();
       if (data.verified) {
-        success('登录成功');
-        router.push(callbackUrl || '/dashboard');
+        success(t('loginSuccess'));
+        if (callbackUrl) {
+          window.location.href = callbackUrl;
+        } else {
+          router.push('/dashboard');
+        }
       } else {
-        error('Passkey 认证失败');
+        error(t('passkeyAuthFailed'));
       }
     } catch (err: any) {
       if (err.name !== 'NotAllowedError') {
-        error('Passkey 登录失败');
+        error(t('passkeyLoginFailed'));
       }
     }
   }, [callbackUrl, router, success, error]);
@@ -128,6 +150,9 @@ export default function LoginPage() {
       `}</style>
 
       <main className="min-h-screen relative overflow-hidden flex items-center justify-center bg-background">
+        {/* Nav */}
+        <PublicNav absolute />
+
         {/* Ambient background */}
         <div className="absolute inset-0">
           {/* Gradient orbs */}
@@ -169,23 +194,18 @@ export default function LoginPage() {
         <div className="relative z-10 w-full max-w-[960px] mx-auto px-6 py-12 flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           {/* Left — branding */}
           <div
-            className="flex-1 text-center lg:text-left"
+            className="hidden lg:block flex-1 text-center lg:text-left"
             style={{
               opacity: mounted ? 1 : 0,
               transform: mounted ? 'translateY(0)' : 'translateY(20px)',
               transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s',
             }}
           >
-            <Link href="/" className="inline-flex items-center gap-2.5 mb-10">
-              <img src="/sakura.ico" alt="Sakura" className="w-8 h-8" />
-              <span className="text-base font-semibold text-foreground tracking-tight">Sakura Account</span>
-            </Link>
-
             <h1 className="text-4xl lg:text-5xl font-light text-foreground leading-tight tracking-tight mb-4">
-              欢迎回来
+              {t('title')}
             </h1>
             <p className="text-base text-muted-foreground leading-relaxed max-w-sm mx-auto lg:mx-0 mb-10">
-              登录您的账户，继续管理身份认证与应用接入。
+              {t('subtitle')}
             </p>
 
             <div className="hidden lg:flex items-center gap-8">
@@ -215,13 +235,13 @@ export default function LoginPage() {
           >
             <div className="bg-card/80 dark:bg-card/60 backdrop-blur-xl border border-border rounded-2xl p-8 shadow-lg shadow-black/[0.04] dark:shadow-black/20">
               <div className="mb-7">
-                <h2 className="text-xl font-medium text-foreground mb-1">登录</h2>
-                <p className="text-sm text-muted-foreground">请输入您的账户信息</p>
+                <h2 className="text-xl font-medium text-foreground mb-1">{t('login')}</h2>
+                <p className="text-sm text-muted-foreground">{t('formTitle')}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">用户名或邮箱</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">{t('usernameOrEmail')}</label>
                   <input
                     type="text"
                     value={username}
@@ -233,13 +253,13 @@ export default function LoginPage() {
                       borderColor: focused === 'username' ? 'var(--accent-button)' : 'var(--border-input)',
                       boxShadow: focused === 'username' ? '0 0 0 3px color-mix(in srgb, var(--accent-button) 12%, transparent)' : 'none',
                     }}
-                    placeholder="请输入用户名或邮箱"
+                    placeholder={t('usernameOrEmailPlaceholder')}
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">密码</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">{t('password')}</label>
                   <input
                     type="password"
                     value={password}
@@ -251,7 +271,7 @@ export default function LoginPage() {
                       borderColor: focused === 'password' ? 'var(--accent-button)' : 'var(--border-input)',
                       boxShadow: focused === 'password' ? '0 0 0 3px color-mix(in srgb, var(--accent-button) 12%, transparent)' : 'none',
                     }}
-                    placeholder="请输入密码"
+                    placeholder={t('passwordPlaceholder')}
                     disabled={loading}
                   />
                 </div>
@@ -267,14 +287,14 @@ export default function LoginPage() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                   )}
-                  {loading ? '登录中...' : '登录'}
+                  {loading ? t('loggingIn') : t('login')}
                 </button>
               </form>
 
               {/* Divider */}
               <div className="flex items-center gap-4 my-6">
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground/60">或</span>
+                <span className="text-xs text-muted-foreground/60">{t('or')}</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
 
@@ -287,14 +307,14 @@ export default function LoginPage() {
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0110 0v4" />
                 </svg>
-                <span>使用 Passkey 登录</span>
+                <span>{t('usePasskey')}</span>
               </button>
 
               {/* Register link */}
               <p className="text-center text-sm text-muted-foreground mt-7">
-                还没有账号？{' '}
+                {t('noAccount')}{' '}
                 <Link href="/auth/register" className="text-accent-button hover:text-accent-button-hover transition-colors font-medium">
-                  注册账号
+                  {t('register')}
                 </Link>
               </p>
             </div>

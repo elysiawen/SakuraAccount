@@ -1,11 +1,17 @@
+import { timingSafeEqual } from 'crypto';
 import { nanoid } from 'nanoid';
 import { SignJWT, jwtVerify } from 'jose';
 import { db } from './db';
 
-const SECRET = new TextEncoder().encode(process.env.APP_SECRET || 'default-secret');
+const APP_SECRET = process.env.APP_SECRET;
+if (!APP_SECRET) {
+  throw new Error('FATAL: APP_SECRET environment variable is required.');
+}
+const SECRET = new TextEncoder().encode(APP_SECRET);
 const ACCESS_TOKEN_EXPIRY = parseInt(process.env.OAUTH2_ACCESS_TOKEN_EXPIRY || '3600');
+const REFRESH_TOKEN_EXPIRY = parseInt(process.env.OAUTH2_REFRESH_TOKEN_EXPIRY || '2592000');
 const AUTHORIZATION_CODE_EXPIRY = parseInt(process.env.OAUTH2_AUTHORIZATION_CODE_EXPIRY || '600');
-const ISSUER = process.env.OAUTH2_ISSUER || 'http://localhost:3000';
+export const ISSUER = process.env.OAUTH2_ISSUER || 'http://localhost:3000';
 
 export interface OAuth2Client {
   id: string;
@@ -13,8 +19,8 @@ export interface OAuth2Client {
   secret: string;
   name: string;
   description?: string;
-  icon?: string;
-  appUrl?: string;
+  icon?: string | null;
+  appUrl?: string | null;
   redirectUris: string[];
   grants: string[];
   scopes: string[];
@@ -41,6 +47,7 @@ export interface Token {
   refreshToken?: string;
   scopes: string[];
   expiresAt: Date;
+  refreshExpiresAt?: Date;
 }
 
 export async function createClient(data: Omit<OAuth2Client, 'id' | 'nanoId' | 'secret'>): Promise<OAuth2Client> {
@@ -106,7 +113,16 @@ export async function validateClient(clientId: string, clientSecret?: string): P
 
   if (!client) return null;
   if (client.status === 'disabled') return null;
-  if (clientSecret && client.secret !== clientSecret) return null;
+  if (clientSecret) {
+    const secretBytes = new TextEncoder().encode(client.secret);
+    const providedBytes = new TextEncoder().encode(clientSecret);
+    if (
+      secretBytes.length !== providedBytes.length ||
+      !timingSafeEqual(secretBytes, providedBytes)
+    ) {
+      return null;
+    }
+  }
 
   return client;
 }
@@ -154,13 +170,13 @@ export async function deleteAuthorizationCode(code: string): Promise<void> {
 
 export async function generateAccessToken(
   clientId: string,
-  userId: string,
+  userId: string | null,
   scopes: string[]
 ): Promise<Token> {
   const tokenId = nanoid(32);
 
   const accessToken = await new SignJWT({
-    sub: userId,
+    sub: userId || clientId,
     client_id: clientId,
     scope: scopes.join(' '),
     iss: ISSUER,
@@ -173,21 +189,23 @@ export async function generateAccessToken(
 
   const refreshToken = nanoid(64);
   const expiresAt = new Date(Date.now() + ACCESS_TOKEN_EXPIRY * 1000);
+  const refreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY * 1000);
 
   await db.execute(
-    `INSERT INTO oauth2_tokens (id, client_id, user_id, access_token, refresh_token, scopes, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [tokenId, clientId, userId, accessToken, refreshToken, JSON.stringify(scopes), expiresAt]
+    `INSERT INTO oauth2_tokens (id, client_id, user_id, access_token, refresh_token, scopes, expires_at, refresh_expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [tokenId, clientId, userId, accessToken, refreshToken, JSON.stringify(scopes), expiresAt, refreshExpiresAt]
   );
 
   return {
     id: tokenId,
     clientId,
-    userId,
+    userId: userId || clientId,
     accessToken,
     refreshToken,
     scopes,
     expiresAt,
+    refreshExpiresAt,
   };
 }
 
@@ -221,7 +239,7 @@ export async function getTokenByAccessToken(accessToken: string): Promise<Token 
 
 export async function getTokenByRefreshToken(refreshToken: string): Promise<Token | null> {
   const token = await db.getOne(
-    'SELECT * FROM oauth2_tokens WHERE refresh_token = ?',
+    'SELECT * FROM oauth2_tokens WHERE refresh_token = ? AND (refresh_expires_at IS NULL OR refresh_expires_at > NOW())',
     [refreshToken]
   );
 
@@ -235,6 +253,7 @@ export async function getTokenByRefreshToken(refreshToken: string): Promise<Toke
     refreshToken: token.refresh_token,
     scopes: safeJsonParse(token.scopes),
     expiresAt: token.expires_at,
+    refreshExpiresAt: token.refresh_expires_at || undefined,
   };
 }
 
@@ -275,13 +294,13 @@ export async function getAllClients(): Promise<OAuth2Client[]> {
   return Promise.all(clients.map(client => ensureNanoId(client)));
 }
 
-export async function getAllClientsSummary(): Promise<Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'appUrl' | 'redirectUris' | 'status' | 'userId' | 'createdAt'>[]> {
+export async function getAllClientsSummary(): Promise<Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'status' | 'userId' | 'createdAt'>[]> {
   let clients: any[];
   try {
-    clients = await db.query('SELECT nano_id, name, description, icon, app_url, redirect_uris, status, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
+    clients = await db.query('SELECT nano_id, name, description, icon, status, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
   } catch {
     // Fallback if status/icon columns don't exist yet
-    clients = await db.query('SELECT nano_id, name, description, redirect_uris, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
+    clients = await db.query('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
   }
 
   return clients.map(c => ({
@@ -289,8 +308,6 @@ export async function getAllClientsSummary(): Promise<Pick<OAuth2Client, 'nanoId
     name: c.name,
     description: c.description,
     icon: c.icon || undefined,
-    appUrl: c.app_url || undefined,
-    redirectUris: safeJsonParse(c.redirect_uris),
     status: c.status || 'active',
     userId: c.user_id,
     createdAt: c.created_at,
@@ -349,4 +366,32 @@ export async function updateClient(nanoId: string, data: Partial<OAuth2Client>):
 
   values.push(nanoId);
   await db.execute(`UPDATE oauth2_clients SET ${fields.join(', ')} WHERE nano_id = ?`, values);
+}
+
+export async function getConsentedScopes(userId: string, clientId: string): Promise<string[] | null> {
+  const row = await db.getOne(
+    'SELECT scopes FROM oauth2_consents WHERE user_id = ? AND client_id = ?',
+    [userId, clientId]
+  );
+  if (!row) return null;
+  return safeJsonParse(row.scopes);
+}
+
+export async function saveConsent(userId: string, clientId: string, scopes: string[]): Promise<void> {
+  const scopesJson = JSON.stringify(scopes);
+  await db.execute(
+    'DELETE FROM oauth2_consents WHERE user_id = ? AND client_id = ?',
+    [userId, clientId]
+  );
+  await db.execute(
+    'INSERT INTO oauth2_consents (user_id, client_id, scopes) VALUES (?, ?, ?)',
+    [userId, clientId, scopesJson]
+  );
+}
+
+export async function deleteConsent(userId: string, clientId: string): Promise<void> {
+  await db.execute(
+    'DELETE FROM oauth2_consents WHERE user_id = ? AND client_id = ?',
+    [userId, clientId]
+  );
 }

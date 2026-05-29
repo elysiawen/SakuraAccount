@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { resolveAppIcon } from '@/lib/app-icon';
@@ -17,10 +18,10 @@ interface AuthorizedApp {
   latestCreatedAt: string;
 }
 
-const SCOPE_LABELS: Record<string, string> = {
-  profile: '个人资料',
-  email: '电子邮箱',
-  openid: 'OpenID',
+const SCOPE_KEYS: Record<string, string> = {
+  profile: 'scopeProfile',
+  email: 'scopeEmail',
+  openid: 'scopeOpenID',
 };
 
 const AVATAR_COLORS = [
@@ -39,7 +40,7 @@ function getAvatarColor(name: string) {
 
 function AppIcon({ app }: { app: AuthorizedApp }) {
   const [errored, setErrored] = useState(false);
-  const iconUrl = resolveAppIcon(app);
+  const iconUrl = resolveAppIcon(app.icon);
 
   if (iconUrl && !errored) {
     return (
@@ -60,6 +61,7 @@ function AppIcon({ app }: { app: AuthorizedApp }) {
 }
 
 export default function AuthorizedAppsPage() {
+  const t = useTranslations('dashboard.authorizedApps');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const [apps, setApps] = useState<AuthorizedApp[]>([]);
@@ -82,8 +84,8 @@ export default function AuthorizedAppsPage() {
   };
 
   const handleRevoke = (app: AuthorizedApp) => {
-    confirm(`确定要撤销「${app.name}」的授权吗？该应用将无法再访问您的数据。`, {
-      confirmText: '撤销授权',
+    confirm(t('revokeConfirm', { name: app.name }), {
+      confirmText: t('revoke'),
       confirmColor: 'red',
       onConfirm: async () => {
         try {
@@ -91,13 +93,13 @@ export default function AuthorizedAppsPage() {
             method: 'DELETE',
           });
           if (res.ok) {
-            success('授权已撤销');
+            success(t('revokeSuccess'));
             fetchApps();
           } else {
-            error('撤销失败');
+            error(t('revokeFailed'));
           }
         } catch {
-          error('撤销失败');
+          error(t('revokeFailed'));
         }
       },
     });
@@ -116,8 +118,8 @@ export default function AuthorizedAppsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">已授权应用</h1>
-        <p className="text-sm text-text-tertiary mt-1">管理已授权访问您账户的第三方应用</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
+        <p className="text-sm text-text-tertiary mt-1">{t('subtitle')}</p>
       </div>
 
       {loading ? (
@@ -141,24 +143,24 @@ export default function AuthorizedAppsPage() {
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-text-primary truncate">{app.name}</p>
                     <span className="text-xs px-2 py-0.5 bg-success text-success-foreground rounded-full shrink-0">
-                      活跃
+                      {t('active')}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <p className="text-xs text-text-tertiary truncate">
-                      {app.description || '第三方应用'}
+                      {app.description || t('thirdPartyApp')}
                     </p>
                     <span className="text-xs text-text-quaternary shrink-0">·</span>
                     <div className="flex items-center gap-1 shrink-0">
                       {app.scopes.map((scope) => (
                         <span key={scope} className="text-xs px-1.5 py-0.5 bg-muted text-text-secondary rounded">
-                          {SCOPE_LABELS[scope] || scope}
+                          {SCOPE_KEYS[scope] ? t(SCOPE_KEYS[scope] as any) : scope}
                         </span>
                       ))}
                     </div>
                   </div>
                   <p className="text-xs text-text-quaternary mt-1">
-                    授权于 {formatDate(app.latestCreatedAt)}
+                    {t('authorizedAt', { date: formatDate(app.latestCreatedAt) })}
                   </p>
                 </div>
               </div>
@@ -166,7 +168,7 @@ export default function AuthorizedAppsPage() {
                 onClick={() => handleRevoke(app)}
                 className="px-3 py-1.5 text-sm text-destructive hover:bg-error rounded-lg transition-colors shrink-0 ml-4"
               >
-                撤销
+                {t('revoke')}
               </button>
             </div>
           ))}
@@ -174,8 +176,8 @@ export default function AuthorizedAppsPage() {
       ) : (
         <div className="text-center py-16">
           <span className="text-4xl mb-4 block">🔗</span>
-          <p className="text-text-tertiary">暂无已授权的应用</p>
-          <p className="text-sm text-text-quaternary mt-1">当您使用第三方应用登录时，授权记录会显示在这里</p>
+          <p className="text-text-tertiary">{t('noApps')}</p>
+          <p className="text-sm text-text-quaternary mt-1">{t('noAppsDesc')}</p>
         </div>
       )}
     </div>

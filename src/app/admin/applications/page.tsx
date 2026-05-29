@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import Modal from '@/components/Modal';
 import { Plus, Settings, Box, Info, Shield, Code, Trash2 } from 'lucide-react';
 import { resolveAppIcon } from '@/lib/app-icon';
+import { getErrorMessage } from '@/lib/api-error';
 
 interface OAuth2Client {
   nanoId: string;
   name: string;
   description: string;
   icon?: string;
-  appUrl?: string;
-  redirectUris: string[];
   status: 'active' | 'disabled';
   userId: string;
   createdAt: string;
@@ -36,7 +36,7 @@ function getAvatarColor(name: string) {
 
 function AppIconSmall({ client }: { client: OAuth2Client }) {
   const [errored, setErrored] = useState(false);
-  const iconUrl = resolveAppIcon(client);
+  const iconUrl = resolveAppIcon(client.icon);
 
   if (iconUrl && !errored) {
     return (
@@ -57,6 +57,7 @@ function AppIconSmall({ client }: { client: OAuth2Client }) {
 }
 
 export default function AdminOAuth2Page() {
+  const t = useTranslations('admin.applications');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const [clients, setClients] = useState<OAuth2Client[]>([]);
@@ -89,7 +90,7 @@ export default function AdminOAuth2Page() {
 
   const handleCreateClient = async () => {
     if (!newClient.name || !newClient.redirectUris) {
-      error('请填写必要字段');
+      error(t('fillRequired'));
       return;
     }
 
@@ -111,21 +112,21 @@ export default function AdminOAuth2Page() {
       const data = await res.json();
 
       if (res.ok) {
-        success('应用创建成功');
+        success(t('appCreated'));
         setShowCreateModal(false);
         setNewClient({ name: '', description: '', appUrl: '', redirectUris: '', scopes: 'profile email', grants: ['authorization_code', 'refresh_token'] });
         fetchClients();
       } else {
-        error(data.error || '创建失败');
+        error(getErrorMessage(data, t('createFailed')));
       }
     } catch (err) {
-      error('创建失败');
+      error(t('createFailed'));
     }
   };
 
   const handleDeleteClient = async (nanoId: string, clientName: string) => {
-    confirm(`确定要删除应用 "${clientName}" 吗？`, {
-      confirmText: '删除',
+    confirm(t('deleteConfirm', { name: clientName }), {
+      confirmText: t('delete'),
       confirmColor: 'red',
       onConfirm: async () => {
         try {
@@ -135,13 +136,13 @@ export default function AdminOAuth2Page() {
           });
 
           if (res.ok) {
-            success('应用已删除');
+            success(t('appDeleted'));
             fetchClients();
           } else {
-            error('删除失败');
+            error(t('deleteFailed'));
           }
         } catch (err) {
-          error('删除失败');
+          error(t('deleteFailed'));
         }
       },
     });
@@ -159,13 +160,13 @@ export default function AdminOAuth2Page() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">应用管理</h1>
+        <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
         <button
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-accent-button rounded-lg hover:bg-accent-button-hover transition-colors"
         >
           <Plus className="w-4 h-4" />
-          创建新应用
+          {t('createNew')}
         </button>
       </div>
 
@@ -196,12 +197,12 @@ export default function AdminOAuth2Page() {
                           ? 'bg-destructive text-destructive-foreground'
                           : 'bg-success text-success-foreground'
                       }`}>
-                        {client.status === 'disabled' ? '禁用' : '活跃'}
+                        {client.status === 'disabled' ? t('statusDisabled') : t('statusActive')}
                       </span>
                     </div>
                   </div>
                   <p className="text-sm text-text-tertiary mb-3 line-clamp-2">
-                    {client.description || '无描述'}
+                    {client.description || t('noDescription')}
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-text-quaternary">
@@ -216,7 +217,7 @@ export default function AdminOAuth2Page() {
                       className="flex items-center gap-1 text-xs text-destructive hover:bg-error px-2 py-1 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-3 h-3" />
-                      删除
+                      {t('delete')}
                     </button>
                   </div>
                 </Link>
@@ -225,8 +226,8 @@ export default function AdminOAuth2Page() {
           ) : (
             <div className="text-center py-12">
               <Box className="w-12 h-12 text-text-quaternary mx-auto mb-4" />
-              <p className="text-text-tertiary">暂无应用</p>
-              <p className="text-sm text-text-quaternary mt-1">点击上方按钮创建新应用</p>
+              <p className="text-text-tertiary">{t('noApps')}</p>
+              <p className="text-sm text-text-quaternary mt-1">{t('noAppsHint')}</p>
             </div>
           )}
         </div>
@@ -235,38 +236,38 @@ export default function AdminOAuth2Page() {
       {/* Documentation */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
         <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-text-primary">接入说明</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('docTitle')}</h2>
         </div>
         <div className="p-6 space-y-6">
           <div>
             <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
               <Info className="w-4 h-4 text-primary" />
-              什么是应用接入？
+              {t('docWhatIs')}
             </h3>
             <p className="text-sm text-text-secondary leading-relaxed">
-              通过创建应用，您可以让您的网站或应用使用 Sakura Account 账号系统进行用户认证，无需自己开发和维护用户系统。
+              {t('docWhatIsDesc')}
             </p>
           </div>
 
           <div>
             <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
               <Shield className="w-4 h-4 text-primary" />
-              支持的认证方式
+              {t('docAuthMethods')}
             </h3>
             <ul className="text-sm text-text-secondary space-y-1.5 ml-6">
-              <li><strong>OAuth 2.0</strong> - 标准的授权框架，用于授权第三方应用访问用户资源</li>
-              <li><strong>OpenID Connect</strong> - 基于 OAuth 2.0 的身份认证层，提供用户身份验证</li>
-              <li><strong>单点登录 (SSO)</strong> - 让用户一次登录，访问多个系统</li>
+              <li><strong>OAuth 2.0</strong> - {t('docOAuthDesc')}</li>
+              <li><strong>OpenID Connect</strong> - {t('docOIDCDesc')}</li>
+              <li><strong>{t('docSSO')}</strong> - {t('docSSODesc')}</li>
             </ul>
           </div>
 
           <div>
             <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
               <Code className="w-4 h-4 text-primary" />
-              开发资源
+              {t('docResources')}
             </h3>
             <p className="text-sm text-text-secondary leading-relaxed">
-              查看我们的 API 文档，了解如何在您的应用中集成 Sakura Account 账号系统。
+              {t('docResourcesDesc')}
             </p>
           </div>
         </div>
@@ -276,47 +277,47 @@ export default function AdminOAuth2Page() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="创建 OAuth2 应用"
+        title={t('createApp')}
         footer={
           <div className="flex justify-end gap-3 p-4 border-t border-border">
             <button
               onClick={() => setShowCreateModal(false)}
               className="px-4 py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
             >
-              取消
+              {t('cancel')}
             </button>
             <button
               onClick={handleCreateClient}
               className="px-4 py-2 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors"
             >
-              创建
+              {t('save')}
             </button>
           </div>
         }
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用名称 *</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('appNameLabel')} *</label>
             <input
               type="text"
               value={newClient.name}
               onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入应用名称"
+              placeholder={t('appNamePlaceholder')}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用描述</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('description')}</label>
             <input
               type="text"
               value={newClient.description}
               onChange={(e) => setNewClient({ ...newClient, description: e.target.value })}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入应用描述"
+              placeholder={t('descriptionPlaceholder')}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">应用网站</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('appUrl')}</label>
             <input
               type="url"
               value={newClient.appUrl}
@@ -326,20 +327,20 @@ export default function AdminOAuth2Page() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Redirect URIs *（每行一个）</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('redirectUri')} *</label>
             <textarea
               value={newClient.redirectUris}
               onChange={(e) => setNewClient({ ...newClient, redirectUris: e.target.value })}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors h-24 resize-none"
-              placeholder="https://example.com/callback"
+              placeholder={t('redirectUriPlaceholder')}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">授权类型</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('grantTypes')}</label>
             <div className="space-y-2">
               {[
-                { value: 'authorization_code', label: '授权码（推荐）' },
-                { value: 'client_credentials', label: '客户端凭证' },
+                { value: 'authorization_code', label: t('grantAuthCode') },
+                { value: 'client_credentials', label: t('grantClientCredentials') },
                 { value: 'refresh_token', label: 'refresh_token' },
               ].map((grant) => (
                 <label key={grant.value} className="flex items-center gap-2 cursor-pointer">
@@ -361,12 +362,12 @@ export default function AdminOAuth2Page() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">请求权限</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('scopes')}</label>
             <div className="space-y-2">
               {[
-                { value: 'openid', label: 'OpenID Connect身份验证' },
-                { value: 'profile', label: '个人资料' },
-                { value: 'email', label: '电子邮箱' },
+                { value: 'openid', label: t('scopeOpenid') },
+                { value: 'profile', label: t('scopeProfile') },
+                { value: 'email', label: t('scopeEmail') },
               ].map((scope) => (
                 <label key={scope.value} className="flex items-center gap-2 cursor-pointer">
                   <input

@@ -6,8 +6,37 @@ import {
   generateAccessToken,
   getTokenByRefreshToken,
   revokeToken,
+  getConsentedScopes,
 } from '@/lib/oauth2';
 import { generateIdToken } from '@/lib/oidc';
+
+const NO_STORE_HEADERS: Record<string, string> = {
+  'Cache-Control': 'no-store',
+  'Pragma': 'no-cache',
+};
+
+function jsonError(status: number, error: string, description: string, extraHeaders?: Record<string, string>): NextResponse {
+  return NextResponse.json(
+    { error, error_description: description },
+    { status, headers: { ...NO_STORE_HEADERS, ...extraHeaders } }
+  );
+}
+
+function checkBasicAuth(request: NextRequest): { clientId: string; clientSecret: string } | null {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Basic ')) return null;
+  try {
+    const decoded = atob(authHeader.substring(6));
+    const colonIndex = decoded.indexOf(':');
+    if (colonIndex === -1) return null;
+    return {
+      clientId: decoded.substring(0, colonIndex),
+      clientSecret: decoded.substring(colonIndex + 1),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,17 +44,22 @@ export async function POST(request: NextRequest) {
     const params = new URLSearchParams(body);
 
     const grantType = params.get('grant_type');
-    const clientId = params.get('client_id');
-    const clientSecret = params.get('client_secret');
+
+    // Support both client_secret_basic (Authorization header) and client_secret_post (body params)
+    const basicAuth = checkBasicAuth(request);
+    const clientId = basicAuth?.clientId || params.get('client_id');
+    const clientSecret = basicAuth?.clientSecret || params.get('client_secret');
 
     if (!grantType || !clientId) {
-      return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+      return jsonError(400, 'invalid_request', 'Missing required parameter: grant_type or client_id');
     }
 
     // Validate client
     const client = await validateClient(clientId, clientSecret || undefined);
     if (!client) {
-      return NextResponse.json({ error: 'invalid_client' }, { status: 401 });
+      return jsonError(401, 'invalid_client', 'Client authentication failed.', {
+        'WWW-Authenticate': 'Basic realm="oauth2"',
+      });
     }
 
     if (grantType === 'authorization_code') {
@@ -33,21 +67,28 @@ export async function POST(request: NextRequest) {
       const redirectUri = params.get('redirect_uri');
 
       if (!code || !redirectUri) {
-        return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+        return jsonError(400, 'invalid_request', 'Missing required parameter: code or redirect_uri');
       }
 
       // Get and validate authorization code
       const authCode = await getAuthorizationCode(code);
       if (!authCode) {
-        return NextResponse.json({ error: 'invalid_grant' }, { status: 400 });
+        console.warn(`[Token] Code not found or expired: ${code.substring(0, 8)}...`);
+        return jsonError(400, 'invalid_grant', 'Authorization code is invalid or has expired.');
       }
 
       if (authCode.clientId !== clientId) {
-        return NextResponse.json({ error: 'invalid_grant' }, { status: 400 });
+        return jsonError(400, 'invalid_grant', 'Authorization code was not issued to this client.');
       }
 
       if (authCode.redirectUri !== redirectUri) {
-        return NextResponse.json({ error: 'invalid_grant' }, { status: 400 });
+        return jsonError(400, 'invalid_grant', 'redirect_uri does not match the original request.');
+      }
+
+      // Verify consent still exists (user may have revoked between authorize and token exchange)
+      const consentedScopes = await getConsentedScopes(authCode.userId, clientId);
+      if (!consentedScopes || !authCode.scopes.every(s => consentedScopes.includes(s))) {
+        return jsonError(400, 'invalid_grant', 'Consent has been revoked.');
       }
 
       // Delete authorization code (one-time use)
@@ -74,24 +115,24 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      return NextResponse.json(response);
+      return NextResponse.json(response, { headers: NO_STORE_HEADERS });
     }
 
     if (grantType === 'refresh_token') {
       const refreshToken = params.get('refresh_token');
 
       if (!refreshToken) {
-        return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+        return jsonError(400, 'invalid_request', 'Missing required parameter: refresh_token');
       }
 
       // Get token by refresh token
       const token = await getTokenByRefreshToken(refreshToken);
       if (!token) {
-        return NextResponse.json({ error: 'invalid_grant' }, { status: 400 });
+        return jsonError(400, 'invalid_grant', 'Refresh token is invalid or has expired.');
       }
 
       if (token.clientId !== clientId) {
-        return NextResponse.json({ error: 'invalid_grant' }, { status: 400 });
+        return jsonError(400, 'invalid_grant', 'Refresh token was not issued to this client.');
       }
 
       // Revoke old token
@@ -113,27 +154,33 @@ export async function POST(request: NextRequest) {
         response.id_token = await generateIdToken(token.userId, clientId, undefined, token.scopes);
       }
 
-      return NextResponse.json(response);
+      return NextResponse.json(response, { headers: NO_STORE_HEADERS });
     }
 
     if (grantType === 'client_credentials') {
-      // Client credentials grant — no user, token belongs to the client itself
+      // Client credentials is a confidential grant — client must authenticate
+      if (!clientSecret) {
+        return jsonError(401, 'invalid_client', 'Client authentication required for client_credentials grant.', {
+          'WWW-Authenticate': 'Basic realm="oauth2"',
+        });
+      }
+
       const scope = params.get('scope');
       const scopes = scope ? scope.split(' ') : client.scopes;
 
-      const token = await generateAccessToken(clientId, clientId, scopes);
+      const token = await generateAccessToken(clientId, null, scopes);
 
       return NextResponse.json({
         access_token: token.accessToken,
         token_type: 'Bearer',
         expires_in: parseInt(process.env.OAUTH2_ACCESS_TOKEN_EXPIRY || '3600'),
         scope: scopes.join(' '),
-      });
+      }, { headers: NO_STORE_HEADERS });
     }
 
-    return NextResponse.json({ error: 'unsupported_grant_type' }, { status: 400 });
+    return jsonError(400, 'unsupported_grant_type', `Grant type "${grantType}" is not supported.`);
   } catch (error) {
     console.error('OAuth2 token error:', error);
-    return NextResponse.json({ error: 'server_error' }, { status: 500 });
+    return jsonError(500, 'server_error', 'An unexpected error occurred. Please try again later.');
   }
 }

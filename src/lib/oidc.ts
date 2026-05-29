@@ -1,7 +1,6 @@
 import { generateKeyPair, exportJWK, SignJWT } from 'jose';
 import { getUserById } from './auth';
-
-const ISSUER = process.env.OAUTH2_ISSUER || 'http://localhost:3000';
+import { ISSUER } from './oauth2';
 const ID_TOKEN_EXPIRY = parseInt(process.env.OIDC_ID_TOKEN_EXPIRY || '3600');
 
 let cachedKeyPair: { privateKey: CryptoKey; publicKey: CryptoKey; kid: string } | null = null;

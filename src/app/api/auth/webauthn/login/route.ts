@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSession, logAudit, getUserById } from '@/lib/auth';
+import { createSession, setSessionCookie, getRequestMetadata, logAudit, getUserById } from '@/lib/auth';
 import { generateAuthentication, verifyAuthentication } from '@/lib/webauthn';
-import { cookies } from 'next/headers';
+import { passkeyInvalidRequest, authPasskeyVerifyFailed, authUserNotFound, passkeyInvalidOperation, passkeyOperationFailed } from '@/lib/api-response';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,36 +15,23 @@ export async function POST(request: NextRequest) {
 
     if (action === 'verify') {
       if (!response || !challenge) {
-        return NextResponse.json({ error: '无效的请求' }, { status: 400 });
+        return passkeyInvalidRequest();
       }
 
       const verification = await verifyAuthentication(response, challenge);
 
       if (!verification.verified || !verification.userId) {
-        return NextResponse.json({ error: '认证失败' }, { status: 401 });
+        return authPasskeyVerifyFailed();
       }
 
       const user = await getUserById(verification.userId);
       if (!user) {
-        return NextResponse.json({ error: '用户不存在' }, { status: 404 });
+        return authUserNotFound();
       }
 
-      // Create session
-      const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-      const userAgent = request.headers.get('user-agent') || 'unknown';
+      const { ip, userAgent } = getRequestMetadata(request);
       const sessionId = await createSession(user.id, ip, userAgent);
-
-      // Set cookie
-      const cookieStore = await cookies();
-      cookieStore.set('account_session', sessionId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: parseInt(process.env.SESSION_EXPIRY || '604800'),
-        path: '/',
-      });
-
-      // Log audit
+      await setSessionCookie(sessionId);
       await logAudit(user.id, 'login_success', { method: 'webauthn' }, ip, userAgent);
 
       return NextResponse.json({
@@ -59,9 +46,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: '无效的操作' }, { status: 400 });
+    return passkeyInvalidOperation();
   } catch (error) {
     console.error('WebAuthn login error:', error);
-    return NextResponse.json({ error: '操作失败' }, { status: 500 });
+    return passkeyOperationFailed();
   }
 }

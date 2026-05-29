@@ -1,46 +1,96 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Shield, User, Mail, Fingerprint, Check, X } from 'lucide-react';
+import { resolveAppIcon } from '@/lib/app-icon';
+import { useTranslations } from 'next-intl';
 
-const SCOPE_INFO: Record<string, { label: string; description: string; icon: typeof User }> = {
-  openid: { label: '身份验证', description: '验证您的身份', icon: Fingerprint },
-  profile: { label: '个人资料', description: '访问您的昵称、头像等基本信息', icon: User },
-  email: { label: '电子邮箱', description: '访问您的邮箱地址', icon: Mail },
-};
+function SakuraPetal({ delay, left, size, duration }: { delay: number; left: string; size: number; duration: number }) {
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{ left, top: '-20px', animation: `petalFall ${duration}s linear ${delay}s infinite` }}
+    >
+      <svg width={size} height={size} viewBox="0 0 12 12" fill="none" style={{ opacity: 0.25 }}>
+        <path d="M6 0C6 0 8 3 10 5C12 7 10 10 8 11C6 12 4 10 2 8C0 6 2 3 4 1.5C5 0.5 6 0 6 0Z" fill="currentColor" className="text-pink-400" />
+      </svg>
+    </div>
+  );
+}
 
 export default function ConsentPage() {
+  return (
+    <Suspense fallback={null}>
+      <ConsentContent />
+    </Suspense>
+  );
+}
+
+function ConsentContent() {
+  const t = useTranslations('auth.consent');
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const SCOPE_INFO: Record<string, { label: string; description: string; icon: typeof User }> = {
+    openid: { label: t('scopeIdentity'), description: t('scopeIdentityDesc'), icon: Fingerprint },
+    profile: { label: t('scopeProfile'), description: t('scopeProfileDesc'), icon: User },
+    email: { label: t('scopeEmail'), description: t('scopeEmailDesc'), icon: Mail },
+  };
+  const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [clientName, setClientName] = useState('');
-  const [clientDescription, setClientDescription] = useState('');
+  const [clientIcon, setClientIcon] = useState<string | null>(null);
+  const [clientAppUrl, setClientAppUrl] = useState('');
+  const [iconErrored, setIconErrored] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [clientError, setClientError] = useState<string | null>(null);
 
   const clientId = searchParams.get('client_id');
   const redirectUri = searchParams.get('redirect_uri');
   const scope = searchParams.get('scope');
   const state = searchParams.get('state');
   const nonce = searchParams.get('nonce');
-  const prompt = searchParams.get('prompt');
 
   const scopes = scope ? scope.split(' ') : ['openid', 'profile'];
 
   useEffect(() => {
-    if (!clientId) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setMounted(true);
+      });
+    });
+    fetch('/api/auth/session').then(res => res.json()).then(data => {
+      if (data.user) setUser(data.user);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!clientId) {
+      setClientError(t('missingClientId'));
+      return;
+    }
     fetch(`/api/applications/info?id=${clientId}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          setClientError(t('invalidClient'));
+          return null;
+        }
+        return res.json();
+      })
       .then(data => {
-        if (data.client) {
+        if (data?.client) {
           setClientName(data.client.name);
-          setClientDescription(data.client.description || '');
+          setClientIcon(resolveAppIcon(data.client.icon));
+          setClientAppUrl(data.client.appUrl || '');
+        } else if (data) {
+          setClientError(t('invalidClient'));
         }
       })
-      .catch(() => {});
+      .catch(() => setClientError(t('cannotVerify')));
   }, [clientId]);
 
   const handleDecision = async (approved: boolean) => {
-    setLoading(true);
+    setLoading(approved ? 'approve' : 'reject');
     try {
       const params = new URLSearchParams();
       if (clientId) params.set('client_id', clientId);
@@ -59,84 +109,234 @@ export default function ConsentPage() {
 
       const data = await res.json();
 
+      if (res.status === 401) {
+        window.location.href = `/auth/login?callbackUrl=${encodeURIComponent(window.location.href)}`;
+        return;
+      }
+
       if (data.redirect) {
         window.location.href = data.redirect;
       }
     } catch {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
   if (!clientId || !redirectUri) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-destructive">缺少必要参数</p>
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-destructive">{t('missingParams')}</p>
+      </main>
+    );
+  }
+
+  if (clientError) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <div className="bg-card/50 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-lg p-8 max-w-md mx-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <X className="w-7 h-7 text-red-500" />
+          </div>
+          <h1 className="text-lg font-semibold text-foreground">{t('invalidRequest')}</h1>
+          <p className="text-sm text-muted-foreground mt-2">{clientError}</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 text-center">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-xl font-bold text-text-primary">授权请求</h1>
-          <p className="text-sm text-text-secondary mt-1">
-            <span className="font-medium text-text-primary">{clientName || clientId}</span> 请求访问您的账户
-          </p>
-          {clientDescription && (
-            <p className="text-xs text-text-tertiary mt-1">{clientDescription}</p>
+    <>
+      <style jsx global>{`
+        @keyframes petalFall {
+          0% { transform: translateY(-20px) rotate(0deg) translateX(0); opacity: 0; }
+          10% { opacity: 0.6; }
+          90% { opacity: 0.3; }
+          100% { transform: translateY(100vh) rotate(360deg) translateX(50px); opacity: 0; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+      `}</style>
+
+      <main className="min-h-screen relative overflow-hidden flex items-center justify-center bg-background">
+        {/* Ambient background */}
+        <div className="absolute inset-0">
+          <div
+            className="absolute w-[600px] h-[600px] rounded-full blur-[200px] opacity-30 dark:opacity-20"
+            style={{ background: 'radial-gradient(circle, var(--accent-button) 0%, transparent 70%)', left: '-10%', top: '-15%', animation: 'float 9s ease-in-out infinite' }}
+          />
+          <div
+            className="absolute w-[500px] h-[500px] rounded-full blur-[180px] opacity-20 dark:opacity-15"
+            style={{ background: 'radial-gradient(circle, #f472b6 0%, transparent 70%)', right: '-5%', bottom: '-10%', animation: 'float 11s ease-in-out 2s infinite' }}
+          />
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]" style={{
+            backgroundImage: `linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+          }} />
+          <SakuraPetal delay={0} left="5%" size={10} duration={14} />
+          <SakuraPetal delay={2} left="15%" size={8} duration={16} />
+          <SakuraPetal delay={5} left="25%" size={12} duration={12} />
+          <SakuraPetal delay={1} left="35%" size={7} duration={15} />
+          <SakuraPetal delay={7} left="45%" size={9} duration={13} />
+          <SakuraPetal delay={3} left="55%" size={11} duration={17} />
+          <SakuraPetal delay={9} left="65%" size={8} duration={14} />
+          <SakuraPetal delay={4} left="75%" size={10} duration={16} />
+          <SakuraPetal delay={6} left="85%" size={7} duration={12} />
+          <SakuraPetal delay={8} left="95%" size={9} duration={15} />
+        </div>
+
+        {/* Nav */}
+        <nav
+          className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 md:px-40 lg:px-60 py-5"
+          style={{
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? 'translateY(0)' : 'translateY(-8px)',
+            transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.05s',
+          }}
+        >
+          <Link href="/" className="flex items-center gap-2">
+            <img src="/sakura.ico" alt="Sakura" className="w-6 h-6" />
+            <span className="text-sm font-semibold text-foreground tracking-tight">Sakura Account</span>
+          </Link>
+          {user && (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-accent-button/10 flex items-center justify-center text-accent-button font-semibold text-sm overflow-hidden shrink-0">
+                {user.avatar ? (
+                  <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (user.nickname || user.username || '').charAt(0).toUpperCase()
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">{user.nickname || user.username}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </div>
+            </div>
           )}
-        </div>
+        </nav>
 
-        {/* Scopes */}
-        <div className="px-6 py-4 border-t border-border">
-          <p className="text-sm font-medium text-text-secondary mb-3">此应用请求以下权限：</p>
-          <div className="space-y-3">
-            {scopes.map((s) => {
-              const info = SCOPE_INFO[s];
-              if (!info) return null;
-              const Icon = info.icon;
-              return (
-                <div key={s} className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Icon className="w-4 h-4 text-primary" />
+        {/* Content */}
+        <div
+          className="relative z-10 w-full max-w-md mx-4"
+          style={{
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? 'translateY(0)' : 'translateY(24px)',
+            transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s',
+          }}
+        >
+          <div className="bg-card/50 dark:bg-card/40 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl shadow-lg shadow-black/[0.04] dark:shadow-black/20 overflow-hidden">
+            {/* Header */}
+            <div
+              className="px-8 pt-8 pb-6 text-center transition-all duration-700"
+              style={{
+                opacity: mounted ? 1 : 0,
+                transform: mounted ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.95)',
+                transitionDelay: '0.3s',
+              }}
+            >
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 overflow-hidden bg-muted border border-border shadow-sm">
+                {clientIcon && !iconErrored ? (
+                  <img src={clientIcon} alt={clientName} className="w-full h-full object-cover" onError={() => setIconErrored(true)} />
+                ) : (
+                  <div className="w-full h-full bg-accent-button/10 flex items-center justify-center">
+                    <Shield className="w-7 h-7 text-accent-button" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{info.label}</p>
-                    <p className="text-xs text-text-tertiary">{info.description}</p>
-                  </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+
+              <h1 className="text-lg font-semibold text-foreground">{t('title')}</h1>
+              <p className="text-sm text-muted-foreground mt-1.5">
+                <span className="font-medium text-foreground">{clientName || clientId}</span> {t('subtitle')}
+              </p>
+              {clientAppUrl && (
+                <a href={clientAppUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-accent-button hover:underline mt-1 inline-block">
+                  {clientAppUrl}
+                </a>
+              )}
+            </div>
+
+            {/* Scopes */}
+            <div
+              className="px-8 py-5 border-t border-border transition-all duration-700"
+              style={{
+                opacity: mounted ? 1 : 0,
+                transform: mounted ? 'translateY(0)' : 'translateY(12px)',
+                transitionDelay: '0.5s',
+              }}
+            >
+              <p className="text-xs font-medium text-muted-foreground mb-3 tracking-wide uppercase">{t('requestedPermissions')}</p>
+              <div className="space-y-3">
+                {scopes.map((s, i) => {
+                  const info = SCOPE_INFO[s];
+                  if (!info) return null;
+                  const Icon = info.icon;
+                  return (
+                    <div
+                      key={s}
+                      className="flex items-start gap-3 transition-all duration-500"
+                      style={{
+                        opacity: mounted ? 1 : 0,
+                        transform: mounted ? 'translateX(0)' : 'translateX(-12px)',
+                        transitionDelay: `${0.6 + i * 0.1}s`,
+                      }}
+                    >
+                      <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                        <Icon className="w-4 h-4 text-accent-button" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{info.label}</p>
+                        <p className="text-xs text-muted-foreground">{info.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div
+              className="px-8 py-5 border-t border-border flex gap-3 transition-all duration-700"
+              style={{
+                opacity: mounted ? 1 : 0,
+                transform: mounted ? 'translateY(0)' : 'translateY(12px)',
+                transitionDelay: '0.8s',
+              }}
+            >
+              <button
+                onClick={() => handleDecision(false)}
+                disabled={!!loading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-muted-foreground bg-background border border-border rounded-xl hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                {loading === 'reject' ? (
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <X className="w-4 h-4" />
+                )}
+                {loading === 'reject' ? t('processing') : t('deny')}
+              </button>
+              <button
+                onClick={() => handleDecision(true)}
+                disabled={!!loading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50"
+              >
+                {loading === 'approve' ? (
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                {loading === 'approve' ? t('processing') : t('allow')}
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Actions */}
-        <div className="px-6 py-4 border-t border-border flex gap-3">
-          <button
-            onClick={() => handleDecision(false)}
-            disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors disabled:opacity-50"
-          >
-            <X className="w-4 h-4" />
-            拒绝
-          </button>
-          <button
-            onClick={() => handleDecision(true)}
-            disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50"
-          >
-            <Check className="w-4 h-4" />
-            {loading ? '处理中...' : '允许'}
-          </button>
-        </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }

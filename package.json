@@ -11,6 +11,7 @@
     "db:migrate-uuid": "ts-node --project tsconfig.node.json scripts/migrate-uuid.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.969.0",
     "@simplewebauthn/browser": "^13.2.2",
     "@simplewebauthn/server": "^13.2.2",
     "bcryptjs": "^3.0.3",
@@ -20,12 +21,15 @@
     "mysql2": "^3.22.4",
     "nanoid": "^5.1.6",
     "next": "16.2.6",
+    "next-intl": "^4.13.0",
     "next-themes": "^0.4.6",
     "otplib": "^13.4.0",
     "pg": "^8.21.0",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-icons": "^5.6.0",
+    "react-image-crop": "^11.0.10",
     "tailwind-merge": "^3.4.0",
     "use-debounce": "^10.0.6",
     "uuidv7": "^1.2.1"

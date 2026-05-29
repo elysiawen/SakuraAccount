@@ -1,38 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, updateUser, logAudit } from '@/lib/auth';
-import { isValidEmail } from '@/lib/utils';
-import { cookies } from 'next/headers';
+import { updateUser, getRequestMetadata, logAudit } from '@/lib/auth';
+import { requireAuthenticatedUser } from '@/lib/require-session';
+import { isValidEmail, validateNickname } from '@/lib/utils';
+import { paramInvalid, userUpdateFailed } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
+
+const VALIDATION_KEY_MAP: Record<string, string> = {
+  'NICKNAME_EMPTY': 'validation.nicknameEmpty',
+  'NICKNAME_TOO_LONG': 'validation.nicknameTooLong',
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('account_session')?.value;
-
-    if (!sessionId) {
-      return NextResponse.json({ error: '请先登录' }, { status: 401 });
-    }
-
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
-    const user = await getSession(sessionId, ip);
-
-    if (!user) {
-      return NextResponse.json({ error: '会话已过期' }, { status: 401 });
-    }
+    const result = await requireAuthenticatedUser();
+    if ('error' in result) return result.error;
+    const { user } = result;
 
     const body = await request.json();
     const { nickname, email } = body;
 
-    if (email && !isValidEmail(email)) {
-      return NextResponse.json({ error: '请输入有效的邮箱地址' }, { status: 400 });
+    const nicknameError = validateNickname(nickname);
+    if (nicknameError) {
+      const mapped = VALIDATION_KEY_MAP[nicknameError];
+      return paramInvalid(mapped ? await tApi(mapped) : nicknameError);
     }
 
-    await updateUser(user.id, { nickname, email });
+    if (email && !isValidEmail(email)) {
+      return paramInvalid(await tApi('sys.paramInvalid'));
+    }
 
-    await logAudit(user.id, 'profile_updated', { nickname, email }, ip, request.headers.get('user-agent') || 'unknown');
+    await updateUser(user.id, { nickname: nickname?.trim(), email });
+
+    const { ip, userAgent } = getRequestMetadata(request);
+    await logAudit(user.id, 'profile_updated', { nickname, email }, ip, userAgent);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Update profile error:', error);
-    return NextResponse.json({ error: '更新失败' }, { status: 500 });
+    return userUpdateFailed();
   }
 }

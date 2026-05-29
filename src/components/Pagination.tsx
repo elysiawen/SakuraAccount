@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface PaginationProps {
   total: number;
@@ -10,6 +11,7 @@ interface PaginationProps {
 }
 
 export default function Pagination({ total, currentPage, itemsPerPage }: PaginationProps) {
+  const t = useTranslations('common.pagination');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -43,9 +45,9 @@ export default function Pagination({ total, currentPage, itemsPerPage }: Paginat
   };
 
   return (
-    <div className="flex flex-col gap-4 mt-6 px-2">
+    <div className="flex flex-col gap-4 mt-0 px-5 py-4 border-t border-border">
       <div className="text-sm text-text-tertiary text-center sm:text-left">
-        显示 {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, total)} 条，共 {total} 条
+        {t('showingRange', { from: (currentPage - 1) * itemsPerPage + 1, to: Math.min(currentPage * itemsPerPage, total), total })}
       </div>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -56,9 +58,9 @@ export default function Pagination({ total, currentPage, itemsPerPage }: Paginat
             disabled={isPending}
             className="w-full border border-border-input rounded-lg text-sm px-3 py-2 outline-none focus:border-accent-foreground disabled:opacity-50 disabled:bg-muted"
           >
-            <option value="10">每页 10 条</option>
-            <option value="30">每页 30 条</option>
-            <option value="50">每页 50 条</option>
+            <option value="10">{t('perPage', { count: 10 })}</option>
+            <option value="30">{t('perPage', { count: 30 })}</option>
+            <option value="50">{t('perPage', { count: 50 })}</option>
           </select>
         </div>
 
@@ -83,13 +85,13 @@ export default function Pagination({ total, currentPage, itemsPerPage }: Paginat
                 />
               </svg>
             ) : (
-              '上一页'
+              t('prevPage')
             )}
           </button>
 
           <div className="flex items-center gap-2 px-1 sm:px-2">
             <span className="text-sm font-medium text-text-secondary whitespace-nowrap">
-              第 {currentPage} / {Math.max(1, totalPages)} 页
+              {t('pageInfo', { current: currentPage, total: Math.max(1, totalPages) })}
             </span>
             <div className="hidden sm:flex items-center gap-1">
               <input
@@ -97,7 +99,7 @@ export default function Pagination({ total, currentPage, itemsPerPage }: Paginat
                 min={1}
                 max={totalPages}
                 className="w-12 px-1 py-1 text-center border border-border-input rounded-md text-sm outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground"
-                placeholder="页码"
+                placeholder={t('pagePlaceholder')}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     const val = parseInt((e.target as HTMLInputElement).value);
@@ -108,7 +110,7 @@ export default function Pagination({ total, currentPage, itemsPerPage }: Paginat
                   }
                 }}
               />
-              <span className="text-xs text-text-quaternary">跳转</span>
+              <span className="text-xs text-text-quaternary">{t('go')}</span>
             </div>
           </div>
 
@@ -132,7 +134,7 @@ export default function Pagination({ total, currentPage, itemsPerPage }: Paginat
                 />
               </svg>
             ) : (
-              '下一页'
+              t('nextPage')
             )}
           </button>
         </div>

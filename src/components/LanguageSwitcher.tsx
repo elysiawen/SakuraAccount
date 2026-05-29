@@ -1,0 +1,65 @@
+'use client';
+
+import { useLocale } from 'next-intl';
+import { useState, useRef, useEffect } from 'react';
+import { LOCALES } from '@/i18n/locales';
+
+export function LanguageSwitcher({ className, dropDown, align = 'left' }: { className?: string; dropDown?: boolean; align?: 'left' | 'right' }) {
+  const locale = useLocale();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const current = LOCALES.find(l => l.code === locale) ?? LOCALES[0];
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const switchLocale = (code: string) => {
+    document.cookie = `NEXT_LOCALE=${code};path=/;max-age=${365 * 24 * 60 * 60};SameSite=Lax`;
+    window.location.reload();
+  };
+
+  return (
+    <div ref={ref} className={`relative ${className ?? ''}`}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-colors"
+      >
+        <span className="text-base leading-none">{current.flag}</span>
+        <svg className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className={`absolute ${dropDown ? 'top-full mt-1' : 'bottom-full mb-1'} ${align === 'right' ? 'right-0' : 'left-0'} w-40 bg-card rounded-xl shadow-lg border border-border-strong py-1 z-[100] animate-fade-in`}>
+          {LOCALES.map(l => (
+            <button
+              key={l.code}
+              onClick={() => { setOpen(false); switchLocale(l.code); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${locale === l.code
+                ? 'text-accent-foreground bg-accent font-medium'
+                : 'text-text-secondary hover:bg-muted'
+                }`}
+            >
+              <span className="text-base">{l.flag}</span>
+              <span>{l.label}</span>
+              {locale === l.code && (
+                <svg className="w-4 h-4 ml-auto text-accent-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

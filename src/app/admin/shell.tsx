@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import AdminSidebar from './sidebar';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Menu } from 'lucide-react';
 
 export default function AdminShell({
@@ -20,12 +22,31 @@ export default function AdminShell({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const t = useTranslations('admin.nav');
 
   useEffect(() => {
     if (sessionInvalid) {
       window.location.href = '/auth/login';
     }
   }, [sessionInvalid]);
+
+  // Periodic session validation — redirects to login if session is revoked
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (!data.user) {
+          window.location.href = '/auth/login';
+        }
+      } catch {
+        // Network error — don't redirect, just skip this check
+      }
+    };
+
+    const interval = setInterval(checkSession, 5 * 60 * 1000); // every 5 minutes
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -63,7 +84,7 @@ export default function AdminShell({
           >
             <Menu className="h-6 w-6" />
           </button>
-          <span className="font-bold text-text-primary text-lg ml-3">管理后台</span>
+          <span className="font-bold text-text-primary text-lg ml-3">{t('adminPanel')}</span>
         </div>
 
         {/* Content Area */}

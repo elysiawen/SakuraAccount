@@ -141,7 +141,7 @@ class Database {
     const isPostgres = this.config.type === 'postgres';
     const jsonType = isPostgres ? 'JSONB' : 'JSON';
     const timestampType = isPostgres ? 'TIMESTAMP' : 'DATETIME';
-    const textType = isPostgres ? 'TEXT' : 'TEXT';
+    const textType = 'TEXT';
     const varcharType = (len: number) => `VARCHAR(${len})`;
 
     // Users table - using UUID v7 as primary key
@@ -289,19 +289,97 @@ class Database {
       }
     }
 
+    // Add ip_location and isp columns to sessions table
+    try {
+      await this.execute(`ALTER TABLE sessions ADD COLUMN ip_location ${varcharType(255)}`);
+    } catch (e: any) {
+      if (e?.code !== '42701' && e?.errno !== 1060) {
+        console.error('Failed to add ip_location column:', e);
+      }
+    }
+    try {
+      await this.execute(`ALTER TABLE sessions ADD COLUMN isp ${varcharType(255)}`);
+    } catch (e: any) {
+      if (e?.code !== '42701' && e?.errno !== 1060) {
+        console.error('Failed to add isp column:', e);
+      }
+    }
+
     // OAuth2 tokens table
     await this.execute(`
       CREATE TABLE IF NOT EXISTS oauth2_tokens (
         id ${varcharType(255)} PRIMARY KEY,
         client_id ${varcharType(255)} NOT NULL,
-        user_id ${varcharType(36)} NOT NULL,
+        user_id ${varcharType(36)},
         access_token ${textType} UNIQUE NOT NULL,
         refresh_token ${textType},
         scopes ${jsonType} NOT NULL,
         expires_at ${timestampType} NOT NULL,
         created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (client_id) REFERENCES oauth2_clients(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Add refresh_expires_at column to existing oauth2_tokens tables
+    try {
+      await this.execute(`ALTER TABLE oauth2_tokens ADD COLUMN refresh_expires_at ${timestampType}`);
+    } catch (e: any) {
+      if (e?.code !== '42701' && e?.errno !== 1060) {
+        console.error('Failed to add refresh_expires_at column:', e);
+      }
+    }
+
+    // Make user_id nullable for client_credentials (no user context)
+    try {
+      if (this.config.type === 'mysql') {
+        await this.execute(`ALTER TABLE oauth2_tokens MODIFY user_id ${varcharType(36)}`);
+      } else {
+        await this.execute(`ALTER TABLE oauth2_tokens ALTER COLUMN user_id DROP NOT NULL`);
+      }
+    } catch (e: any) {
+      // Column may already be nullable — ignore
+    }
+
+    // Update FK constraint to SET NULL on delete (for client_credentials tokens)
+    try {
+      if (this.config.type === 'mysql') {
+        const fkRows = await this.query(
+          `SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+           WHERE TABLE_NAME = 'oauth2_tokens' AND COLUMN_NAME = 'user_id'
+           AND REFERENCED_TABLE_NAME = 'users' AND CONSTRAINT_SCHEMA = DATABASE()`
+        );
+        if (fkRows.length > 0) {
+          await this.execute(`ALTER TABLE oauth2_tokens DROP FOREIGN KEY \`${fkRows[0].CONSTRAINT_NAME}\``);
+          await this.execute(`ALTER TABLE oauth2_tokens ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL`);
+        }
+      } else {
+        const fkRows = await this.query(
+          `SELECT constraint_name FROM information_schema.table_constraints
+           WHERE table_name = 'oauth2_tokens' AND constraint_type = 'FOREIGN KEY'
+           AND constraint_name LIKE '%user_id%'`
+        );
+        if (fkRows.length > 0) {
+          await this.execute(`ALTER TABLE oauth2_tokens DROP CONSTRAINT "${fkRows[0].constraint_name}"`);
+          await this.execute(`ALTER TABLE oauth2_tokens ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL`);
+        }
+      }
+    } catch (e: any) {
+      // Constraint may already be updated — ignore
+    }
+
+    // OAuth2 consents table
+    await this.execute(`
+      CREATE TABLE IF NOT EXISTS oauth2_consents (
+        id SERIAL PRIMARY KEY,
+        user_id ${varcharType(36)} NOT NULL,
+        client_id ${varcharType(255)} NOT NULL,
+        scopes ${jsonType} NOT NULL,
+        created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
+        updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (user_id, client_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (client_id) REFERENCES oauth2_clients(id) ON DELETE CASCADE
       )
     `);
 
@@ -343,6 +421,42 @@ class Database {
       )
     `);
 
+    // Global config table
+    await this.execute(`
+      CREATE TABLE IF NOT EXISTS global_config (
+        key ${varcharType(255)} PRIMARY KEY,
+        value ${textType},
+        updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Migrate old icon format: {"mode":"upload","url":"..."} -> new format
+    try {
+      const rows = await this.query("SELECT id, icon FROM oauth2_clients WHERE icon LIKE '{%}'");
+      for (const row of rows) {
+        try {
+          const parsed = JSON.parse(row.icon);
+          if (parsed.mode === 'upload' && parsed.url) {
+            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', [parsed.url, row.id]);
+            console.log(`Migrated icon for client ${row.id}: upload -> ${parsed.url}`);
+          } else if (parsed.mode === 'auto') {
+            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', ['auto', row.id]);
+            console.log(`Migrated icon for client ${row.id}: auto`);
+          } else if (parsed.mode === 'default') {
+            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', ['default', row.id]);
+            console.log(`Migrated icon for client ${row.id}: default`);
+          }
+        } catch {
+          // Skip invalid JSON
+        }
+      }
+      // Also migrate NULL to 'default'
+      await this.execute("UPDATE oauth2_clients SET icon = 'default' WHERE icon IS NULL");
+    } catch (e) {
+      // Migration may fail if table doesn't exist yet, that's ok
+      console.log('Icon migration skipped:', (e as Error).message);
+    }
+
     // Create indexes
     await this.createIndexes();
   }
@@ -372,6 +486,55 @@ class Database {
     }
     if (this.mysqlPool) {
       await this.mysqlPool.end();
+    }
+  }
+
+  // Global config methods
+  async getGlobalConfig(): Promise<Record<string, any>> {
+    const rows = await this.query('SELECT key, value FROM global_config');
+    const config: Record<string, any> = {};
+    for (const row of rows) {
+      try {
+        config[row.key] = JSON.parse(row.value);
+      } catch {
+        config[row.key] = row.value;
+      }
+    }
+    return config;
+  }
+
+  async getGlobalConfigValue(key: string): Promise<any | null> {
+    const row = await this.getOne('SELECT value FROM global_config WHERE key = ?', [key]);
+    if (!row) return null;
+    try {
+      return JSON.parse(row.value);
+    } catch {
+      return row.value;
+    }
+  }
+
+  async setGlobalConfig(key: string, value: any): Promise<void> {
+    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+    const isPostgres = this.config.type === 'postgres';
+    
+    if (isPostgres) {
+      await this.execute(
+        `INSERT INTO global_config (key, value, updated_at) VALUES (?, ?, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [key, stringValue]
+      );
+    } else {
+      await this.execute(
+        `INSERT INTO global_config (key, value, updated_at) VALUES (?, ?, NOW())
+         ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = NOW()`,
+        [key, stringValue]
+      );
+    }
+  }
+
+  async setGlobalConfigBatch(config: Record<string, any>): Promise<void> {
+    for (const [key, value] of Object.entries(config)) {
+      await this.setGlobalConfig(key, value);
     }
   }
 }

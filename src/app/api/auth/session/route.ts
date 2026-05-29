@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { internalError } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,6 +22,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ user });
   } catch (error) {
     console.error('Session error:', error);
-    return NextResponse.json({ user: null });
+    return internalError();
   }
 }

@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
+import AvatarCropper from '@/components/AvatarCropper';
+import { getErrorMessage } from '@/lib/api-error';
 
 interface Credential {
   id: string;
@@ -12,6 +15,7 @@ interface Credential {
 }
 
 export default function SettingsPage() {
+  const t = useTranslations('dashboard.settings');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
 
@@ -20,6 +24,11 @@ export default function SettingsPage() {
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -47,6 +56,7 @@ export default function SettingsPage() {
         setUser(data.user);
         setNickname(data.user.nickname || '');
         setEmail(data.user.email || '');
+        setAvatar(data.user.avatar || null);
       }
     } catch (err) {
       console.error('Failed to fetch profile:', err);
@@ -67,6 +77,104 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAvatarChange = (avatarUrl: string | null) => {
+    setAvatar(avatarUrl);
+    // Update user state
+    if (user) {
+      setUser({ ...user, avatar: avatarUrl });
+    }
+  };
+
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      error(t('avatarSizeLimit'));
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      error(t('avatarTypeInvalid'));
+      return;
+    }
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAvatarPreview(e.target?.result as string);
+      setShowCropper(true);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input value to allow selecting same file again
+    e.target.value = '';
+  };
+
+  const handleAvatarUpload = async (croppedImage: Blob) => {
+    setAvatarUploading(true);
+    setShowCropper(false);
+
+    try {
+      const formData = new FormData();
+      formData.append('avatar', croppedImage, 'avatar.webp');
+
+      const res = await fetch('/api/user/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setAvatar(data.avatarUrl);
+        if (user) {
+          setUser({ ...user, avatar: data.avatarUrl });
+        }
+        success(t('avatarUploadSuccess'));
+      } else {
+        error(getErrorMessage(data, t('avatarUploadFailed')));
+      }
+    } catch (err) {
+      error(t('avatarUploadFailed'));
+    } finally {
+      setAvatarUploading(false);
+      setAvatarPreview(null);
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    if (!avatar) return;
+
+    if (await confirm(t('deleteAvatarConfirm'), { confirmColor: 'red' })) {
+      setAvatarUploading(true);
+
+      try {
+        const res = await fetch('/api/user/avatar', {
+          method: 'DELETE',
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          setAvatar(null);
+          if (user) {
+            setUser({ ...user, avatar: null });
+          }
+          success(t('avatarDeleteSuccess'));
+        } else {
+          error(getErrorMessage(data, t('avatarDeleteFailed')));
+        }
+      } catch (err) {
+        error(t('avatarDeleteFailed'));
+      } finally {
+        setAvatarUploading(false);
+      }
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -81,13 +189,13 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (res.ok) {
-        success('个人资料已更新');
+        success(t('profileUpdated'));
         fetchProfile();
       } else {
-        error(data.error || '更新失败');
+        error(getErrorMessage(data, t('updateFailed')));
       }
     } catch (err) {
-      error('网络错误');
+      error(t('networkError'));
     } finally {
       setSavingProfile(false);
     }
@@ -97,17 +205,17 @@ export default function SettingsPage() {
     e.preventDefault();
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      error('请填写所有密码字段');
+      error(t('fillAllFields'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      error('两次输入的密码不一致');
+      error(t('passwordMismatch'));
       return;
     }
 
     if (newPassword.length < 8) {
-      error('新密码长度至少8位');
+      error(t('passwordTooShort'));
       return;
     }
 
@@ -123,15 +231,15 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (res.ok) {
-        success('密码修改成功');
+        success(t('passwordChangeSuccess'));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       } else {
-        error(data.error || '密码修改失败');
+        error(getErrorMessage(data, t('passwordChangeFailed')));
       }
     } catch (err) {
-      error('网络错误');
+      error(t('networkError'));
     } finally {
       setChangingPassword(false);
     }
@@ -163,21 +271,21 @@ export default function SettingsPage() {
       const data = await verifyRes.json();
 
       if (data.verified) {
-        success('Passkey 添加成功');
+        success(t('passkeyAddSuccess'));
         fetchCredentials();
       } else {
-        error('Passkey 添加失败');
+        error(t('passkeyAddFailed'));
       }
     } catch (err: any) {
       if (err.name !== 'NotAllowedError') {
-        error('Passkey 添加失败');
+        error(t('passkeyAddFailed'));
       }
     }
   };
 
   const handleRemovePasskey = async (credentialId: string) => {
-    confirm('确定要删除此 Passkey 吗？', {
-      confirmText: '删除',
+    confirm(t('delete'), {
+      confirmText: t('delete'),
       confirmColor: 'red',
       onConfirm: async () => {
         try {
@@ -186,21 +294,21 @@ export default function SettingsPage() {
           });
 
           if (res.ok) {
-            success('Passkey 已删除');
+            success(t('passkeyDeleteSuccess'));
             fetchCredentials();
           } else {
-            error('删除失败');
+            error(t('passkeyDeleteFailed'));
           }
         } catch (err) {
-          error('删除失败');
+          error(t('passkeyDeleteFailed'));
         }
       },
     });
   };
 
   const handleDeleteAccount = async () => {
-    confirm('确定要删除账号吗？此操作不可撤销，所有数据将被永久删除。', {
-      confirmText: '删除账号',
+    confirm(t('deleteAccountConfirm'), {
+      confirmText: t('deleteAccountBtn'),
       confirmColor: 'red',
       onConfirm: async () => {
         try {
@@ -209,13 +317,13 @@ export default function SettingsPage() {
           });
 
           if (res.ok) {
-            success('账号已删除');
+            success(t('accountDeleted'));
             window.location.href = '/';
           } else {
-            error('删除失败');
+            error(t('deleteFailed'));
           }
         } catch (err) {
-          error('删除失败');
+          error(t('deleteFailed'));
         }
       },
     });
@@ -235,32 +343,70 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">设置</h1>
+      <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
 
       {/* Profile Section */}
       <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
         <div className="flex items-center gap-3 mb-6">
           <span className="text-2xl">👤</span>
-          <h2 className="text-lg font-semibold text-text-primary">个人资料</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('profile')}</h2>
         </div>
 
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-text-tertiary text-2xl font-semibold border-2 border-border">
-            {user?.avatar ? (
-              <img src={user.avatar} alt="头像" className="w-full h-full object-cover rounded-full" />
-            ) : (
-              <span>{(nickname || user?.username || '').slice(0, 2).toUpperCase()}</span>
+          {/* Avatar Preview */}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
+              {avatar ? (
+                <img src={avatar} alt={t('avatar')} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-text-quaternary text-2xl">
+                  👤
+                </div>
+              )}
+            </div>
+            {avatarUploading && (
+              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                <svg className="animate-spin h-6 w-6 text-white" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              </div>
             )}
           </div>
-          <div>
-            <p className="font-medium text-text-primary">{user?.username}</p>
-            <p className="text-sm text-text-tertiary">{user?.role}</p>
+
+          {/* Upload/Delete Buttons */}
+          <div className="flex-1 space-y-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleAvatarFileSelect}
+              className="hidden"
+              disabled={avatarUploading}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              className={`inline-block px-4 py-2 bg-accent-button text-white rounded-lg hover:bg-accent-button-hover transition-colors cursor-pointer text-sm font-medium ${avatarUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {avatar ? t('changeAvatar') : t('uploadAvatar')}
+            </button>
+            {avatar && (
+              <button
+                onClick={handleAvatarDelete}
+                disabled={avatarUploading}
+                className="ml-2 px-4 py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t('deleteAvatar')}
+              </button>
+            )}
+            <p className="text-xs text-text-tertiary">{t('avatarHint')}</p>
           </div>
         </div>
 
         <form onSubmit={handleUpdateProfile} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">用户名</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('username')}</label>
             <input
               type="text"
               value={user?.username || ''}
@@ -269,24 +415,24 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">昵称</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('nickname')}</label>
             <input
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入昵称"
+              placeholder={t('nicknamePlaceholder')}
               disabled={savingProfile}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">邮箱</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('email')}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入邮箱"
+              placeholder={t('emailPlaceholder')}
               disabled={savingProfile}
             />
           </div>
@@ -302,7 +448,7 @@ export default function SettingsPage() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
               )}
-              {savingProfile ? '保存中...' : '保存资料'}
+              {savingProfile ? t('saving') : t('saveProfile')}
             </button>
           </div>
         </form>
@@ -312,40 +458,40 @@ export default function SettingsPage() {
       <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
         <div className="flex items-center gap-3 mb-6">
           <span className="text-2xl">🔑</span>
-          <h2 className="text-lg font-semibold text-text-primary">修改密码</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('changePassword')}</h2>
         </div>
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">当前密码</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('currentPassword')}</label>
             <input
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="请输入当前密码"
+              placeholder={t('currentPasswordPlaceholder')}
               disabled={changingPassword}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">新密码</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('newPassword')}</label>
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="请输入新密码（至少8位）"
+              placeholder={t('newPasswordPlaceholder')}
               disabled={changingPassword}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">确认新密码</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('confirmNewPassword')}</label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="请再次输入新密码"
+              placeholder={t('confirmNewPasswordPlaceholder')}
               disabled={changingPassword}
             />
           </div>
@@ -361,7 +507,7 @@ export default function SettingsPage() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
               )}
-              {changingPassword ? '修改中...' : '修改密码'}
+              {changingPassword ? t('changing') : t('changePasswordBtn')}
             </button>
           </div>
         </form>
@@ -374,7 +520,7 @@ export default function SettingsPage() {
             <span className="text-2xl">🔐</span>
             <div>
               <h2 className="text-lg font-semibold text-text-primary">Passkey</h2>
-              <p className="text-sm text-text-tertiary">无密码登录</p>
+              <p className="text-sm text-text-tertiary">{t('passwordlessLogin')}</p>
             </div>
           </div>
           <button
@@ -382,7 +528,7 @@ export default function SettingsPage() {
             className="px-4 py-2 bg-accent-button text-white rounded-xl text-sm font-medium hover:bg-accent-button-hover transition-colors flex items-center gap-2"
           >
             <span>+</span>
-            <span>添加 Passkey</span>
+            <span>{t('addPasskey')}</span>
           </button>
         </div>
 
@@ -406,7 +552,7 @@ export default function SettingsPage() {
                   <div>
                     <p className="font-medium text-text-primary">{cred.device_type || 'Passkey'}</p>
                     <p className="text-xs text-text-tertiary">
-                      添加于 {new Date(cred.created_at).toLocaleDateString('zh-CN')}
+                      {t('addedAt', { date: new Date(cred.created_at).toLocaleDateString() })}
                     </p>
                   </div>
                 </div>
@@ -414,7 +560,7 @@ export default function SettingsPage() {
                   onClick={() => handleRemovePasskey(cred.id)}
                   className="px-3 py-1.5 text-sm text-destructive hover:bg-error rounded-lg transition-colors"
                 >
-                  删除
+                  {t('delete')}
                 </button>
               </div>
             ))}
@@ -422,8 +568,8 @@ export default function SettingsPage() {
         ) : (
           <div className="text-center py-8">
             <span className="text-4xl mb-4 block">🔐</span>
-            <p className="text-text-tertiary">暂无 Passkey</p>
-            <p className="text-sm text-text-quaternary mt-1">添加 Passkey 以启用无密码登录</p>
+            <p className="text-text-tertiary">{t('noPasskey')}</p>
+            <p className="text-sm text-text-quaternary mt-1">{t('noPasskeyDesc')}</p>
           </div>
         )}
       </div>
@@ -432,22 +578,34 @@ export default function SettingsPage() {
       <div className="bg-card rounded-xl p-6 shadow-sm border border-destructive/30">
         <div className="flex items-center gap-3 mb-6">
           <span className="text-2xl">⚠️</span>
-          <h2 className="text-lg font-semibold text-destructive">危险操作</h2>
+          <h2 className="text-lg font-semibold text-destructive">{t('dangerZone')}</h2>
         </div>
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-text-primary">删除账号</p>
-            <p className="text-sm text-text-tertiary">永久删除您的账号和所有数据，此操作不可撤销</p>
+            <p className="font-medium text-text-primary">{t('deleteAccount')}</p>
+            <p className="text-sm text-text-tertiary">{t('deleteAccountDesc')}</p>
           </div>
           <button
             onClick={handleDeleteAccount}
             className="px-4 py-2 text-sm text-destructive border border-destructive/30 rounded-xl hover:bg-error transition-colors"
           >
-            删除账号
+            {t('deleteAccountBtn')}
           </button>
         </div>
       </div>
+
+      {/* Avatar Cropper */}
+      {showCropper && avatarPreview && (
+        <AvatarCropper
+          image={avatarPreview}
+          onCropComplete={handleAvatarUpload}
+          onCancel={() => {
+            setShowCropper(false);
+            setAvatarPreview(null);
+          }}
+        />
+      )}
     </div>
   );
 }

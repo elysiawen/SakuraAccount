@@ -23,12 +23,9 @@ export async function getAuthenticators(userId: string) {
   );
 
   return credentials.map(cred => ({
-    id: cred.id,
-    credentialID: cred.credential_id,
-    credentialPublicKey: Buffer.from(cred.public_key, 'base64'),
+    id: cred.credential_id,
+    publicKey: Buffer.from(cred.public_key, 'base64'),
     counter: cred.counter,
-    credentialDeviceType: cred.device_type,
-    credentialBackedUp: cred.backup_state,
     transports: cred.transports ? JSON.parse(cred.transports) : [],
   }));
 }
@@ -44,7 +41,7 @@ export async function generateRegistration(userId: string, username: string, dis
     userDisplayName: displayName || username,
     attestationType: 'none',
     excludeCredentials: authenticators.map(auth => ({
-      id: auth.credentialID,
+      id: auth.id,
       type: 'public-key' as const,
       transports: auth.transports as AuthenticatorTransportFuture[],
     })),
@@ -111,7 +108,7 @@ export async function generateAuthentication(userId?: string) {
     rpID,
     userVerification: 'preferred',
     allowCredentials: authenticators.map(auth => ({
-      id: auth.credentialID,
+      id: auth.id,
       type: 'public-key' as const,
       transports: auth.transports as AuthenticatorTransportFuture[],
     })),
@@ -134,11 +131,9 @@ export async function verifyAuthentication(
   }
 
   const authenticator = {
-    credentialID: credential.credential_id,
-    credentialPublicKey: Buffer.from(credential.public_key, 'base64'),
+    id: credential.credential_id,
+    publicKey: Buffer.from(credential.public_key, 'base64'),
     counter: credential.counter,
-    credentialDeviceType: credential.device_type,
-    credentialBackedUp: credential.backup_state,
     transports: credential.transports ? JSON.parse(credential.transports) : [],
   };
 

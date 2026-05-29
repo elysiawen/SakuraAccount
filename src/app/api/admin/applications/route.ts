@@ -1,48 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
 import { createClient, getAllClientsSummary } from '@/lib/oauth2';
+import { requireAdmin } from '@/lib/require-session';
+import { appListFailed, paramInvalid, appCreateFailed } from '@/lib/api-response';
 
-async function requireAdmin() {
-  const { cookies } = await import('next/headers');
-  const cookieStore = await cookies();
-  const sessionId = cookieStore.get('account_session')?.value;
-
-  if (!sessionId) return null;
-
-  const user = await getSession(sessionId);
-  if (!user || user.role !== 'admin') return null;
-
-  return user;
-}
-
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: '无权限' }, { status: 403 });
-    }
+    const result = await requireAdmin();
+    if ('error' in result) return result.error;
 
     const clients = await getAllClientsSummary();
-
     return NextResponse.json({ clients });
   } catch (error) {
     console.error('Admin OAuth2 error:', error);
-    return NextResponse.json({ error: '获取应用列表失败' }, { status: 500 });
+    return appListFailed();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: '无权限' }, { status: 403 });
-    }
+    const result = await requireAdmin();
+    if ('error' in result) return result.error;
+    const { user: admin } = result;
 
     const body = await request.json();
     const { name, description, appUrl, redirectUris, grants, scopes } = body;
 
     if (!name || !redirectUris || !redirectUris.length) {
-      return NextResponse.json({ error: '请填写必要字段' }, { status: 400 });
+      return paramInvalid('请填写必要字段');
     }
 
     const client = await createClient({
@@ -58,6 +42,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ client });
   } catch (error) {
     console.error('Admin create OAuth2 client error:', error);
-    return NextResponse.json({ error: '创建应用失败' }, { status: 500 });
+    return appCreateFailed();
   }
 }

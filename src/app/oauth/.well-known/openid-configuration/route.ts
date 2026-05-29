@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-const ISSUER = process.env.OAUTH2_ISSUER || 'http://localhost:3000';
+import { ISSUER } from '@/lib/oauth2';
 
 export async function GET() {
   const metadata = {
@@ -11,7 +10,7 @@ export async function GET() {
     jwks_uri: `${ISSUER}/oauth/.well-known/jwks.json`,
     scopes_supported: ['openid', 'profile', 'email'],
     response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code', 'refresh_token'],
+    grant_types_supported: ['authorization_code', 'refresh_token', 'client_credentials'],
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['RS256'],
     token_endpoint_auth_methods_supported: ['client_secret_post', 'client_secret_basic'],

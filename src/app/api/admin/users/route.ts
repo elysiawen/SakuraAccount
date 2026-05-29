@@ -1,135 +1,140 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, getUserByUsername, logAudit } from '@/lib/auth';
-import { isValidEmail } from '@/lib/utils';
-import { cookies } from 'next/headers';
+import { getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, getUserByUsername, logAudit } from '@/lib/auth';
+import { requireAdmin } from '@/lib/require-session';
+import { isValidEmail, validatePassword, validateNickname } from '@/lib/utils';
+import {
+    paramInvalid,
+    adminUserIdRequired,
+    adminCannotDeleteSelf,
+    adminUserDeleteFailed,
+    adminInvalidRole,
+    adminCannotChangeSelfRole,
+    adminUserUpdateFailed,
+    adminUserListFailed,
+    authWeakPassword,
+    authUsernameExists,
+} from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
-async function requireAdmin() {
-  const cookieStore = await cookies();
-  const sessionId = cookieStore.get('account_session')?.value;
-
-  if (!sessionId) return null;
-
-  const user = await getSession(sessionId);
-  if (!user || user.role !== 'admin') return null;
-
-  return user;
-}
+const VALIDATION_KEY_MAP: Record<string, string> = {
+  'PASSWORD_TOO_SHORT': 'validation.passwordTooShort',
+  'PASSWORD_NEEDS_LETTER_AND_NUMBER': 'validation.passwordNeedsLetterAndNumber',
+  'NICKNAME_EMPTY': 'validation.nicknameEmpty',
+  'NICKNAME_TOO_LONG': 'validation.nicknameTooLong',
+};
 
 export async function GET(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: '无权限' }, { status: 403 });
-    }
+    const result = await requireAdmin();
+    if ('error' in result) return result.error;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
 
-    const result = await getAllUsers(page, limit);
-
-    return NextResponse.json(result);
+    const data = await getAllUsers(page, limit);
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Admin users error:', error);
-    return NextResponse.json({ error: '获取用户列表失败' }, { status: 500 });
+    return adminUserListFailed();
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: '无权限' }, { status: 403 });
-    }
+    const result = await requireAdmin();
+    if ('error' in result) return result.error;
+    const { user: admin } = result;
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
 
     if (!userId) {
-      return NextResponse.json({ error: '请指定用户ID' }, { status: 400 });
+      return adminUserIdRequired();
     }
 
-    if (parseInt(userId) === admin.id) {
-      return NextResponse.json({ error: '不能删除自己的账号' }, { status: 400 });
+    if (userId === admin.id) {
+      return adminCannotDeleteSelf();
     }
 
-    await deleteUser(parseInt(userId));
-
+    await deleteUser(userId);
     await logAudit(admin.id, 'admin_delete_user', { targetUserId: userId }, 'admin', 'admin');
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin delete user error:', error);
-    return NextResponse.json({ error: '删除用户失败' }, { status: 500 });
+    return adminUserDeleteFailed();
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: '无权限' }, { status: 403 });
-    }
+    const result = await requireAdmin();
+    if ('error' in result) return result.error;
+    const { user: admin } = result;
 
     const body = await request.json();
     const { id, role } = body;
 
     if (!id || !role) {
-      return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
+      return paramInvalid(await tApi('sys.paramInvalid'));
     }
 
     if (!['user', 'admin'].includes(role)) {
-      return NextResponse.json({ error: '无效的角色' }, { status: 400 });
+      return adminInvalidRole();
     }
 
     if (id === admin.id) {
-      return NextResponse.json({ error: '不能修改自己的角色' }, { status: 400 });
+      return adminCannotChangeSelfRole();
     }
 
     await updateUserRole(id, role);
-
     await logAudit(admin.id, 'admin_update_user_role', { targetUserId: id, newRole: role }, 'admin', 'admin');
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin update user error:', error);
-    return NextResponse.json({ error: '更新用户失败' }, { status: 500 });
+    return adminUserUpdateFailed();
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: '无权限' }, { status: 403 });
-    }
+    const result = await requireAdmin();
+    if ('error' in result) return result.error;
+    const { user: admin } = result;
 
     const body = await request.json();
     const { id, username, nickname, email, newPassword } = body;
 
     if (!id) {
-      return NextResponse.json({ error: '缺少用户ID' }, { status: 400 });
+      return adminUserIdRequired();
     }
 
     if (email && !isValidEmail(email)) {
-      return NextResponse.json({ error: '请输入有效的邮箱地址' }, { status: 400 });
+      return paramInvalid(await tApi('sys.paramInvalid'));
     }
 
-    // Check username uniqueness if changed
+    const nicknameError = validateNickname(nickname);
+    if (nicknameError) {
+      const mapped = VALIDATION_KEY_MAP[nicknameError];
+      return paramInvalid(mapped ? await tApi(mapped) : nicknameError);
+    }
+
     if (username) {
       const existing = await getUserByUsername(username);
       if (existing && String(existing.id) !== String(id)) {
-        return NextResponse.json({ error: '用户名已被占用' }, { status: 400 });
+        return authUsernameExists();
       }
     }
 
-    // Update profile
-    await updateUser(id, { username, nickname, email });
+    await updateUser(id, { username, nickname: nickname?.trim(), email });
 
-    // Update password if provided
     if (newPassword) {
-      if (newPassword.length < 8) {
-        return NextResponse.json({ error: '密码长度至少8位' }, { status: 400 });
+      const passwordError = validatePassword(newPassword);
+      if (passwordError) {
+        const mapped = VALIDATION_KEY_MAP[passwordError];
+        return authWeakPassword(mapped ? await tApi(mapped) : passwordError);
       }
       await updateUserPassword(id, newPassword);
     }
@@ -139,6 +144,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin update user error:', error);
-    return NextResponse.json({ error: '更新用户失败' }, { status: 500 });
+    return adminUserUpdateFailed();
   }
 }

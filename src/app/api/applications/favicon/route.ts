@@ -7,6 +7,8 @@ function isValidDomain(domain: string): boolean {
   if (domain.length > 253 || domain.length < 1) return false;
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(domain)) return false;
   if (domain === 'localhost' || domain.endsWith('.local') || domain.endsWith('.internal')) return false;
+  if (domain === '169.254.169.254' || domain.endsWith('.169.254.169.254')) return false;
+  if (domain.startsWith('[') || domain.includes(':')) return false;
   return /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(domain);
 }
 
@@ -15,9 +17,13 @@ async function tryFetchFavicon(url: string): Promise<Response | null> {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT),
       headers: { 'User-Agent': USER_AGENT },
-      redirect: 'follow',
+      redirect: 'error',
     });
     if (res.ok) {
+      const contentLength = res.headers.get('content-length');
+      if (contentLength && parseInt(contentLength) > 1024 * 100) {
+        return null;
+      }
       const contentType = res.headers.get('content-type') || '';
       if (contentType.startsWith('image/') || url.endsWith('.ico')) {
         return res;

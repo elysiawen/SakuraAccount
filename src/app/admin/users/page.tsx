@@ -1,24 +1,67 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import Search from '@/components/Search';
 import Pagination from '@/components/Pagination';
 import Modal from '@/components/Modal';
+import AvatarUpload from '@/components/AvatarUpload';
+import { Shield, User as UserIcon, Mail, Key, Edit, Trash2 } from 'lucide-react';
+import { getErrorMessage } from '@/lib/api-error';
 
 interface User {
   id: number;
   username: string;
   email: string;
   nickname: string;
+  avatar?: string | null;
   role: string;
   email_verified: boolean;
   two_factor_enabled: boolean;
   created_at: string;
 }
 
+const AVATAR_COLORS = [
+  'from-pink-500/80 to-rose-500/80',
+  'from-violet-500/80 to-purple-500/80',
+  'from-sky-500/80 to-cyan-500/80',
+  'from-emerald-500/80 to-teal-500/80',
+  'from-amber-500/80 to-orange-500/80',
+];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function UserAvatar({ user, size = 'sm' }: { user: User; size?: 'sm' | 'md' }) {
+  const [errored, setErrored] = useState(false);
+  const dim = size === 'sm' ? 'w-9 h-9' : 'w-16 h-16';
+  const textSize = size === 'sm' ? 'text-sm' : 'text-xl';
+
+  if (user.avatar && !errored) {
+    return (
+      <img
+        src={user.avatar}
+        alt={user.username}
+        className={`${dim} rounded-full object-cover shrink-0`}
+        onError={() => setErrored(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`${dim} rounded-full bg-gradient-to-br ${getAvatarColor(user.username)} flex items-center justify-center text-white font-bold ${textSize} shadow-md shadow-black/10 shrink-0`}>
+      {(user.nickname || user.username).charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 export default function AdminUsersPage() {
+  const t = useTranslations('admin.users');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const [users, setUsers] = useState<User[]>([]);
@@ -27,8 +70,10 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ username: '', nickname: '', email: '', newPassword: '' });
+  const [editForm, setEditForm] = useState({ username: '', nickname: '', email: '', newPassword: '', role: 'user' });
+  const [editingAvatar, setEditingAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -49,49 +94,21 @@ export default function AdminUsersPage() {
   };
 
   const handleDeleteUser = async (userId: number, username: string) => {
-    confirm(`确定要删除用户 "${username}" 吗？此操作不可撤销。`, {
-      confirmText: '删除',
+    confirm(t('deleteConfirm', { name: username }), {
+      confirmText: t('delete'),
       confirmColor: 'red',
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/users?id=${userId}`, {
-            method: 'DELETE',
-          });
-
+          const res = await fetch(`/api/admin/users?id=${userId}`, { method: 'DELETE' });
           if (res.ok) {
-            success('用户已删除');
+            success(t('userDeleted'));
             fetchUsers();
           } else {
             const data = await res.json();
-            error(data.error || '删除失败');
+            error(getErrorMessage(data, t('deleteFailed')));
           }
-        } catch (err) {
-          error('删除失败');
-        }
-      },
-    });
-  };
-
-  const handleToggleRole = async (userId: number, currentRole: string) => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    confirm(`确定要将此用户的角色更改为 "${newRole}" 吗？`, {
-      confirmText: '确认',
-      onConfirm: async () => {
-        try {
-          const res = await fetch('/api/admin/users', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: userId, role: newRole }),
-          });
-
-          if (res.ok) {
-            success('用户角色已更新');
-            fetchUsers();
-          } else {
-            error('更新失败');
-          }
-        } catch (err) {
-          error('更新失败');
+        } catch {
+          error(t('deleteFailed'));
         }
       },
     });
@@ -99,18 +116,19 @@ export default function AdminUsersPage() {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
+    setEditingAvatar(user.avatar || null);
     setEditForm({
       username: user.username || '',
       nickname: user.nickname || '',
       email: user.email || '',
       newPassword: '',
+      role: user.role || 'user',
     });
   };
 
   const handleSaveUser = async () => {
     if (!editingUser) return;
     setSaving(true);
-
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
@@ -121,40 +139,45 @@ export default function AdminUsersPage() {
           nickname: editForm.nickname,
           email: editForm.email,
           newPassword: editForm.newPassword || undefined,
+          role: editForm.role,
         }),
       });
-
       if (res.ok) {
-        success('用户信息已更新');
+        success(t('userUpdated'));
         setEditingUser(null);
         fetchUsers();
       } else {
         const data = await res.json();
-        error(data.error || '更新失败');
+        error(getErrorMessage(data, t('updateFailed')));
       }
-    } catch (err) {
-      error('更新失败');
+    } catch {
+      error(t('updateFailed'));
     } finally {
       setSaving(false);
     }
   };
 
+  const inputStyle = (field: string) => ({
+    borderColor: focused === field ? 'var(--accent-button)' : 'var(--border-input)',
+    boxShadow: focused === field ? '0 0 0 3px color-mix(in srgb, var(--accent-button) 12%, transparent)' : 'none',
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">用户管理</h1>
+        <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
       </div>
 
       <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         <div className="p-4 border-b border-border">
-          <Search placeholder="搜索用户名、邮箱或昵称..." />
+          <Search placeholder={t('searchPlaceholder')} />
         </div>
 
         {loading ? (
           <div className="p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-16 bg-muted rounded-lg"></div>
+                <div className="h-16 bg-muted rounded-lg" />
               </div>
             ))}
           </div>
@@ -164,70 +187,69 @@ export default function AdminUsersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">用户</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">邮箱</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">角色</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">状态</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-text-secondary">注册时间</th>
-                    <th className="text-right px-4 py-3 text-sm font-medium text-text-secondary">操作</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('username')}</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('email')}</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('role')}</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('status')}</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('createdAt')}</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((user) => (
-                    <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium text-text-primary">{user.username}</p>
-                          <p className="text-xs text-text-tertiary">{user.nickname || '-'}</p>
+                    <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar user={user} />
+                          <div className="min-w-0">
+                            <p className="font-medium text-text-primary truncate">{user.username}</p>
+                            <p className="text-xs text-text-tertiary truncate">{user.nickname || '-'}</p>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleToggleRole(user.id, user.role)}
-                          className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      <td className="px-5 py-3.5 text-sm text-text-secondary">{user.email}</td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${
                             user.role === 'admin'
-                              ? 'bg-accent text-accent-foreground'
+                              ? 'bg-accent-button/10 text-accent-button'
                               : 'bg-muted text-text-secondary'
                           }`}
                         >
+                          <Shield className="w-3 h-3" />
                           {user.role}
-                        </button>
+                        </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-1.5">
                           {user.email_verified ? (
-                            <span className="text-xs px-2 py-0.5 bg-success text-success-foreground rounded-full">
-                              已验证
-                            </span>
+                            <span className="text-xs px-2 py-0.5 bg-success/10 text-success-foreground rounded-full">{t('verified')}</span>
                           ) : (
-                            <span className="text-xs px-2 py-0.5 bg-warning text-warning-foreground rounded-full">
-                              未验证
-                            </span>
+                            <span className="text-xs px-2 py-0.5 bg-warning/10 text-warning-foreground rounded-full">{t('unverified')}</span>
                           )}
                           {user.two_factor_enabled && (
-                            <span className="text-xs px-2 py-0.5 bg-info text-info-foreground rounded-full">
-                              2FA
-                            </span>
+                            <span className="text-xs px-2 py-0.5 bg-info/10 text-info-foreground rounded-full">2FA</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-tertiary">
+                      <td className="px-5 py-3.5 text-sm text-text-tertiary">
                         {new Date(user.created_at).toLocaleDateString('zh-CN')}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => handleEditUser(user)}
-                            className="text-sm text-accent-foreground hover:bg-accent px-2 py-1 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-1 text-sm text-accent-foreground hover:bg-accent px-2.5 py-1.5 rounded-lg transition-colors"
                           >
-                            编辑
+                            <Edit className="w-3.5 h-3.5" />
+                            {t('edit')}
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.id, user.username)}
-                            className="text-sm text-destructive hover:bg-error px-2 py-1 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-1 text-sm text-destructive hover:bg-error px-2.5 py-1.5 rounded-lg transition-colors"
                           >
-                            删除
+                            <Trash2 className="w-3.5 h-3.5" />
+                            {t('delete')}
                           </button>
                         </div>
                       </td>
@@ -239,9 +261,12 @@ export default function AdminUsersPage() {
             <Pagination total={total} currentPage={page} itemsPerPage={limit} />
           </>
         ) : (
-          <div className="text-center py-12">
-            <span className="text-4xl mb-4 block">👥</span>
-            <p className="text-text-tertiary">暂无用户</p>
+          <div className="text-center py-16">
+            <div className="w-14 h-14 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <UserIcon className="w-7 h-7 text-text-quaternary" />
+            </div>
+            <p className="text-text-secondary font-medium">{t('noUsers')}</p>
+            <p className="text-sm text-text-quaternary mt-1">{t('noUsers')}</p>
           </div>
         )}
       </div>
@@ -250,14 +275,14 @@ export default function AdminUsersPage() {
       <Modal
         isOpen={!!editingUser}
         onClose={() => setEditingUser(null)}
-        title={`编辑用户 - ${editingUser?.username}`}
+        title={`${t('editUser')} - ${editingUser?.username}`}
         footer={
           <div className="flex justify-end gap-3 p-4 border-t border-border">
             <button
               onClick={() => setEditingUser(null)}
               className="px-4 py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
             >
-              取消
+              {t('cancel')}
             </button>
             <button
               onClick={handleSaveUser}
@@ -270,52 +295,165 @@ export default function AdminUsersPage() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
               )}
-              {saving ? '保存中...' : '保存'}
+              {saving ? t('saving') : t('save')}
             </button>
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-5 p-4">
+          {/* Avatar */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">用户名</label>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+              <UserIcon className="w-3.5 h-3.5" />
+              {t('avatar')}
+            </label>
+            {editingUser && (
+              <AvatarUpload
+                currentAvatar={editingAvatar}
+                onAvatarChange={(url) => {
+                  setEditingAvatar(url);
+                  fetchUsers();
+                }}
+                uploadUrl={`/api/admin/users/${editingUser.id}/avatar`}
+                deleteUrl={`/api/admin/users/${editingUser.id}/avatar`}
+              >
+                {({ isUploading, preview, triggerUpload, handleDelete }) => (
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
+                        {(preview || editingAvatar) ? (
+                          <img src={preview || editingAvatar!} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-text-quaternary text-2xl">
+                            👤
+                          </div>
+                        )}
+                      </div>
+                      {isUploading && (
+                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                          <svg className="animate-spin h-6 w-6 text-white" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={triggerUpload}
+                          disabled={isUploading}
+                          className={`inline-block px-4 py-2 bg-accent-button text-white rounded-lg hover:bg-accent-button-hover transition-colors cursor-pointer text-sm font-medium ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {editingAvatar ? t('changeAvatar') : t('uploadAvatar')}
+                        </button>
+                        {editingAvatar && (
+                          <button
+                            type="button"
+                            onClick={handleDelete}
+                            disabled={isUploading}
+                            className="ml-2 px-4 py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {t('delete')}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-text-tertiary">{t('avatarHint')}</p>
+                    </div>
+                  </div>
+                )}
+              </AvatarUpload>
+            )}
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+              <UserIcon className="w-3.5 h-3.5" />
+              {t('username')}
+            </label>
             <input
               type="text"
               value={editForm.username}
               onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入用户名"
+              onFocus={() => setFocused('username')}
+              onBlur={() => setFocused(null)}
+              className="w-full px-4 py-2.5 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+              style={inputStyle('username')}
+              placeholder={t('username')}
             />
           </div>
+
+          {/* Nickname */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">昵称</label>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+              <UserIcon className="w-3.5 h-3.5" />
+              {t('nickname')}
+            </label>
             <input
               type="text"
               value={editForm.nickname}
               onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })}
-              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入昵称"
+              onFocus={() => setFocused('nickname')}
+              onBlur={() => setFocused(null)}
+              className="w-full px-4 py-2.5 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+              style={inputStyle('nickname')}
+              placeholder={t('nickname')}
             />
           </div>
+
+          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">邮箱</label>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+              <Mail className="w-3.5 h-3.5" />
+              {t('email')}
+            </label>
             <input
               type="email"
               value={editForm.email}
               onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="输入邮箱"
+              onFocus={() => setFocused('email')}
+              onBlur={() => setFocused(null)}
+              className="w-full px-4 py-2.5 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+              style={inputStyle('email')}
+              placeholder={t('email')}
             />
           </div>
+
+          {/* Role */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">重置密码</label>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+              <Shield className="w-3.5 h-3.5" />
+              {t('role')}
+            </label>
+            <select
+              value={editForm.role}
+              onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+              className="w-full px-4 py-2.5 bg-background border border-border-input rounded-xl text-sm text-foreground outline-none transition-all duration-200 focus:border-accent-button focus:ring-2 focus:ring-accent-button/20"
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+              <Key className="w-3.5 h-3.5" />
+              {t('resetPassword')}
+            </label>
             <input
               type="password"
               value={editForm.newPassword}
               onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
-              placeholder="留空则不修改密码"
+              onFocus={() => setFocused('newPassword')}
+              onBlur={() => setFocused(null)}
+              className="w-full px-4 py-2.5 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+              style={inputStyle('newPassword')}
+              placeholder={t('leaveEmptyForNoChange')}
             />
-            <p className="text-xs text-text-quaternary mt-1">留空表示不修改密码</p>
+            <p className="text-xs text-text-quaternary mt-1.5">{t('leaveEmptyForNoChangePassword')}</p>
           </div>
         </div>
       </Modal>

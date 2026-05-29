@@ -1,11 +1,50 @@
 import { cookies } from 'next/headers';
-import { getSession, User } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { getSession, getRequestMetadata, User } from '@/lib/auth';
+import { authNotLoggedIn, authTokenExpired, adminPermissionDenied } from '@/lib/api-response';
 
-export async function requireSession(): Promise<User | null> {
+export async function requireSession(request?: Request): Promise<User | null> {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get('account_session')?.value;
 
   if (!sessionId) return null;
 
-  return getSession(sessionId);
+  const ip = request ? getRequestMetadata(request).ip : undefined;
+  return getSession(sessionId, ip);
+}
+
+export async function requireAuthenticatedUser(request?: Request): Promise<
+  | { user: User; sessionId: string }
+  | { error: NextResponse }
+> {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get('account_session')?.value;
+
+  if (!sessionId) {
+    return { error: await authNotLoggedIn() };
+  }
+
+  const ip = request ? getRequestMetadata(request).ip : undefined;
+  const user = await getSession(sessionId, ip);
+
+  if (!user) {
+    return { error: await authTokenExpired() };
+  }
+
+  return { user, sessionId };
+}
+
+export async function requireAdmin(): Promise<
+  | { user: User; sessionId: string }
+  | { error: NextResponse }
+> {
+  const result = await requireAuthenticatedUser();
+
+  if ('error' in result) return result;
+
+  if (result.user.role !== 'admin') {
+    return { error: await adminPermissionDenied() };
+  }
+
+  return result;
 }

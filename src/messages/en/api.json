@@ -1,0 +1,88 @@
+{
+  "sys": {
+    "paramInvalid": "Invalid parameters",
+    "resourceNotFound": "Resource not found",
+    "rateLimitExceeded": "Too many requests, please retry in {seconds} seconds",
+    "internalError": "Internal server error, please try again later",
+    "connectionFailed": "Connection failed",
+    "csrfFailed": "CSRF verification failed"
+  },
+  "auth": {
+    "notLoggedIn": "Please login first",
+    "tokenExpired": "Session expired, please login again",
+    "loginFailed": "Invalid username or password",
+    "passwordWrong": "Incorrect current password",
+    "userNotFound": "User not found",
+    "captchaExpired": "Captcha expired",
+    "usernameExists": "Username already taken",
+    "emailExists": "Email already registered",
+    "weakPassword": "Password too weak",
+    "passkeyNotFound": "Passkey not found or no permission",
+    "passkeyVerifyFailed": "Passkey authentication failed"
+  },
+  "user": {
+    "notFound": "User not found",
+    "avatarUploadFailed": "Avatar upload failed, please try again later",
+    "avatarDeleteFailed": "Avatar deletion failed, please try again later",
+    "avatarNotSet": "No avatar set",
+    "avatarSizeLimit": "File size cannot exceed 10MB",
+    "avatarTypeInvalid": "Only image files are allowed",
+    "passwordNotSet": "Account has no password set",
+    "updateFailed": "Update failed",
+    "deleteFailed": "Account deletion failed",
+    "passwordChangeFailed": "Password change failed"
+  },
+  "session": {
+    "listFailed": "Failed to fetch session list",
+    "cannotRevokeCurrent": "Cannot revoke current session",
+    "notFound": "Session not found or no permission",
+    "revokeAllFailed": "Failed to revoke sessions",
+    "idRequired": "Session ID required"
+  },
+  "passkey": {
+    "listFailed": "Failed to fetch Passkey list",
+    "idRequired": "Passkey ID required",
+    "deleteFailed": "Failed to delete Passkey",
+    "operationFailed": "Operation failed",
+    "invalidRequest": "Invalid request",
+    "invalidOperation": "Invalid operation"
+  },
+  "admin": {
+    "permissionDenied": "Access denied",
+    "userListFailed": "Failed to fetch user list",
+    "userIdRequired": "User ID required",
+    "cannotDeleteSelf": "Cannot delete your own account",
+    "userDeleteFailed": "Failed to delete user",
+    "cannotChangeSelfRole": "Cannot change your own role",
+    "invalidRole": "Invalid role",
+    "userUpdateFailed": "Failed to update user",
+    "auditLogFailed": "Failed to fetch audit logs"
+  },
+  "app": {
+    "idRequired": "Application ID required",
+    "notFound": "Application not found",
+    "createFailed": "Failed to create application",
+    "updateFailed": "Failed to update application",
+    "deleteFailed": "Failed to delete application",
+    "listFailed": "Failed to fetch application list",
+    "clientIdRequired": "Missing required parameter: client_id",
+    "invalidClient": "Invalid client application",
+    "iconSizeLimit": "File size cannot exceed 2MB",
+    "iconTypeInvalid": "Only image files are allowed",
+    "iconUploadFailed": "Icon upload failed"
+  },
+  "token": {
+    "appRequired": "Application required",
+    "revokeFailed": "Failed to revoke access",
+    "listFailed": "Failed to fetch authorization list"
+  },
+  "oauth": {
+    "accessDenied": "User denied the authorization request"
+  },
+  "validation": {
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordNeedsLetterAndNumber": "Password must contain at least one letter and one number",
+    "nicknameEmpty": "Nickname cannot be empty",
+    "nicknameTooLong": "Nickname cannot exceed 50 characters"
+  }
+}

@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { PublicNav } from '@/components/PublicNav';
 import { useToast } from '@/components/ToastProvider';
+import { getErrorMessage } from '@/lib/api-error';
 
 function SakuraPetal({ delay, left, size, duration }: { delay: number; left: string; size: number; duration: number }) {
   return (
@@ -27,6 +30,7 @@ function SakuraPetal({ delay, left, size, duration }: { delay: number; left: str
 }
 
 export default function RegisterPage() {
+  const t = useTranslations('auth.register');
   const router = useRouter();
   const { success, error } = useToast();
 
@@ -52,15 +56,15 @@ export default function RegisterPage() {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !email || !password) {
-      error('请填写所有必填字段');
+      error(t('fillRequired'));
       return;
     }
     if (password !== confirmPassword) {
-      error('两次输入的密码不一致');
+      error(t('passwordMismatch'));
       return;
     }
     if (password.length < 8) {
-      error('密码长度至少8位');
+      error(t('passwordTooShort'));
       return;
     }
     setLoading(true);
@@ -72,17 +76,17 @@ export default function RegisterPage() {
       });
       const data = await response.json();
       if (response.ok) {
-        success('注册成功');
+        success(t('registerSuccess'));
         router.push('/dashboard');
       } else {
-        error(data.error || '注册失败');
+        error(getErrorMessage(data, t('registerFailed')));
       }
     } catch {
-      error('网络错误，请稍后重试');
+      error(t('networkError'));
     } finally {
       setLoading(false);
     }
-  }, [username, email, password, confirmPassword, nickname, router, success, error]);
+  }, [username, email, password, confirmPassword, nickname, router, success, error, t]);
 
   const inputStyle = (field: string) => ({
     borderColor: focused === field ? 'var(--accent-button)' : 'var(--border-input)',
@@ -113,6 +117,9 @@ export default function RegisterPage() {
       `}</style>
 
       <main className="min-h-screen relative overflow-hidden flex items-center justify-center bg-background">
+        {/* Nav */}
+        <PublicNav absolute />
+
         {/* Ambient background */}
         <div className="absolute inset-0">
           <div
@@ -151,30 +158,25 @@ export default function RegisterPage() {
         <div className="relative z-10 w-full max-w-[960px] mx-auto px-6 py-12 flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           {/* Left — branding */}
           <div
-            className="flex-1 text-center lg:text-left"
+            className="hidden lg:block flex-1 text-center lg:text-left"
             style={{
               opacity: mounted ? 1 : 0,
               transform: mounted ? 'translateY(0)' : 'translateY(20px)',
               transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s',
             }}
           >
-            <Link href="/" className="inline-flex items-center gap-2.5 mb-10">
-              <img src="/sakura.ico" alt="Sakura" className="w-8 h-8" />
-              <span className="text-base font-semibold text-foreground tracking-tight">Sakura Account</span>
-            </Link>
-
             <h1 className="text-4xl lg:text-5xl font-light text-foreground leading-tight tracking-tight mb-4">
-              创建账户
+              {t('title')}
             </h1>
             <p className="text-base text-muted-foreground leading-relaxed max-w-sm mx-auto lg:mx-0 mb-10">
-              注册 Sakura Account，获取统一身份认证能力。
+              {t('subtitle')}
             </p>
 
             <div className="hidden lg:flex flex-col gap-3">
               {[
-                '支持 Passkey 无密码登录',
-                'OAuth 2.0 / OIDC 标准协议',
-                '完整的安全审计日志',
+                t('featurePasskey'),
+                t('featureOAuth'),
+                t('featureAudit'),
               ].map((text, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-pink-400/50" />
@@ -195,14 +197,14 @@ export default function RegisterPage() {
           >
             <div className="bg-card/80 dark:bg-card/60 backdrop-blur-xl border border-border rounded-2xl p-8 shadow-lg shadow-black/[0.04] dark:shadow-black/20">
               <div className="mb-7">
-                <h2 className="text-xl font-medium text-foreground mb-1">注册</h2>
-                <p className="text-sm text-muted-foreground">创建您的新账户</p>
+                <h2 className="text-xl font-medium text-foreground mb-1">{t('formTitle')}</h2>
+                <p className="text-sm text-muted-foreground">{t('register')}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
-                    用户名 <span className="text-pink-400">*</span>
+                    {t('username')} <span className="text-pink-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -212,14 +214,14 @@ export default function RegisterPage() {
                     onBlur={() => setFocused(null)}
                     className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
                     style={inputStyle('username')}
-                    placeholder="请输入用户名"
+                    placeholder={t('username')}
                     disabled={loading}
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
-                    邮箱 <span className="text-pink-400">*</span>
+                    {t('email')} <span className="text-pink-400">*</span>
                   </label>
                   <input
                     type="email"
@@ -229,13 +231,13 @@ export default function RegisterPage() {
                     onBlur={() => setFocused(null)}
                     className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
                     style={inputStyle('email')}
-                    placeholder="请输入邮箱"
+                    placeholder={t('email')}
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">昵称</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">{t('nickname')}</label>
                   <input
                     type="text"
                     value={nickname}
@@ -244,7 +246,7 @@ export default function RegisterPage() {
                     onBlur={() => setFocused(null)}
                     className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
                     style={inputStyle('nickname')}
-                    placeholder="选填，默认使用用户名"
+                    placeholder={t('nicknameHint')}
                     disabled={loading}
                   />
                 </div>
@@ -252,7 +254,7 @@ export default function RegisterPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
-                      密码 <span className="text-pink-400">*</span>
+                      {t('password')} <span className="text-pink-400">*</span>
                     </label>
                     <input
                       type="password"
@@ -262,13 +264,13 @@ export default function RegisterPage() {
                       onBlur={() => setFocused(null)}
                       className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
                       style={inputStyle('password')}
-                      placeholder="至少8位"
+                      placeholder={t('passwordHint')}
                       disabled={loading}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
-                      确认密码 <span className="text-pink-400">*</span>
+                      {t('confirmPassword')} <span className="text-pink-400">*</span>
                     </label>
                     <input
                       type="password"
@@ -278,7 +280,7 @@ export default function RegisterPage() {
                       onBlur={() => setFocused(null)}
                       className="w-full px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
                       style={inputStyle('confirmPassword')}
-                      placeholder="再次输入"
+                      placeholder={t('confirmPasswordHint')}
                       disabled={loading}
                     />
                   </div>
@@ -295,14 +297,14 @@ export default function RegisterPage() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                   )}
-                  {loading ? '注册中...' : '创建账户'}
+                  {loading ? t('registering') : t('createAccount')}
                 </button>
               </form>
 
               <p className="text-center text-sm text-muted-foreground mt-7">
-                已有账号？{' '}
+                {t('hasAccount')}{' '}
                 <Link href="/auth/login" className="text-accent-button hover:text-accent-button-hover transition-colors font-medium">
-                  登录
+                  {t('login')}
                 </Link>
               </p>
             </div>

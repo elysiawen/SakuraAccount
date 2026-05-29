@@ -34,14 +34,19 @@ async function init() {
 
     if (!adminUser) {
       // Create default admin user
-      const user = await createUser('admin', 'admin@sakura.local', 'admin123456', 'Administrator');
+      const { randomBytes } = await import('crypto');
+      const adminPassword = process.env.ADMIN_PASSWORD || randomBytes(24).toString('base64url');
+      const user = await createUser('admin', 'admin@sakura.local', adminPassword, 'Administrator');
       await updateUserRole(user.id, 'admin');
       console.log('Default admin user created:');
       console.log('  Username: admin');
-      console.log('  Password: admin123456');
+      if (!process.env.ADMIN_PASSWORD) {
+        console.log(`  Password: ${adminPassword}`);
+        console.log('  *** SAVE THIS PASSWORD - it will NOT be shown again! ***');
+      } else {
+        console.log('  Password: (from ADMIN_PASSWORD env var)');
+      }
       console.log('  Email: admin@sakura.local');
-      console.log('');
-      console.log('Please change the password after first login!');
     } else {
       console.log('Admin user already exists.');
     }

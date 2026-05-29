@@ -1,60 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createUser, getUserByUsername, getUserByEmail, createSession, logAudit } from '@/lib/auth';
-import { isValidEmail, isValidUsername } from '@/lib/utils';
-import { cookies } from 'next/headers';
+import { createUser, getUserByUsername, getUserByEmail, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
+import { isValidEmail, isValidUsername, validatePassword, validateNickname } from '@/lib/utils';
+import { paramInvalid, authUsernameExists, authEmailExists, authWeakPassword, internalError } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
+
+const VALIDATION_KEY_MAP: Record<string, string> = {
+  'PASSWORD_TOO_SHORT': 'validation.passwordTooShort',
+  'PASSWORD_NEEDS_LETTER_AND_NUMBER': 'validation.passwordNeedsLetterAndNumber',
+  'NICKNAME_EMPTY': 'validation.nicknameEmpty',
+  'NICKNAME_TOO_LONG': 'validation.nicknameTooLong',
+};
+
+async function translateValidationKey(key: string): Promise<string> {
+  const mapped = VALIDATION_KEY_MAP[key];
+  if (mapped) return tApi(mapped);
+  return key;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, email, password, nickname } = body;
 
-    // Validation
     if (!username || !email || !password) {
-      return NextResponse.json({ error: '请填写所有必填字段' }, { status: 400 });
+      return paramInvalid(await tApi('sys.paramInvalid'));
     }
 
     if (!isValidUsername(username)) {
-      return NextResponse.json({ error: '用户名只能包含字母、数字、下划线和连字符，长度3-50' }, { status: 400 });
+      return paramInvalid(await tApi('sys.paramInvalid'));
     }
 
     if (!isValidEmail(email)) {
-      return NextResponse.json({ error: '请输入有效的邮箱地址' }, { status: 400 });
+      return paramInvalid(await tApi('sys.paramInvalid'));
     }
 
-    if (password.length < 8) {
-      return NextResponse.json({ error: '密码长度至少8位' }, { status: 400 });
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return authWeakPassword(await translateValidationKey(passwordError));
     }
 
-    // Check if user exists
+    const nicknameError = validateNickname(nickname);
+    if (nicknameError) {
+      return paramInvalid(await translateValidationKey(nicknameError));
+    }
+
     const existingUser = await getUserByUsername(username);
-    if (existingUser) {
-      return NextResponse.json({ error: '用户名已存在' }, { status: 409 });
-    }
-
     const existingEmail = await getUserByEmail(email);
-    if (existingEmail) {
-      return NextResponse.json({ error: '邮箱已被注册' }, { status: 409 });
+    if (existingUser || existingEmail) {
+      if (existingUser) return authUsernameExists();
+      return authEmailExists();
     }
 
-    // Create user
-    const user = await createUser(username, email, password, nickname);
-
-    // Create session
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-    const userAgent = request.headers.get('user-agent') || 'unknown';
+    const user = await createUser(username, email, password, nickname?.trim());
+    const { ip, userAgent } = getRequestMetadata(request);
     const sessionId = await createSession(user.id, ip, userAgent);
-
-    // Set cookie
-    const cookieStore = await cookies();
-    cookieStore.set('account_session', sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: parseInt(process.env.SESSION_EXPIRY || '604800'),
-      path: '/',
-    });
-
-    // Log audit
+    await setSessionCookie(sessionId);
     await logAudit(user.id, 'register', { username, email }, ip, userAgent);
 
     return NextResponse.json({
@@ -69,6 +69,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Register error:', error);
-    return NextResponse.json({ error: '注册失败，请稍后重试' }, { status: 500 });
+    return internalError();
   }
 }

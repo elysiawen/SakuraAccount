@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { getClient, generateAuthorizationCode } from '@/lib/oauth2';
-import { cookies } from 'next/headers';
+import { getClient, generateAuthorizationCode, saveConsent } from '@/lib/oauth2';
+import { requireAuthenticatedUser } from '@/lib/require-session';
+
+const NO_STORE_HEADERS: Record<string, string> = {
+  'Cache-Control': 'no-store',
+  'Pragma': 'no-cache',
+};
+
+function htmlError(status: number, title: string, message: string): NextResponse {
+  const body = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>${title}</title></head>
+<body><h1>${title}</h1><p>${message}</p></body>
+</html>`;
+  return new NextResponse(body, {
+    status,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      ...NO_STORE_HEADERS,
+    },
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,59 +34,58 @@ export async function POST(request: NextRequest) {
     const nonce = params.get('nonce');
     const approved = params.get('approved') === 'true';
 
-    if (!clientId || !redirectUri) {
-      return NextResponse.json({ error: 'missing_parameters' }, { status: 400 });
+    // Non-redirectable: missing parameters
+    if (!clientId) {
+      return htmlError(400, 'Invalid Request', 'Missing required parameter: client_id');
     }
 
-    // User denied
-    if (!approved) {
-      const errorUrl = new URL(redirectUri);
-      errorUrl.searchParams.set('error', 'access_denied');
-      if (state) errorUrl.searchParams.set('state', state);
-      return NextResponse.json({ redirect: errorUrl.toString() });
+    if (!redirectUri) {
+      return htmlError(400, 'Invalid Request', 'Missing required parameter: redirect_uri');
     }
 
-    // Verify user session
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get('account_session')?.value;
-
-    if (!sessionId) {
-      return NextResponse.json({ error: 'login_required' }, { status: 401 });
-    }
-
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
-    const user = await getSession(sessionId, ip);
-
-    if (!user) {
-      return NextResponse.json({ error: 'login_required' }, { status: 401 });
-    }
-
-    // Validate client
+    // Non-redirectable: client validation
     const client = await getClient(clientId);
     if (!client) {
-      return NextResponse.json({ error: 'invalid_client' }, { status: 400 });
+      return htmlError(400, 'Invalid Client', 'The provided client_id is invalid.');
     }
 
     if (client.status === 'disabled') {
-      return NextResponse.json({ error: 'client_disabled' }, { status: 400 });
+      return htmlError(400, 'Client Disabled', 'This client has been disabled.');
     }
 
+    // Non-redirectable: redirect_uri mismatch
     if (!client.redirectUris.includes(redirectUri)) {
-      return NextResponse.json({ error: 'invalid_redirect_uri' }, { status: 400 });
+      return htmlError(400, 'Invalid Redirect URI', 'The redirect_uri does not match any registered URI for this client.');
     }
 
-    // Generate authorization code
-    const scopes = scope ? scope.split(' ') : ['openid', 'profile'];
-    const code = await generateAuthorizationCode(clientId, user.id, redirectUri, scopes, nonce || undefined);
+    // Redirectable: return JSON with redirect URL (SPA calls this via fetch, not browser navigation)
+    if (!approved) {
+      const errorUrl = new URL(redirectUri);
+      errorUrl.searchParams.set('error', 'access_denied');
+      errorUrl.searchParams.set('error_description', 'The user denied the authorization request.');
+      if (state) errorUrl.searchParams.set('state', state);
+      return NextResponse.json({ redirect: errorUrl.toString() }, { headers: NO_STORE_HEADERS });
+    }
 
-    // Build redirect URL
+    const result = await requireAuthenticatedUser();
+    if ('error' in result) {
+      return htmlError(401, 'Login Required', 'You must be logged in to authorize an application.');
+    }
+
+    const scopes = scope ? scope.split(' ') : ['openid', 'profile'];
+
+    // Save consent so future requests can skip the consent page
+    await saveConsent(result.user.id, clientId, scopes);
+
+    const code = await generateAuthorizationCode(clientId, result.user.id, redirectUri, scopes, nonce || undefined);
+
     const callbackUrl = new URL(redirectUri);
     callbackUrl.searchParams.set('code', code);
     if (state) callbackUrl.searchParams.set('state', state);
 
-    return NextResponse.json({ redirect: callbackUrl.toString() });
+    return NextResponse.json({ redirect: callbackUrl.toString() }, { headers: NO_STORE_HEADERS });
   } catch (error) {
     console.error('Consent error:', error);
-    return NextResponse.json({ error: 'consent_failed' }, { status: 500 });
+    return htmlError(500, 'Server Error', 'An unexpected error occurred. Please try again later.');
   }
 }

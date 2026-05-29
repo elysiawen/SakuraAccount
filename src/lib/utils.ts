@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -56,10 +57,11 @@ export function truncate(str: string, length: number): string {
 }
 
 export function generateRandomString(length: number): string {
+  const bytes = randomBytes(length);
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars[bytes[i] % chars.length];
   }
   return result;
 }
@@ -72,6 +74,19 @@ export function isValidEmail(email: string): boolean {
 export function isValidUsername(username: string): boolean {
   const usernameRegex = /^[a-zA-Z0-9_-]{3,50}$/;
   return usernameRegex.test(username);
+}
+
+export function validatePassword(password: string): string | null {
+  if (password.length < 8) return 'PASSWORD_TOO_SHORT';
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) return 'PASSWORD_NEEDS_LETTER_AND_NUMBER';
+  return null;
+}
+
+export function validateNickname(nickname: unknown): string | null {
+  if (nickname === undefined || nickname === null) return null;
+  if (typeof nickname !== 'string' || nickname.trim().length === 0) return 'NICKNAME_EMPTY';
+  if ((nickname as string).length > 50) return 'NICKNAME_TOO_LONG';
+  return null;
 }
 
 export function getInitials(name: string): string {

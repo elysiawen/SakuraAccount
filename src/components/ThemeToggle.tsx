@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState, useRef } from 'react';
 import { Sun, Moon, Clock, Monitor } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 const MODE_KEY = 'sakura-theme-mode';
 
@@ -13,15 +14,10 @@ function isDarkHour(): boolean {
 
 const MODE_KEYS = ['light', 'dark', 'auto', 'system'] as const;
 const MODE_ICONS: Record<string, typeof Sun> = { light: Sun, dark: Moon, auto: Clock, system: Monitor };
-const MODE_LABELS: Record<string, string> = {
-  light: '浅色',
-  dark: '深色',
-  auto: '自动',
-  system: '系统',
-};
 
-export function ThemeToggle() {
+export function ThemeToggle({ dropDown }: { dropDown?: boolean }) {
   const { setTheme } = useTheme();
+  const t = useTranslations('common.theme');
   const [mode, setMode] = useState<string>('auto');
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
@@ -68,7 +64,7 @@ export function ThemeToggle() {
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-colors"
-        title={MODE_LABELS[currentKey]}
+        title={t(currentKey)}
       >
         <Icon className="w-4 h-4" />
         <svg className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +73,7 @@ export function ThemeToggle() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-36 bg-card rounded-xl shadow-lg border border-border-strong py-1 z-[100] animate-fade-in">
+        <div className={`absolute ${dropDown ? 'top-full mt-1' : 'bottom-full mb-1'} left-0 w-36 bg-card rounded-xl shadow-lg border border-border-strong py-1 z-[100] animate-fade-in`}>
           {MODE_KEYS.map(key => {
             const ModeIcon = MODE_ICONS[key];
             return (
@@ -91,7 +87,7 @@ export function ThemeToggle() {
                 }`}
               >
                 <ModeIcon className="w-4 h-4" />
-                <span>{MODE_LABELS[key]}</span>
+                <span>{t(key)}</span>
                 {mode === key && (
                   <svg className="w-4 h-4 ml-auto text-accent-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

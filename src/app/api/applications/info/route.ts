@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getClient } from '@/lib/oauth2';
+import { appClientIdRequired, appNotFound, internalError } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,22 +8,25 @@ export async function GET(request: NextRequest) {
     const clientId = searchParams.get('id');
 
     if (!clientId) {
-      return NextResponse.json({ error: 'missing_id' }, { status: 400 });
+      return appClientIdRequired();
     }
 
     const client = await getClient(clientId);
     if (!client) {
-      return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      return appNotFound();
     }
 
     return NextResponse.json({
       client: {
         name: client.name,
         description: client.description,
+        icon: client.icon,
+        appUrl: client.appUrl,
+        redirectUris: client.redirectUris,
       },
     });
   } catch (error) {
     console.error('App info error:', error);
-    return NextResponse.json({ error: 'failed' }, { status: 500 });
+    return internalError();
   }
 }

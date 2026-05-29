@@ -1,0 +1,74 @@
+{
+  "metadata": {
+    "title": "Sakura Account - Unified Identity Platform",
+    "description": "Sakura Account is a modern unified identity platform supporting email/password login, Passkey/WebAuthn, OAuth2.0 and more."
+  },
+  "confirm": {
+    "title": "Confirm Action",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "processing": "Processing..."
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto",
+    "system": "System"
+  },
+  "pagination": {
+    "showingRange": "Showing {from} - {to} of {total} entries",
+    "perPage": "{count} / page",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "pageInfo": "Page {current} / {total}",
+    "pagePlaceholder": "Page",
+    "go": "Go"
+  },
+  "avatarCropper": {
+    "title": "Crop Avatar",
+    "description": "Select the area to crop",
+    "selectCropArea": "Please select a crop area first",
+    "cropFailed": "Crop failed, please try again",
+    "rotation": "Rotation",
+    "rotateLeft": "Rotate Left 90°",
+    "rotateRight": "Rotate Right 90°",
+    "reset": "Reset",
+    "cancel": "Cancel",
+    "processing": "Processing...",
+    "confirmUpload": "Confirm Upload",
+    "zoom": "Zoom",
+    "fit": "Fit"
+  },
+  "avatarUpload": {
+    "uploadSuccess": "Avatar uploaded successfully",
+    "uploadFailed": "Avatar upload failed",
+    "deleteSuccess": "Avatar deleted",
+    "deleteFailed": "Avatar deletion failed",
+    "invalidType": "Only image files are allowed",
+    "sizeLimit": "File size cannot exceed 10MB"
+  },
+  "home": {
+    "console": "Console",
+    "login": "Login",
+    "register": "Register",
+    "systemRunning": "System Running",
+    "title1": "Unified",
+    "title2": "Identity",
+    "title3": "Platform",
+    "subtitle": "Secure, scalable authentication infrastructure. Enterprise-grade identity for your applications.",
+    "enterConsole": "Enter Console",
+    "getStarted": "Get Started",
+    "loginAccount": "Login",
+    "featurePasskey": "Passkey / WebAuthn",
+    "featurePasskeyDesc": "Passwordless auth based on FIDO2",
+    "featureOAuth": "OAuth 2.0 / OIDC",
+    "featureOAuthDesc": "Standard authorization, third-party integration",
+    "featureAudit": "Security Audit",
+    "featureAuditDesc": "Complete operation logs and device management"
+  },
+  "status": {
+    "loading": "Loading...",
+    "noData": "No data",
+    "networkError": "Network error, please try again later"
+  }
+}

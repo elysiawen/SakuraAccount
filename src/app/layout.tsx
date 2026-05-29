@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import Script from 'next/script';
 import './globals.css';
 import ProgressBar from '@/components/ProgressBar';
 import { Providers } from '@/components/Providers';
 import { Suspense } from 'react';
+import { getLocale, getMessages, getTranslations, getTimeZone } from 'next-intl/server';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -16,31 +16,38 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata: Metadata = {
-  title: 'Sakura Account - 统一身份认证平台',
-  description: 'Sakura Account 是一个现代化的统一身份认证平台，支持邮箱密码登录、Passkey/WebAuthn、OAuth2.0等多种认证方式。',
-  icons: {
-    icon: '/sakura.ico',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('common.metadata');
+  return {
+    title: t('title'),
+    description: t('description'),
+    icons: {
+      icon: '/sakura.ico',
+    },
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+  const timeZone = await getTimeZone();
+
   return (
-    <html lang="zh-CN" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <head />
-      <body className="min-h-full flex flex-col">
-        <Script
+    <html lang={locale} suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <head>
+        <script
           id="theme-init"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var m=localStorage.getItem('sakura-theme-mode')||'auto';var h=new Date().getHours();if(m==='dark'||(m==='auto'&&(h>=19||h<7)))document.documentElement.classList.add('dark')}catch(e){}})()`,
           }}
         />
-        <Providers>
+      </head>
+      <body className="min-h-full flex flex-col">
+        <Providers locale={locale} messages={messages} timeZone={timeZone}>
           <Suspense fallback={null}>
             <ProgressBar />
           </Suspense>

@@ -1,43 +1,32 @@
-export interface IconConfig {
-  mode: 'default' | 'auto' | 'custom';
-  url?: string;
-}
-
-export function parseIconConfig(icon?: string | null): IconConfig {
+/**
+ * 解析图标配置
+ * @param icon 图标字段值
+ * @returns 解析后的图标配置对象
+ */
+export function parseIconConfig(icon?: string | null): { mode: 'default' | 'auto' | 'upload'; url?: string } {
   if (!icon) return { mode: 'default' };
-  try {
-    const parsed = JSON.parse(icon);
-    if (parsed && typeof parsed === 'object' && (parsed.mode === 'default' || parsed.mode === 'auto' || parsed.mode === 'custom')) {
-      return parsed;
-    }
-  } catch {
-    // not JSON — treat as default
-  }
-  return { mode: 'default' };
-}
-
-function extractDomain(url: string): string | null {
-  try {
-    const u = new URL(url);
-    return u.hostname;
-  } catch {
-    return null;
-  }
-}
-
-export function resolveAppIcon(client: { icon?: string | null; appUrl?: string | null; redirectUris?: string[] }): string | null {
-  const config = parseIconConfig(client.icon);
-
-  if (config.mode === 'auto') {
-    const domain = extractDomain(client.appUrl || client.redirectUris?.[0] || '');
-    if (domain) {
-      return `/api/applications/favicon?domain=${encodeURIComponent(domain)}`;
+  if (icon.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(icon);
+      if (parsed.url) return { mode: 'upload', url: parsed.url };
+    } catch {
+      // 不是有效 JSON
     }
   }
+  return { mode: 'upload', url: icon };
+}
 
-  if (config.mode === 'custom' && config.url) {
-    return config.url;
+/**
+ * 解析应用图标
+ * @param icon 图标字段值：
+ *   - null/空/'default' = 默认图标（首字母）
+ *   - '/api/applications/favicon?domain=xxx' = 自动获取的favicon
+ *   - 'https://oss...' = 上传的自定义图标URL
+ * @returns 图标URL或null
+ */
+export function resolveAppIcon(icon?: string | null): string | null {
+  if (!icon || icon === 'default') {
+    return null; // 使用默认首字母图标
   }
-
-  return null;
+  return icon;
 }

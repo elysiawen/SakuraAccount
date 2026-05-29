@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { PublicNav } from '@/components/PublicNav';
 
 function SakuraPetal({ delay, left, size, duration }: { delay: number; left: string; size: number; duration: number }) {
   return (
@@ -25,6 +27,7 @@ function SakuraPetal({ delay, left, size, duration }: { delay: number; left: str
 }
 
 export default function Home() {
+  const t = useTranslations('common.home');
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
 
@@ -103,37 +106,25 @@ export default function Home() {
         {/* Content */}
         <div className="relative z-10 min-h-screen flex flex-col">
           {/* Nav */}
-          <nav className="flex items-center justify-between px-8 md:px-16 py-6" style={fadeUp(0)}>
-            <Link href="/" className="flex items-center gap-2.5">
-              <img src="/sakura.ico" alt="Sakura" className="w-8 h-8" />
-              <span className="text-base font-semibold text-foreground tracking-tight">Sakura Account</span>
-            </Link>
-            <div className="flex items-center gap-3">
-              {user ? (
-                <Link
-                  href="/dashboard"
-                  className="text-sm text-foreground bg-accent-button hover:bg-accent-button-hover text-white rounded-lg px-4 py-2 transition-all duration-200 font-medium"
-                >
-                  控制台
+          <div style={fadeUp(0)}>
+            <PublicNav
+              extra={user && (
+                <Link href="/dashboard" className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-accent-button/10 flex items-center justify-center text-accent-button font-semibold text-sm overflow-hidden shrink-0">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      (user.nickname || user.username || '').charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="text-sm font-medium text-foreground">{user.nickname || user.username}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
                 </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/auth/login"
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2"
-                  >
-                    登录
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    className="text-sm text-white bg-accent-button hover:bg-accent-button-hover rounded-lg px-4 py-2 transition-all duration-200 font-medium"
-                  >
-                    注册
-                  </Link>
-                </>
               )}
-            </div>
-          </nav>
+            />
+          </div>
 
           {/* Hero */}
           <div className="flex-1 flex items-center justify-center px-8 md:px-16">
@@ -142,26 +133,24 @@ export default function Home() {
               <div className="flex items-center gap-2 mb-8" style={fadeUp(0.15)}>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/80 border border-border">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" style={{ animation: 'pulse 2s ease-in-out infinite' }} />
-                  <span className="text-xs text-muted-foreground tracking-wide">系统运行中</span>
+                  <span className="text-xs text-muted-foreground tracking-wide">{t('systemRunning')}</span>
                 </div>
               </div>
 
               {/* Heading */}
               <div style={fadeUp(0.25)}>
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-light text-foreground leading-[0.95] tracking-tight mb-2">
-                  统一身份
+                  {t('title1')}
                 </h1>
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-light leading-[0.95] tracking-tight mb-8">
-                  <span className="text-foreground">认证</span>
-                  <span className="text-muted-foreground/30 ml-4">平台</span>
+                  <span className="text-foreground">{t('title2')}</span>
+                  <span className="text-muted-foreground/30 ml-4">{t('title3')}</span>
                 </h1>
               </div>
 
               {/* Subtitle */}
               <p className="text-base md:text-lg text-muted-foreground max-w-lg mb-12 leading-relaxed" style={fadeUp(0.35)}>
-                安全、可扩展的身份认证基础设施。
-                <br />
-                为您的应用提供企业级认证能力。
+                {t('subtitle')}
               </p>
 
               {/* CTA */}
@@ -171,7 +160,7 @@ export default function Home() {
                     href="/dashboard"
                     className="group inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-accent-button text-white rounded-lg font-medium text-sm hover:bg-accent-button-hover transition-all duration-200"
                   >
-                    <span>进入控制台</span>
+                    <span>{t('enterConsole')}</span>
                     <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
@@ -182,7 +171,7 @@ export default function Home() {
                       href="/auth/register"
                       className="group inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-accent-button text-white rounded-lg font-medium text-sm hover:bg-accent-button-hover transition-all duration-200"
                     >
-                      <span>开始使用</span>
+                      <span>{t('getStarted')}</span>
                       <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
@@ -191,7 +180,7 @@ export default function Home() {
                       href="/auth/login"
                       className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-muted-foreground hover:text-foreground bg-card/60 hover:bg-card border border-border hover:border-border-strong rounded-lg text-sm transition-all duration-200"
                     >
-                      登录账户
+                      {t('loginAccount')}
                     </Link>
                   </>
                 )}
@@ -210,8 +199,8 @@ export default function Home() {
                         <path d="M7 11V7a5 5 0 0110 0v4" />
                       </svg>
                     ),
-                    title: 'Passkey / WebAuthn',
-                    desc: '无密码认证，基于 FIDO2 标准',
+                    title: t('featurePasskey'),
+                    desc: t('featurePasskeyDesc'),
                   },
                   {
                     icon: (
@@ -221,8 +210,8 @@ export default function Home() {
                         <path d="M2 12l10 5 10-5" />
                       </svg>
                     ),
-                    title: 'OAuth 2.0 / OIDC',
-                    desc: '标准授权协议，支持第三方接入',
+                    title: t('featureOAuth'),
+                    desc: t('featureOAuthDesc'),
                   },
                   {
                     icon: (
@@ -231,8 +220,8 @@ export default function Home() {
                         <path d="M9 12l2 2 4-4" />
                       </svg>
                     ),
-                    title: '安全审计',
-                    desc: '完整的操作日志与设备管理',
+                    title: t('featureAudit'),
+                    desc: t('featureAuditDesc'),
                   },
                 ].map((feature, i) => (
                   <div

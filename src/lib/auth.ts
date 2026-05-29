@@ -2,9 +2,15 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { nanoid } from 'nanoid';
 import { uuidv7 } from 'uuidv7';
+import { cookies } from 'next/headers';
 import { db } from './db';
+import { getLocation } from './ip-location';
 
-const SECRET = new TextEncoder().encode(process.env.APP_SECRET || 'default-secret');
+const APP_SECRET = process.env.APP_SECRET;
+if (!APP_SECRET) {
+  throw new Error('FATAL: APP_SECRET environment variable is required. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+}
+const SECRET = new TextEncoder().encode(APP_SECRET);
 const SESSION_EXPIRY = parseInt(process.env.SESSION_EXPIRY || '604800');
 
 export interface User {
@@ -55,12 +61,49 @@ export async function createSession(userId: string, ip?: string, userAgent?: str
   const sessionId = nanoid(32);
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY * 1000);
 
+  // Get IP location and ISP info
+  let ipLocation = '';
+  let isp = '';
+  if (ip) {
+    try {
+      const locInfo = await getLocation(ip);
+      ipLocation = locInfo.location || '';
+      isp = locInfo.isp || '';
+    } catch {
+      // Ignore location lookup errors
+    }
+  }
+
   await db.execute(
-    'INSERT INTO sessions (id, user_id, ip, user_agent, expires_at) VALUES (?, ?, ?, ?, ?)',
-    [sessionId, userId, ip, userAgent, expiresAt]
+    'INSERT INTO sessions (id, user_id, ip, user_agent, ip_location, isp, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [sessionId, userId, ip, userAgent, ipLocation, isp, expiresAt]
   );
 
   return sessionId;
+}
+
+export async function setSessionCookie(sessionId: string): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set('account_session', sessionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: SESSION_EXPIRY,
+    path: '/',
+  });
+}
+
+export function getRequestMetadata(request: Request): { ip: string; userAgent: string } {
+  // 优先级: CF-Connecting-IP (Cloudflare) > X-Forwarded-For > X-Real-IP
+  const ip = request.headers.get('cf-connecting-ip')
+    || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+
+  return {
+    ip,
+    userAgent: request.headers.get('user-agent') || 'unknown',
+  };
 }
 
 export async function getSession(sessionId: string, ip?: string): Promise<User | null> {
@@ -75,9 +118,18 @@ export async function getSession(sessionId: string, ip?: string): Promise<User |
 
   if (!session) return null;
 
-  // Update IP if changed
+  // Update IP and location if changed
   if (ip && session.ip !== ip) {
-    await db.execute('UPDATE sessions SET ip = ? WHERE id = ?', [ip, sessionId]);
+    try {
+      const locInfo = await getLocation(ip);
+      await db.execute(
+        'UPDATE sessions SET ip = ?, ip_location = ?, isp = ? WHERE id = ?',
+        [ip, locInfo.location || '', locInfo.isp || '', sessionId]
+      );
+    } catch {
+      // If location lookup fails, just update IP
+      await db.execute('UPDATE sessions SET ip = ? WHERE id = ?', [ip, sessionId]);
+    }
   }
 
   return {
@@ -96,13 +148,21 @@ export async function deleteSession(sessionId: string): Promise<void> {
   await db.execute('DELETE FROM sessions WHERE id = ?', [sessionId]);
 }
 
+export async function sessionBelongsToUser(sessionId: string, userId: string): Promise<boolean> {
+  const session = await db.getOne(
+    'SELECT user_id FROM sessions WHERE id = ?',
+    [sessionId]
+  );
+  return session?.user_id === userId;
+}
+
 export async function deleteUserSessions(userId: string): Promise<void> {
   await db.execute('DELETE FROM sessions WHERE user_id = ?', [userId]);
 }
 
 export async function getUserSessions(userId: string): Promise<any[]> {
   return db.query(
-    'SELECT id, ip, user_agent, created_at, expires_at FROM sessions WHERE user_id = ? ORDER BY created_at DESC',
+    'SELECT id, ip, user_agent, ip_location, isp, created_at, expires_at FROM sessions WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   );
 }
@@ -167,7 +227,7 @@ export async function getUserById(id: string): Promise<any | null> {
   return db.getOne('SELECT * FROM users WHERE id = ?', [id]);
 }
 
-export async function updateUser(id: string, data: Partial<User>): Promise<void> {
+export async function updateUser(id: string, data: { username?: string; nickname?: string; avatar?: string | null; email?: string }): Promise<void> {
   const fields: string[] = [];
   const values: any[] = [];
 
