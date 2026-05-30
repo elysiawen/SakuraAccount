@@ -179,7 +179,7 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
     return new Date(dateStr).toLocaleString('zh-CN');
   };
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://account.example.com';
+  const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
   const integrationExamples = {
     javascript: `// 使用授权码流程进行OAuth认证
