@@ -70,7 +70,7 @@ export default async function Home() {
           />
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-5 sm:px-8 md:px-16">
+        <div className="flex-1 flex items-center justify-center px-5 sm:px-8 md:px-16 pt-32 sm:pt-0">
           <div className="max-w-4xl w-full">
             <div className="animate-slide-in-up" style={{ animationDelay: '0.25s' }}>
               <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-light text-foreground leading-[0.95] tracking-tight mb-2">

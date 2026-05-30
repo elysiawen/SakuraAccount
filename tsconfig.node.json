@@ -6,7 +6,10 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "strict": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["scripts/**/*", "src/lib/**/*"]
 }

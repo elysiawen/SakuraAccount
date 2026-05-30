@@ -77,6 +77,7 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const page = 1;
   const limit = DEFAULT_PAGE_SIZE;
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -107,6 +108,12 @@ export default function AdminUsersPage() {
     }, 0);
     return () => window.clearTimeout(timeoutId);
   }, [fetchUsers]);
+
+  useEffect(() => {
+    fetch('/api/auth/session').then(res => res.json()).then(data => {
+      if (data.user?.id) setCurrentUserId(String(data.user.id));
+    }).catch(() => {});
+  }, []);
 
   const handleDeleteUser = async (userId: number, username: string) => {
     confirm(t('deleteConfirm', { name: username }), {
@@ -178,6 +185,7 @@ export default function AdminUsersPage() {
   const handleSaveUser = async () => {
     if (!editingUser) return;
     setSaving(true);
+    const isSelf = String(editingUser.id) === currentUserId;
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
@@ -188,7 +196,7 @@ export default function AdminUsersPage() {
           nickname: editForm.nickname,
           email: editForm.email,
           newPassword: editForm.newPassword || undefined,
-          role: editForm.role,
+          ...(isSelf ? {} : { role: editForm.role }),
         }),
       });
       if (res.ok) {
@@ -530,21 +538,23 @@ export default function AdminUsersPage() {
           </div>
 
           {/* Role */}
-          <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
-              <Shield className="w-3.5 h-3.5" />
-              {t('role')}
-            </label>
-            <select
-              value={editForm.role}
-              onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-              className="w-full px-4 py-2.5 bg-background border border-border-input rounded-xl text-sm text-foreground outline-none transition-all duration-200 focus:border-accent-button focus:ring-2 focus:ring-accent-button/20"
-            >
-              <option value="user">{t('roleUser')}</option>
-              <option value="developer">{t('roleDeveloper')}</option>
-              <option value="admin">{t('roleAdmin')}</option>
-            </select>
-          </div>
+          {editingUser && String(editingUser.id) !== currentUserId && (
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+                <Shield className="w-3.5 h-3.5" />
+                {t('role')}
+              </label>
+              <select
+                value={editForm.role}
+                onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                className="w-full px-4 py-2.5 bg-background border border-border-input rounded-xl text-sm text-foreground outline-none transition-all duration-200 focus:border-accent-button focus:ring-2 focus:ring-accent-button/20"
+              >
+                <option value="user">{t('roleUser')}</option>
+                <option value="developer">{t('roleDeveloper')}</option>
+                <option value="admin">{t('roleAdmin')}</option>
+              </select>
+            </div>
+          )}
 
           {/* Password */}
           <div>
