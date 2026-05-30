@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage } from '@/lib/api-error';
@@ -13,21 +13,33 @@ export default function StorageSettingsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [config, setConfig] = useState<Record<string, any>>({});
+  interface StorageSettingsConfig {
+    storageProvider?: 'local' | 's3';
+    localStoragePath?: string;
+    iconStoragePath?: string;
+    s3Preset?: string;
+    s3AccountId?: string;
+    s3Endpoint?: string;
+    s3Region?: string;
+    s3AccessKeyId?: string;
+    s3SecretAccessKey?: string;
+    s3BucketName?: string;
+    s3PublicDomain?: string;
+    s3FolderPath?: string;
+    s3IconFolderPath?: string;
+  }
+
+  const [config, setConfig] = useState<StorageSettingsConfig>({});
   const [storageProvider, setStorageProvider] = useState<'local' | 's3'>('local');
   const [s3Preset, setS3Preset] = useState('cloudflare-r2');
   const [s3AccountId, setS3AccountId] = useState('');
   const [s3Endpoint, setS3Endpoint] = useState('');
   const [s3Region, setS3Region] = useState('auto');
 
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/settings');
-      const data = await res.json();
+      const data = (await res.json()) as StorageSettingsConfig;
       setConfig(data);
       setStorageProvider(data.storageProvider || 'local');
       const preset = data.s3Preset || 'cloudflare-r2';
@@ -40,7 +52,14 @@ export default function StorageSettingsPanel() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchConfig();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchConfig]);
 
   const handlePresetChange = (preset: string) => {
     setS3Preset(preset);
@@ -70,6 +89,11 @@ export default function StorageSettingsPanel() {
     }
   };
 
+  const getFormString = (formData: FormData, key: string, fallback: string): string => {
+    const value = formData.get(key);
+    return typeof value === 'string' ? value : fallback;
+  };
+
   const isEndpointEditable = s3Preset === 'custom' || s3Preset === 'minio';
 
   const handleSave = async (e: React.FormEvent) => {
@@ -79,24 +103,25 @@ export default function StorageSettingsPanel() {
     try {
       const form = e.target as HTMLFormElement;
       const formData = new FormData(form);
+      const storageProviderValue = getFormString(formData, 'storageProvider', 'local');
 
-      const storageConfig: Record<string, any> = {
-        storageProvider: formData.get('storageProvider') || 'local',
-        localStoragePath: formData.get('localStoragePath') || '/uploads/avatars',
-        iconStoragePath: formData.get('iconStoragePath') || '/uploads/icons',
+      const storageConfig: StorageSettingsConfig = {
+        storageProvider: storageProviderValue === 's3' ? 's3' : 'local',
+        localStoragePath: getFormString(formData, 'localStoragePath', '/uploads/avatars'),
+        iconStoragePath: getFormString(formData, 'iconStoragePath', '/uploads/icons'),
       };
 
       if (storageConfig.storageProvider === 's3') {
-        storageConfig.s3Preset = formData.get('s3Preset') || 'cloudflare-r2';
-        storageConfig.s3Endpoint = formData.get('s3Endpoint') || '';
-        storageConfig.s3Region = formData.get('s3Region') || 'auto';
-        storageConfig.s3AccessKeyId = formData.get('s3AccessKeyId') || '';
-        storageConfig.s3SecretAccessKey = formData.get('s3SecretAccessKey') || '';
-        storageConfig.s3BucketName = formData.get('s3BucketName') || '';
-        storageConfig.s3PublicDomain = formData.get('s3PublicDomain') || '';
-        storageConfig.s3FolderPath = formData.get('s3FolderPath') || 'avatars';
-        storageConfig.s3IconFolderPath = formData.get('s3IconFolderPath') || 'icons';
-        storageConfig.s3AccountId = formData.get('s3AccountId') || '';
+        storageConfig.s3Preset = getFormString(formData, 's3Preset', 'cloudflare-r2');
+        storageConfig.s3Endpoint = getFormString(formData, 's3Endpoint', '');
+        storageConfig.s3Region = getFormString(formData, 's3Region', 'auto');
+        storageConfig.s3AccessKeyId = getFormString(formData, 's3AccessKeyId', '');
+        storageConfig.s3SecretAccessKey = getFormString(formData, 's3SecretAccessKey', '');
+        storageConfig.s3BucketName = getFormString(formData, 's3BucketName', '');
+        storageConfig.s3PublicDomain = getFormString(formData, 's3PublicDomain', '');
+        storageConfig.s3FolderPath = getFormString(formData, 's3FolderPath', 'avatars');
+        storageConfig.s3IconFolderPath = getFormString(formData, 's3IconFolderPath', 'icons');
+        storageConfig.s3AccountId = getFormString(formData, 's3AccountId', '');
       }
 
       const res = await fetch('/api/admin/settings', {
@@ -113,7 +138,7 @@ export default function StorageSettingsPanel() {
       } else {
         error(getErrorMessage(data, t('saveFailed')));
       }
-    } catch (err) {
+    } catch {
       error(t('networkError'));
     } finally {
       setSaving(false);
@@ -145,7 +170,7 @@ export default function StorageSettingsPanel() {
       } else {
         error(getErrorMessage(data, t('connectionFailed')));
       }
-    } catch (err) {
+    } catch {
       error(t('networkError'));
     } finally {
       setTesting(false);

@@ -1,15 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revokeToken, deleteConsent } from '@/lib/oauth2';
+import { deleteConsent } from '@/lib/oauth2';
 import { requireAuthenticatedUser } from '@/lib/require-session';
 import { db } from '@/lib/db';
 import { tokenListFailed, tokenAppRequired, tokenRevokeFailed } from '@/lib/api-response';
+
+interface TokenAppRow extends Record<string, unknown> {
+  client_id: string;
+  consented_scopes: string | string[] | null;
+  consented_at: string;
+  client_name: string | null;
+  client_description: string | null;
+  icon: string | null;
+  app_url: string | null;
+  token_count: number | string | null;
+  latest_token_at: string | null;
+}
+
+function parseScopes(value: TokenAppRow['consented_scopes']): string[] {
+  if (Array.isArray(value)) return value.filter((scope): scope is string => typeof scope === 'string');
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter((scope): scope is string => typeof scope === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
 
 export async function GET() {
   try {
     const result = await requireAuthenticatedUser();
     if ('error' in result) return result.error;
 
-    const rows = await db.query(
+    const rows = await db.query<TokenAppRow>(
       `SELECT
          con.client_id,
          con.scopes as consented_scopes,
@@ -26,13 +51,13 @@ export async function GET() {
       [result.user.id]
     );
 
-    const apps = rows.map((row: any) => ({
+    const apps = rows.map((row) => ({
       clientId: row.client_id,
       name: row.client_name || row.client_id,
       description: row.client_description || '',
       icon: row.icon || undefined,
       appUrl: row.app_url || undefined,
-      scopes: typeof row.consented_scopes === 'string' ? JSON.parse(row.consented_scopes) : row.consented_scopes,
+      scopes: parseScopes(row.consented_scopes),
       tokenCount: Number(row.token_count) || 0,
       latestCreatedAt: row.latest_token_at || row.consented_at,
     }));

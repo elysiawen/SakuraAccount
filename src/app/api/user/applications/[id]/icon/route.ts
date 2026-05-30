@@ -12,13 +12,19 @@ import {
   internalError,
   adminPermissionDenied,
 } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
-function getIconStoragePath(globalConfig: Record<string, any>): string {
-  const provider = globalConfig.storageProvider || 'local';
+function getConfigString(globalConfig: Record<string, unknown>, key: string): string | undefined {
+  const value = globalConfig[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function getIconStoragePath(globalConfig: Record<string, unknown>): string {
+  const provider = getConfigString(globalConfig, 'storageProvider') || 'local';
   if (provider === 's3') {
-    return globalConfig.s3IconFolderPath || 'icons';
+    return getConfigString(globalConfig, 's3IconFolderPath') || 'icons';
   }
-  return globalConfig.iconStoragePath || '/uploads/icons';
+  return getConfigString(globalConfig, 'iconStoragePath') || '/uploads/icons';
 }
 
 export async function POST(
@@ -50,7 +56,7 @@ export async function POST(
     const file = formData.get('icon') as File;
 
     if (!file) {
-      return paramInvalid('请选择要上传的图标文件');
+      return paramInvalid(await tApi('app.iconRequired'));
     }
 
     if (file.size > 2 * 1024 * 1024) {
@@ -137,6 +143,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Icon delete error:', error);
-    return internalError('图标删除失败');
+    return internalError(await tApi('app.iconDeleteFailed'));
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -30,8 +30,6 @@ export default function SessionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => { fetchSessions(); }, []);
-
   function parseUA(ua: string): { name: string; browser: string } {
     if (!ua) return { name: t('unknownDevice'), browser: '' };
     let os = '';
@@ -53,17 +51,10 @@ export default function SessionsPage() {
   }
 
   function formatTime(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return t('justNow');
-    if (mins < 60) return t('minutesAgo', { minutes: mins });
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return t('hoursAgo', { hours: hours });
-    const days = Math.floor(hours / 24);
-    return t('daysAgo', { days: days });
+    return new Date(dateStr).toLocaleString('zh-CN');
   }
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/auth/sessions');
@@ -75,7 +66,14 @@ export default function SessionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchSessions();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchSessions]);
 
   const handleRevoke = async (sessionId: string) => {
     confirm(t('forceLogoutConfirm'), {

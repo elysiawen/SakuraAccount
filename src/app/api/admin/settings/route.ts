@@ -3,8 +3,9 @@ import { requireAdmin } from '@/lib/require-session';
 import { db } from '@/lib/db';
 import { logAudit } from '@/lib/auth';
 import { paramInvalid, internalError } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
     try {
         const result = await requireAdmin();
         if ('error' in result) return result.error;
@@ -13,7 +14,7 @@ export async function GET(_request: NextRequest) {
         return NextResponse.json(config);
     } catch (error) {
         console.error('Admin get settings error:', error);
-        return internalError('获取设置失败');
+        return internalError(await tApi('admin.settingsGetFailed'));
     }
 }
 
@@ -27,7 +28,7 @@ export async function PUT(request: NextRequest) {
         const { key, value } = body;
 
         if (!key) {
-            return paramInvalid('缺少配置键');
+            return paramInvalid(await tApi('admin.configKeyRequired'));
         }
 
         await db.setGlobalConfig(key, value);
@@ -36,7 +37,7 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Admin update setting error:', error);
-        return internalError('更新设置失败');
+        return internalError(await tApi('admin.settingsUpdateFailed'));
     }
 }
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
         const { config } = body;
 
         if (!config || typeof config !== 'object') {
-            return paramInvalid('无效的配置数据');
+            return paramInvalid(await tApi('admin.configDataInvalid'));
         }
 
         await db.setGlobalConfigBatch(config);
@@ -59,6 +60,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Admin update settings error:', error);
-        return internalError('更新设置失败');
+        return internalError(await tApi('admin.settingsUpdateFailed'));
     }
 }

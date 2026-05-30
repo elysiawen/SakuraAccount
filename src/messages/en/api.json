@@ -11,6 +11,7 @@
     "notLoggedIn": "Please login first",
     "tokenExpired": "Session expired, please login again",
     "loginFailed": "Invalid username or password",
+    "loginRequired": "Please enter username and password",
     "passwordWrong": "Incorrect current password",
     "userNotFound": "User not found",
     "captchaExpired": "Captcha expired",
@@ -18,10 +19,12 @@
     "emailExists": "Email already registered",
     "weakPassword": "Password too weak",
     "passkeyNotFound": "Passkey not found or no permission",
-    "passkeyVerifyFailed": "Passkey authentication failed"
+    "passkeyVerifyFailed": "Passkey authentication failed",
+    "logoutFailed": "Logout failed"
   },
   "user": {
     "notFound": "User not found",
+    "avatarRequired": "Please select an avatar file to upload",
     "avatarUploadFailed": "Avatar upload failed, please try again later",
     "avatarDeleteFailed": "Avatar deletion failed, please try again later",
     "avatarNotSet": "No avatar set",
@@ -37,6 +40,7 @@
     "cannotRevokeCurrent": "Cannot revoke current session",
     "notFound": "Session not found or no permission",
     "revokeAllFailed": "Failed to revoke sessions",
+    "revokeFailed": "Failed to revoke session",
     "idRequired": "Session ID required"
   },
   "passkey": {
@@ -56,7 +60,11 @@
     "cannotChangeSelfRole": "Cannot change your own role",
     "invalidRole": "Invalid role",
     "userUpdateFailed": "Failed to update user",
-    "auditLogFailed": "Failed to fetch audit logs"
+    "auditLogFailed": "Failed to fetch audit logs",
+    "settingsGetFailed": "Failed to get settings",
+    "settingsUpdateFailed": "Failed to update settings",
+    "configKeyRequired": "Missing configuration key",
+    "configDataInvalid": "Invalid configuration data"
   },
   "app": {
     "idRequired": "Application ID required",
@@ -65,11 +73,22 @@
     "updateFailed": "Failed to update application",
     "deleteFailed": "Failed to delete application",
     "listFailed": "Failed to fetch application list",
+    "fieldsRequired": "Please fill in required fields",
+    "getInfoFailed": "Failed to get application info",
     "clientIdRequired": "Missing required parameter: client_id",
     "invalidClient": "Invalid client application",
+    "iconRequired": "Please select an icon file to upload",
     "iconSizeLimit": "File size cannot exceed 2MB",
     "iconTypeInvalid": "Only image files are allowed",
-    "iconUploadFailed": "Icon upload failed"
+    "iconUploadFailed": "Icon upload failed",
+    "iconDeleteFailed": "Icon delete failed"
+  },
+  "storage": {
+    "s3ConfigIncomplete": "Please fill in complete S3 configuration",
+    "connectionSuccess": "Connection successful",
+    "connectionFailed": "Connection failed",
+    "uploadFailed": "File upload failed",
+    "deleteFailed": "File delete failed"
   },
   "token": {
     "appRequired": "Application required",

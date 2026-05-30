@@ -1,11 +1,12 @@
 'use client';
 
 import { useTheme } from 'next-themes';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Sun, Moon, Clock, Monitor } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 const MODE_KEY = 'sakura-theme-mode';
+const MODE_CHANGED_EVENT = 'sakura-theme-mode-change';
 
 function isDarkHour(): boolean {
   const hour = new Date().getHours();
@@ -13,20 +14,46 @@ function isDarkHour(): boolean {
 }
 
 const MODE_KEYS = ['light', 'dark', 'auto', 'system'] as const;
-const MODE_ICONS: Record<string, typeof Sun> = { light: Sun, dark: Moon, auto: Clock, system: Monitor };
+type ThemeMode = (typeof MODE_KEYS)[number];
+
+const MODE_ICONS: Record<ThemeMode, typeof Sun> = { light: Sun, dark: Moon, auto: Clock, system: Monitor };
+
+function isThemeMode(value: string | null): value is ThemeMode {
+  return value !== null && MODE_KEYS.includes(value as ThemeMode);
+}
+
+function getThemeModeSnapshot(): ThemeMode {
+  if (typeof window === 'undefined') return 'auto';
+  const stored = localStorage.getItem(MODE_KEY);
+  return isThemeMode(stored) ? stored : 'auto';
+}
+
+function subscribeThemeMode(onStoreChange: () => void) {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  const handleChange = () => onStoreChange();
+  window.addEventListener('storage', handleChange);
+  window.addEventListener(MODE_CHANGED_EVENT, handleChange);
+
+  return () => {
+    window.removeEventListener('storage', handleChange);
+    window.removeEventListener(MODE_CHANGED_EVENT, handleChange);
+  };
+}
+
+function updateStoredThemeMode(mode: ThemeMode) {
+  localStorage.setItem(MODE_KEY, mode);
+  window.dispatchEvent(new Event(MODE_CHANGED_EVENT));
+}
 
 export function ThemeToggle({ dropDown }: { dropDown?: boolean }) {
   const { setTheme } = useTheme();
   const t = useTranslations('common.theme');
-  const [mode, setMode] = useState<string>('auto');
-  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    setMode(localStorage.getItem(MODE_KEY) ?? 'auto');
-  }, []);
+  const mode = useSyncExternalStore<ThemeMode>(subscribeThemeMode, getThemeModeSnapshot, () => 'auto');
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -38,16 +65,11 @@ export function ThemeToggle({ dropDown }: { dropDown?: boolean }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  if (!mounted) {
-    return <div className="w-9 h-9" />;
-  }
-
-  const currentKey = MODE_KEYS.includes(mode as any) ? mode : 'auto';
+  const currentKey = mode;
   const Icon = MODE_ICONS[currentKey];
 
-  const selectMode = (next: string) => {
-    localStorage.setItem(MODE_KEY, next);
-    setMode(next);
+  const selectMode = (next: ThemeMode) => {
+    updateStoredThemeMode(next);
     setOpen(false);
 
     if (next === 'auto') {

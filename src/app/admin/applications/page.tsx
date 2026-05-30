@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -74,11 +74,7 @@ function AdminApplicationsContent() {
     grants: ['authorization_code', 'refresh_token'] as string[],
   });
 
-  useEffect(() => {
-    fetchClients();
-  }, []);
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/applications');
       const data = await res.json();
@@ -88,7 +84,14 @@ function AdminApplicationsContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchClients();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchClients]);
 
   const filteredClients = clients.filter((client) => {
     if (!search) return true;
@@ -131,7 +134,7 @@ function AdminApplicationsContent() {
       } else {
         error(getErrorMessage(data, t('createFailed')));
       }
-    } catch (err) {
+    } catch {
       error(t('createFailed'));
     } finally {
       setSaving(false);
@@ -155,7 +158,7 @@ function AdminApplicationsContent() {
           } else {
             error(t('deleteFailed'));
           }
-        } catch (err) {
+        } catch {
           error(t('deleteFailed'));
         }
       },

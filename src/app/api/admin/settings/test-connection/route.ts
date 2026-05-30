@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/require-session';
 import { S3Provider } from '@/lib/storage/s3';
 import { paramInvalid, connectionFailed } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
 export async function POST(request: NextRequest) {
     try {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
         const { s3Endpoint, s3Region, s3AccessKeyId, s3SecretAccessKey, s3BucketName, s3PublicDomain, s3FolderPath } = body;
 
         if (!s3Endpoint || !s3AccessKeyId || !s3SecretAccessKey || !s3BucketName) {
-            return paramInvalid('请填写完整的 S3 配置');
+            return paramInvalid(await tApi('storage.s3ConfigIncomplete'));
         }
 
         const provider = new S3Provider(
@@ -37,10 +38,9 @@ export async function POST(request: NextRequest) {
             // Ignore cleanup errors
         }
 
-        return NextResponse.json({ success: true, message: '连接成功' });
+        return NextResponse.json({ success: true, message: await tApi('storage.connectionSuccess') });
     } catch (error) {
         console.error('S3 test connection error:', error);
-        const message = error instanceof Error ? error.message : '连接失败';
-        return connectionFailed(message);
+        return connectionFailed();
     }
 }

@@ -20,12 +20,11 @@ export default function AvatarCropper({ image, onCropComplete, onCancel }: Avata
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
     const [rotation, setRotation] = useState(0);
     const [loading, setLoading] = useState(false);
-    const [mounted, setMounted] = useState(false);
     const [scale, setScale] = useState(1);
     const [fitScale, setFitScale] = useState(1);
+    const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
     useEffect(() => {
-        setMounted(true);
         document.body.style.overflow = 'hidden';
         return () => {
             document.body.style.overflow = 'unset';
@@ -47,6 +46,7 @@ export default function AvatarCropper({ image, onCropComplete, onCancel }: Avata
         }
         setFitScale(newFitScale);
         setScale(newFitScale);
+        setImageSize({ width: naturalWidth, height: naturalHeight });
 
         const size = Math.min(naturalWidth, naturalHeight) * 0.8;
         const x = (naturalWidth - size) / 2;
@@ -133,7 +133,7 @@ export default function AvatarCropper({ image, onCropComplete, onCancel }: Avata
         }
     };
 
-    if (!mounted) return null;
+    if (typeof document === 'undefined') return null;
 
     return createPortal(
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-fade-in">
@@ -159,8 +159,8 @@ export default function AvatarCropper({ image, onCropComplete, onCancel }: Avata
                             alt="Crop preview"
                             onLoad={onImageLoad}
                             style={{
-                                width: imgRef.current ? imgRef.current.naturalWidth * scale : undefined,
-                                height: imgRef.current ? imgRef.current.naturalHeight * scale : undefined,
+                                width: imageSize ? imageSize.width * scale : undefined,
+                                height: imageSize ? imageSize.height * scale : undefined,
                                 maxWidth: 'none',
                                 transform: `rotate(${rotation}deg)`,
                                 transition: 'transform 0.2s ease-in-out, width 0.15s ease, height 0.15s ease',

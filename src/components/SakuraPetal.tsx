@@ -1,5 +1,3 @@
-'use client';
-
 export function SakuraPetal({ delay, left, size, duration }: { delay: number; left: string; size: number; duration: number }) {
   return (
     <div

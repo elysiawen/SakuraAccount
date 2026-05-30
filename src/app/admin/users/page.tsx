@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -23,6 +23,13 @@ interface User {
   email_verified: boolean;
   two_factor_enabled: boolean;
   created_at: string;
+}
+
+interface UserPasskey {
+  id: string;
+  name: string | null;
+  providerName: string;
+  providerIcon: string;
 }
 
 function UserAvatar({ user, size = 'sm' }: { user: User; size?: 'sm' | 'md' }) {
@@ -64,21 +71,17 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const page = 1;
+  const limit = 20;
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ username: '', nickname: '', email: '', newPassword: '', role: 'user' });
   const [editingAvatar, setEditingAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
-  const [userPasskeys, setUserPasskeys] = useState<any[]>([]);
+  const [userPasskeys, setUserPasskeys] = useState<UserPasskey[]>([]);
   const [loadingPasskeys, setLoadingPasskeys] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [page, limit]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`/api/admin/users?page=${page}&limit=${limit}`);
@@ -90,7 +93,14 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit, page]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchUsers();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchUsers]);
 
   const handleDeleteUser = async (userId: number, username: string) => {
     confirm(t('deleteConfirm', { name: username }), {

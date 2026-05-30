@@ -1,13 +1,28 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, User, Mail, Fingerprint, Check, X } from 'lucide-react';
 import { resolveAppIcon } from '@/lib/app-icon';
 import { useTranslations } from 'next-intl';
 import { Spinner } from '@/components/Spinner';
 import { SakuraPetal } from '@/components/SakuraPetal';
+
+interface ConsentUser {
+  username: string;
+  nickname?: string;
+  email: string;
+  avatar?: string | null;
+}
+
+interface ClientInfoResponse {
+  client?: {
+    name: string;
+    icon?: string | null;
+    appUrl?: string | null;
+  };
+}
 
 export default function ConsentPage() {
   return (
@@ -19,6 +34,7 @@ export default function ConsentPage() {
 
 function ConsentContent() {
   const t = useTranslations('auth.consent');
+  const router = useRouter();
   const searchParams = useSearchParams();
   const SCOPE_INFO: Record<string, { label: string; description: string; icon: typeof User }> = {
     openid: { label: t('scopeIdentity'), description: t('scopeIdentityDesc'), icon: Fingerprint },
@@ -31,7 +47,7 @@ function ConsentContent() {
   const [clientIcon, setClientIcon] = useState<string | null>(null);
   const [clientAppUrl, setClientAppUrl] = useState('');
   const [iconErrored, setIconErrored] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<ConsentUser | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
 
   const clientId = searchParams.get('client_id');
@@ -54,17 +70,14 @@ function ConsentContent() {
   }, []);
 
   useEffect(() => {
-    if (!clientId) {
-      setClientError(t('missingClientId'));
-      return;
-    }
+    if (!clientId) return;
     fetch(`/api/applications/info?id=${clientId}`)
       .then(res => {
         if (!res.ok) {
           setClientError(t('invalidClient'));
           return null;
         }
-        return res.json();
+        return res.json() as Promise<ClientInfoResponse>;
       })
       .then(data => {
         if (data?.client) {
@@ -76,7 +89,7 @@ function ConsentContent() {
         }
       })
       .catch(() => setClientError(t('cannotVerify')));
-  }, [clientId]);
+  }, [clientId, t]);
 
   const handleDecision = async (approved: boolean) => {
     setLoading(approved ? 'approve' : 'reject');
@@ -99,12 +112,14 @@ function ConsentContent() {
       const data = await res.json();
 
       if (res.status === 401) {
-        window.location.href = `/auth/login?callbackUrl=${encodeURIComponent(window.location.href)}`;
+        window.location.assign(`/auth/login?callbackUrl=${encodeURIComponent(window.location.href)}`);
         return;
       }
 
       if (data.redirect) {
-        window.location.href = data.redirect;
+        window.location.assign(data.redirect);
+      } else {
+        router.refresh();
       }
     } catch {
       setLoading(null);

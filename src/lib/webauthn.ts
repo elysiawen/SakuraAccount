@@ -9,7 +9,7 @@ import type {
   AuthenticationResponseJSON,
   AuthenticatorTransportFuture,
 } from '@simplewebauthn/server';
-import { db } from './db';
+import { db, isExecuteWithAffectedRows, isExecuteWithRowCount } from './db';
 import { nanoid } from 'nanoid';
 import { getAuthenticatorInfo } from './aaguids';
 import { DEFAULT_BASE_URL } from './utils';
@@ -18,8 +18,34 @@ const rpName = process.env.WEBAUTHN_RP_NAME || 'Sakura Account';
 const rpID = process.env.WEBAUTHN_RP_ID || 'localhost';
 const origin = process.env.WEBAUTHN_ORIGIN || DEFAULT_BASE_URL;
 
+interface WebAuthnCredentialRow extends Record<string, unknown> {
+  id: string;
+  user_id: string;
+  credential_id: string;
+  public_key: string;
+  counter: number;
+  transports?: string | null;
+  name?: string | null;
+  device_type?: string | null;
+  backup_state?: boolean;
+  aaguid?: string | null;
+  created_at?: string;
+  last_used?: string;
+}
+
+interface AuthenticatorRecord {
+  id: string;
+  publicKey: Buffer;
+  counter: number;
+  transports: AuthenticatorTransportFuture[];
+}
+
+interface RegistrationInfoWithAaguid {
+  aaguid?: string;
+}
+
 export async function getAuthenticators(userId: string) {
-  const credentials = await db.query(
+  const credentials = await db.query<WebAuthnCredentialRow>(
     'SELECT * FROM webauthn_credentials WHERE user_id = ?',
     [userId]
   );
@@ -79,7 +105,7 @@ export async function verifyRegistration(
     );
 
     if (!existingCredential) {
-      const aaguid = (verification.registrationInfo as any).aaguid || undefined;
+      const aaguid = (verification.registrationInfo as RegistrationInfoWithAaguid).aaguid || undefined;
 
       await db.execute(
         `INSERT INTO webauthn_credentials (id, user_id, credential_id, public_key, counter, device_type, backup_eligible, backup_state, transports, name, aaguid, last_used)
@@ -105,7 +131,7 @@ export async function verifyRegistration(
 }
 
 export async function generateAuthentication(userId?: string) {
-  let authenticators: any[] = [];
+  let authenticators: AuthenticatorRecord[] = [];
 
   if (userId) {
     authenticators = await getAuthenticators(userId);
@@ -127,7 +153,7 @@ export async function generateAuthentication(userId?: string) {
 export async function verifyAuthentication(
   response: AuthenticationResponseJSON,
   expectedChallenge: string
-) {
+): Promise<{ verified: boolean; userId: string | null }> {
   const credential = await db.getOne(
     'SELECT * FROM webauthn_credentials WHERE credential_id = ?',
     [Buffer.from(response.id).toString('base64')]
@@ -138,10 +164,10 @@ export async function verifyAuthentication(
   }
 
   const authenticator = {
-    id: credential.credential_id,
-    publicKey: Buffer.from(credential.public_key, 'base64'),
-    counter: credential.counter,
-    transports: credential.transports ? JSON.parse(credential.transports) : [],
+    id: String(credential.credential_id),
+    publicKey: Buffer.from(String(credential.public_key), 'base64'),
+    counter: Number(credential.counter),
+    transports: credential.transports ? JSON.parse(String(credential.transports)) : [],
   };
 
   const verification = await verifyAuthenticationResponse({
@@ -155,13 +181,13 @@ export async function verifyAuthentication(
   if (verification.verified) {
     await db.execute(
       'UPDATE webauthn_credentials SET counter = ?, last_used = CURRENT_TIMESTAMP WHERE id = ?',
-      [verification.authenticationInfo.newCounter, credential.id]
+      [verification.authenticationInfo.newCounter, String(credential.id)]
     );
   }
 
   return {
     verified: verification.verified,
-    userId: credential.user_id,
+    userId: String(credential.user_id),
   };
 }
 
@@ -171,17 +197,18 @@ export async function removeCredential(credentialId: string, userId: string): Pr
     [credentialId, userId]
   );
 
-  return result.affectedRows > 0 || result.rowCount > 0;
+  return (isExecuteWithAffectedRows(result) && result.affectedRows > 0)
+    || (isExecuteWithRowCount(result) && (result.rowCount ?? 0) > 0);
 }
 
 export async function getUserCredentials(userId: string) {
-  const rows = await db.query(
+  const rows = await db.query<WebAuthnCredentialRow>(
     'SELECT id, name, device_type, backup_state, aaguid, created_at, last_used FROM webauthn_credentials WHERE user_id = ?',
     [userId]
   );
 
-  return rows.map((cred: any) => {
-    const info = getAuthenticatorInfo(cred.aaguid);
+  return rows.map((cred) => {
+    const info = getAuthenticatorInfo(cred.aaguid ?? undefined);
     return {
       id: cred.id,
       name: cred.name || null,

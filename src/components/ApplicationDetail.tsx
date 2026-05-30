@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -23,7 +23,6 @@ import {
   Fingerprint,
   ExternalLink,
   Clock,
-  Box,
   Shield,
 } from 'lucide-react';
 
@@ -154,12 +153,7 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
   );
   const [iconUrl, setIconUrl] = useState(client.icon || '');
   const [uploadingIcon, setUploadingIcon] = useState(false);
-
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [activeTab, setActiveTab] = useState('javascript');
 
   const handleDelete = () => {
     confirm(t('deleteConfirm', { name: client.name }), {
@@ -233,22 +227,16 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
     return new Date(dateStr).toLocaleString('zh-CN');
   };
 
-  const getOrigin = () => {
-    if (typeof window !== 'undefined') return window.location.origin;
-    return 'https://account.example.com';
-  };
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://account.example.com';
 
-  const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState('javascript');
-
-  const integrationExamples = mounted ? {
+  const integrationExamples = {
     javascript: `// 使用授权码流程进行OAuth认证
 const clientId = '${client.id}';
 const redirectUri = '${client.redirectUris[0] || 'http://localhost:3000/callback'}';
 
 // 重定向用户到授权页面
 function authorize() {
-  const authUrl = '${getOrigin()}/oauth/authorize';
+  const authUrl = '${origin}/oauth/authorize';
   const url = \`\${authUrl}?client_id=\${clientId}&redirect_uri=\${encodeURIComponent(redirectUri)}&response_type=code&scope=profile email\`;
   window.location.href = url;
 }
@@ -259,7 +247,7 @@ async function handleCallback() {
   const code = urlParams.get('code');
 
   if (code) {
-    const tokenUrl = '${getOrigin()}/oauth/token';
+    const tokenUrl = '${origin}/oauth/token';
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -286,7 +274,7 @@ async function handleCallback() {
 
 // 获取用户信息
 async function fetchUserInfo(accessToken) {
-  const response = await fetch('${getOrigin()}/oauth/userinfo', {
+  const response = await fetch('${origin}/oauth/userinfo', {
     headers: { 'Authorization': \`Bearer \${accessToken}\` }
   });
   return await response.json();
@@ -300,7 +288,7 @@ $redirectUri = '${client.redirectUris[0] || 'http://localhost:3000/callback'}';
 // 重定向用户到授权页面
 function redirectToAuth() {
     global $clientId, $redirectUri;
-    $authUrl = '${getOrigin()}/oauth/authorize';
+    $authUrl = '${origin}/oauth/authorize';
     $url = $authUrl . '?client_id=' . $clientId
          . '&redirect_uri=' . urlencode($redirectUri)
          . '&response_type=code&scope=profile email';
@@ -314,7 +302,7 @@ function handleCallback() {
 
     if (isset($_GET['code'])) {
         $code = $_GET['code'];
-        $tokenUrl = '${getOrigin()}/oauth/token';
+        $tokenUrl = '${origin}/oauth/token';
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $tokenUrl);
@@ -346,7 +334,7 @@ function handleCallback() {
 // 获取用户信息
 function getUserInfo($accessToken) {
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, '${getOrigin()}/oauth/userinfo');
+    curl_setopt($ch, CURLOPT_URL, '${origin}/oauth/userinfo');
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer ' . $accessToken
     ]);
@@ -368,9 +356,9 @@ app.secret_key = os.urandom(24)
 client_id = '${client.id}'
 client_secret = '${client.secret}'
 redirect_uri = '${client.redirectUris[0] || 'http://localhost:3000/callback'}'
-auth_url = '${getOrigin()}/oauth/authorize'
-token_url = '${getOrigin()}/oauth/token'
-userinfo_url = '${getOrigin()}/oauth/userinfo'
+auth_url = '${origin}/oauth/authorize'
+token_url = '${origin}/oauth/token'
+userinfo_url = '${origin}/oauth/userinfo'
 
 @app.route('/login')
 def login():
@@ -415,7 +403,7 @@ def get_user_info(access_token):
 
 if __name__ == '__main__':
     app.run(debug=True)`,
-  } : { javascript: '', php: '', python: '' };
+  };
 
   return (
     <div className="space-y-6">
@@ -620,7 +608,7 @@ if __name__ == '__main__':
         </div>
         <div className="p-4 sm:p-6 space-y-4">
           {getOAuthEndpoints(t).map((endpoint) => {
-            const url = `${getOrigin()}${endpoint.path}`;
+            const url = `${origin}${endpoint.path}`;
             return (
               <div key={endpoint.path}>
                 <h6 className="text-sm font-medium text-text-secondary mb-2">{endpoint.label}</h6>
@@ -671,20 +659,16 @@ if __name__ == '__main__':
 
           {/* Code */}
           <div className="relative">
-            {mounted ? (
-              <>
-                <pre className="bg-muted/50 rounded-xl p-3 sm:p-4 overflow-x-auto">
-                  <code className="text-xs sm:text-sm text-text-primary font-mono whitespace-pre">
-                    {integrationExamples[activeTab as keyof typeof integrationExamples]}
-                  </code>
-                </pre>
-                <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-                  <CopyButton text={integrationExamples[activeTab as keyof typeof integrationExamples]} />
-                </div>
-              </>
-            ) : (
-              <div className="bg-muted/50 rounded-xl p-4 h-48 animate-pulse" />
-            )}
+            <>
+              <pre className="bg-muted/50 rounded-xl p-3 sm:p-4 overflow-x-auto">
+                <code className="text-xs sm:text-sm text-text-primary font-mono whitespace-pre">
+                  {integrationExamples[activeTab as keyof typeof integrationExamples]}
+                </code>
+              </pre>
+              <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+                <CopyButton text={integrationExamples[activeTab as keyof typeof integrationExamples]} />
+              </div>
+            </>
           </div>
         </div>
       </div>

@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/require-session';
-import { db } from '@/lib/db';
+import { db, isExecuteWithAffectedRows, isExecuteWithRowCount } from '@/lib/db';
 import { getAuthenticatorInfo } from '@/lib/aaguids';
 import { adminUserIdRequired, authPasskeyNotFound, passkeyDeleteFailed, passkeyListFailed } from '@/lib/api-response';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+interface PasskeyRow extends Record<string, unknown> {
+  id: string;
+  name: string | null;
+  device_type: string;
+  aaguid: string | null;
+  created_at: string;
+  last_used: string;
 }
 
 export async function GET(request: NextRequest, { params }: PageProps) {
@@ -15,13 +24,13 @@ export async function GET(request: NextRequest, { params }: PageProps) {
 
     const { id: userId } = await params;
 
-    const rows = await db.query(
+    const rows = await db.query<PasskeyRow>(
       'SELECT id, name, device_type, aaguid, created_at, last_used FROM webauthn_credentials WHERE user_id = ?',
       [userId]
     );
 
-    const credentials = rows.map((cred: any) => {
-      const info = getAuthenticatorInfo(cred.aaguid);
+    const credentials = rows.map((cred) => {
+      const info = getAuthenticatorInfo(cred.aaguid ?? undefined);
       return {
         id: cred.id,
         name: cred.name || null,
@@ -59,7 +68,8 @@ export async function DELETE(request: NextRequest, { params }: PageProps) {
       [credentialId, userId]
     );
 
-    const affected = dbResult.affectedRows > 0 || dbResult.rowCount > 0;
+    const affected = (isExecuteWithAffectedRows(dbResult) && dbResult.affectedRows > 0)
+      || (isExecuteWithRowCount(dbResult) && (dbResult.rowCount ?? 0) > 0);
     if (!affected) {
       return authPasskeyNotFound();
     }

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
@@ -10,7 +9,8 @@ interface OverviewClientProps {
   email: string;
   role: string;
   sessionsCount: number;
-  userCreatedAt: number;
+  userCreatedAt: string | null;
+  daysUsed: number | null;
   emailVerified: boolean;
   twoFactorEnabled: boolean;
   bannerUrl?: string;
@@ -23,22 +23,21 @@ export default function OverviewClient({
   role,
   sessionsCount,
   userCreatedAt,
+  daysUsed,
   emailVerified,
   twoFactorEnabled,
   bannerUrl,
 }: OverviewClientProps) {
   const t = useTranslations('dashboard.overview');
 
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
+  const formatDate = (dateValue: string) => {
+    const date = new Date(dateValue);
     return date.toLocaleDateString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
     });
   };
-
-  const daysUsed = Math.floor((Date.now() - new Date(userCreatedAt).getTime()) / (1000 * 60 * 60 * 24));
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -89,8 +88,8 @@ export default function OverviewClient({
             <h3 className="text-sm font-medium text-green-900 dark:text-green-200">{t('registeredAt')}</h3>
             <span className="text-2xl">📅</span>
           </div>
-          <p className="text-lg font-bold text-green-900 dark:text-green-100">{formatDate(new Date(userCreatedAt).getTime())}</p>
-          <p className="text-xs text-green-700 dark:text-green-300 mt-1">{t('daysUsed', { days: daysUsed })}</p>
+          <p className="text-lg font-bold text-green-900 dark:text-green-100">{userCreatedAt ? formatDate(userCreatedAt) : '-'}</p>
+          <p className="text-xs text-green-700 dark:text-green-300 mt-1">{t('daysUsed', { days: daysUsed ?? 0 })}</p>
         </div>
 
       </div>

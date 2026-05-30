@@ -11,6 +11,7 @@ import {
     userAvatarNotSet,
     userAvatarDeleteFailed,
 } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
 export async function POST(request: NextRequest) {
     try {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
         const file = formData.get('avatar') as File;
 
         if (!file) {
-            return paramInvalid('请选择要上传的头像文件');
+            return paramInvalid(await tApi('user.avatarRequired'));
         }
 
         // Check file size (10MB)
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-export async function DELETE(_request: NextRequest) {
+export async function DELETE() {
     try {
         const authResult = await requireAuthenticatedUser();
         if ('error' in authResult) {

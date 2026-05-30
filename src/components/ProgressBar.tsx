@@ -10,12 +10,17 @@ export default function ProgressBar() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    setProgress(100);
+    const frame = window.requestAnimationFrame(() => {
+      setProgress(100);
+    });
     const timer = setTimeout(() => {
       setIsVisible(false);
       setProgress(0);
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
   }, [pathname, searchParams]);
 
   useEffect(() => {

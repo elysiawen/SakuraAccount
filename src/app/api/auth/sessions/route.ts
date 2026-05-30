@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserSessions, deleteSession, deleteUserSessions, createSession, setSessionCookie, sessionBelongsToUser, getRequestMetadata, logAudit } from '@/lib/auth';
 import { requireAuthenticatedUser } from '@/lib/require-session';
-import { sessionListFailed, sessionCannotRevokeCurrent, sessionNotFound, sessionIdRequired, sessionRevokeAllFailed, internalError } from '@/lib/api-response';
+import { sessionListFailed, sessionCannotRevokeCurrent, sessionNotFound, sessionIdRequired, internalError } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
 export async function GET() {
   try {
@@ -53,6 +54,6 @@ export async function DELETE(request: NextRequest) {
     return sessionIdRequired();
   } catch (error) {
     console.error('Delete session error:', error);
-    return internalError('撤销会话失败');
+    return internalError(await tApi('session.revokeFailed'));
   }
 }

@@ -13,9 +13,10 @@ import {
   FileText,
   Settings,
   ArrowLeft,
+  type LucideIcon,
 } from 'lucide-react';
 
-function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
+function NavLink({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
   const pathname = usePathname();
   const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 

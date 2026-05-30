@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { deleteSession, getRequestMetadata, logAudit } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { internalError } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Logout error:', error);
-    return internalError('登出失败');
+    return internalError(await tApi('auth.logoutFailed'));
   }
 }
 

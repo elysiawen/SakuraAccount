@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByUsername, getUserByEmail, verifyPassword, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
 import { paramInvalid, authLoginFailed, internalError } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function POST(request: NextRequest) {
     const { username, password } = body;
 
     if (!username || !password) {
-      return paramInvalid('请输入用户名和密码');
+      return paramInvalid(await tApi('auth.loginRequired'));
     }
 
     let user = await getUserByUsername(username);

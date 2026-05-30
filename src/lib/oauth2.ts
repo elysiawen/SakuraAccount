@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import { nanoid } from 'nanoid';
-import { SignJWT, jwtVerify } from 'jose';
-import { db } from './db';
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
+import { db, isExecuteWithAffectedRows, isExecuteWithRowCount } from './db';
 import { DEFAULT_BASE_URL } from './utils';
 
 const APP_SECRET = process.env.APP_SECRET;
@@ -51,6 +51,55 @@ export interface Token {
   refreshExpiresAt?: Date;
 }
 
+interface OAuth2ClientRow extends Record<string, unknown> {
+  id: string;
+  nano_id: string;
+  secret: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  app_url?: string | null;
+  redirect_uris: string | string[];
+  grants: string | string[];
+  scopes: string | string[];
+  status?: 'active' | 'disabled' | null;
+  user_id?: string | null;
+  created_at?: string;
+}
+
+interface AuthorizationCodeRow extends Record<string, unknown> {
+  id: string;
+  client_id: string;
+  user_id: string;
+  redirect_uri: string;
+  scopes: string | string[];
+  nonce?: string | null;
+  expires_at: Date;
+}
+
+interface TokenRow extends Record<string, unknown> {
+  id: string;
+  client_id: string;
+  user_id: string;
+  access_token: string;
+  refresh_token?: string | null;
+  scopes: string | string[];
+  expires_at: Date;
+  refresh_expires_at?: Date | null;
+  created_at?: string;
+}
+
+interface ClientSummaryRow extends Record<string, unknown> {
+  nano_id: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  status?: 'active' | 'disabled' | null;
+  user_id?: string | null;
+  username?: string | null;
+  created_at?: string;
+}
+
 export async function createClient(data: Omit<OAuth2Client, 'id' | 'nanoId' | 'secret'>): Promise<OAuth2Client> {
   const id = nanoid(32);
   const nanoId = nanoid(32);
@@ -59,7 +108,7 @@ export async function createClient(data: Omit<OAuth2Client, 'id' | 'nanoId' | 's
   await db.execute(
     `INSERT INTO oauth2_clients (id, nano_id, secret, name, description, app_url, redirect_uris, grants, scopes, status, user_id)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, nanoId, secret, data.name, data.description, data.appUrl || null, JSON.stringify(data.redirectUris), JSON.stringify(data.grants), JSON.stringify(data.scopes), data.status || 'active', data.userId]
+    [id, nanoId, secret, data.name, data.description ?? null, data.appUrl ?? null, JSON.stringify(data.redirectUris), JSON.stringify(data.grants), JSON.stringify(data.scopes), data.status ?? 'active', data.userId ?? null]
   );
 
   return {
@@ -70,25 +119,25 @@ export async function createClient(data: Omit<OAuth2Client, 'id' | 'nanoId' | 's
   };
 }
 
-function mapClient(client: any): OAuth2Client {
+function mapClient(client: OAuth2ClientRow): OAuth2Client {
   return {
     id: client.id,
     nanoId: client.nano_id,
     secret: client.secret,
     name: client.name,
-    description: client.description,
-    icon: client.icon || undefined,
-    appUrl: client.app_url || undefined,
+    description: client.description ?? undefined,
+    icon: client.icon ?? undefined,
+    appUrl: client.app_url ?? undefined,
     redirectUris: safeJsonParse(client.redirect_uris),
     grants: safeJsonParse(client.grants),
     scopes: safeJsonParse(client.scopes),
-    status: client.status || 'active',
-    userId: client.user_id,
-    createdAt: client.created_at,
+    status: client.status ?? 'active',
+    userId: client.user_id ?? undefined,
+    createdAt: client.created_at ?? undefined,
   };
 }
 
-async function ensureNanoId(client: any): Promise<OAuth2Client> {
+async function ensureNanoId(client: OAuth2ClientRow): Promise<OAuth2Client> {
   if (!client.nano_id) {
     const newNanoId = nanoid(32);
     await db.execute('UPDATE oauth2_clients SET nano_id = ? WHERE id = ?', [newNanoId, client.id]);
@@ -98,13 +147,13 @@ async function ensureNanoId(client: any): Promise<OAuth2Client> {
 }
 
 export async function getClient(clientId: string): Promise<OAuth2Client | null> {
-  const client = await db.getOne('SELECT * FROM oauth2_clients WHERE id = ?', [clientId]);
+  const client = await db.getOne<OAuth2ClientRow>('SELECT * FROM oauth2_clients WHERE id = ?', [clientId]);
   if (!client) return null;
   return ensureNanoId(client);
 }
 
 export async function getClientByNanoId(nanoId: string): Promise<OAuth2Client | null> {
-  const client = await db.getOne('SELECT * FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
+  const client = await db.getOne<OAuth2ClientRow>('SELECT * FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
   if (!client) return null;
   return mapClient(client);
 }
@@ -147,7 +196,7 @@ export async function generateAuthorizationCode(
 }
 
 export async function getAuthorizationCode(code: string): Promise<AuthorizationCode | null> {
-  const authCode = await db.getOne(
+  const authCode = await db.getOne<AuthorizationCodeRow>(
     'SELECT * FROM oauth2_authorization_codes WHERE id = ? AND expires_at > NOW()',
     [code]
   );
@@ -210,7 +259,7 @@ export async function generateAccessToken(
   };
 }
 
-export async function verifyAccessToken(token: string): Promise<any> {
+export async function verifyAccessToken(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
     return payload;
@@ -220,7 +269,7 @@ export async function verifyAccessToken(token: string): Promise<any> {
 }
 
 export async function getTokenByAccessToken(accessToken: string): Promise<Token | null> {
-  const token = await db.getOne(
+  const token = await db.getOne<TokenRow>(
     'SELECT * FROM oauth2_tokens WHERE access_token = ? AND expires_at > NOW()',
     [accessToken]
   );
@@ -232,14 +281,14 @@ export async function getTokenByAccessToken(accessToken: string): Promise<Token 
     clientId: token.client_id,
     userId: token.user_id,
     accessToken: token.access_token,
-    refreshToken: token.refresh_token,
+    refreshToken: token.refresh_token ?? undefined,
     scopes: safeJsonParse(token.scopes),
     expiresAt: token.expires_at,
   };
 }
 
 export async function getTokenByRefreshToken(refreshToken: string): Promise<Token | null> {
-  const token = await db.getOne(
+  const token = await db.getOne<TokenRow>(
     'SELECT * FROM oauth2_tokens WHERE refresh_token = ? AND (refresh_expires_at IS NULL OR refresh_expires_at > NOW())',
     [refreshToken]
   );
@@ -251,10 +300,10 @@ export async function getTokenByRefreshToken(refreshToken: string): Promise<Toke
     clientId: token.client_id,
     userId: token.user_id,
     accessToken: token.access_token,
-    refreshToken: token.refresh_token,
+    refreshToken: token.refresh_token ?? undefined,
     scopes: safeJsonParse(token.scopes),
     expiresAt: token.expires_at,
-    refreshExpiresAt: token.refresh_expires_at || undefined,
+    refreshExpiresAt: token.refresh_expires_at ?? undefined,
   };
 }
 
@@ -267,7 +316,7 @@ export async function revokeUserTokens(userId: string): Promise<void> {
 }
 
 export async function getUserTokens(userId: string): Promise<Token[]> {
-  const tokens = await db.query(
+  const tokens = await db.query<TokenRow>(
     'SELECT * FROM oauth2_tokens WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   );
@@ -277,78 +326,79 @@ export async function getUserTokens(userId: string): Promise<Token[]> {
     clientId: token.client_id,
     userId: token.user_id,
     accessToken: token.access_token,
-    refreshToken: token.refresh_token,
+    refreshToken: token.refresh_token ?? undefined,
     scopes: safeJsonParse(token.scopes),
     expiresAt: token.expires_at,
   }));
 }
 
-function safeJsonParse(val: any): any[] {
+function safeJsonParse(val: unknown): string[] {
   if (Array.isArray(val)) return val;
   if (typeof val === 'string') return JSON.parse(val);
   return [];
 }
 
 export async function getAllClients(): Promise<OAuth2Client[]> {
-  const clients = await db.query('SELECT * FROM oauth2_clients ORDER BY created_at DESC');
+  const clients = await db.query<OAuth2ClientRow>('SELECT * FROM oauth2_clients ORDER BY created_at DESC');
 
   return Promise.all(clients.map(client => ensureNanoId(client)));
 }
 
 export async function getAllClientsSummary(): Promise<(Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'status' | 'userId' | 'createdAt'> & { username?: string })[]> {
-  let clients: any[];
+  let clients: ClientSummaryRow[];
   try {
-    clients = await db.query('SELECT c.nano_id, c.name, c.description, c.icon, c.status, c.user_id, c.created_at, u.username FROM oauth2_clients c LEFT JOIN users u ON c.user_id = u.id ORDER BY c.created_at DESC');
+    clients = await db.query<ClientSummaryRow>('SELECT c.nano_id, c.name, c.description, c.icon, c.status, c.user_id, c.created_at, u.username FROM oauth2_clients c LEFT JOIN users u ON c.user_id = u.id ORDER BY c.created_at DESC');
   } catch {
     // Fallback if status/icon columns don't exist yet
-    clients = await db.query('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
+    clients = await db.query<ClientSummaryRow>('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
   }
 
   return clients.map(c => ({
     nanoId: c.nano_id,
     name: c.name,
-    description: c.description,
-    icon: c.icon || undefined,
-    status: c.status || 'active',
-    userId: c.user_id,
-    username: c.username || undefined,
-    createdAt: c.created_at,
+    description: c.description ?? undefined,
+    icon: c.icon ?? undefined,
+    status: c.status ?? 'active',
+    userId: c.user_id ?? undefined,
+    username: c.username ?? undefined,
+    createdAt: c.created_at ?? undefined,
   }));
 }
 
 export async function getUserClientsSummary(userId: string): Promise<Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'status' | 'userId' | 'createdAt'>[]> {
-  let clients: any[];
+  let clients: ClientSummaryRow[];
   try {
-    clients = await db.query('SELECT nano_id, name, description, icon, status, user_id, created_at FROM oauth2_clients WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+    clients = await db.query<ClientSummaryRow>('SELECT nano_id, name, description, icon, status, user_id, created_at FROM oauth2_clients WHERE user_id = ? ORDER BY created_at DESC', [userId]);
   } catch {
-    clients = await db.query('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+    clients = await db.query<ClientSummaryRow>('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients WHERE user_id = ? ORDER BY created_at DESC', [userId]);
   }
 
   return clients.map(c => ({
     nanoId: c.nano_id,
     name: c.name,
-    description: c.description,
-    icon: c.icon || undefined,
-    status: c.status || 'active',
-    userId: c.user_id,
-    createdAt: c.created_at,
+    description: c.description ?? undefined,
+    icon: c.icon ?? undefined,
+    status: c.status ?? 'active',
+    userId: c.user_id ?? undefined,
+    createdAt: c.created_at ?? undefined,
   }));
 }
 
 export async function deleteClient(nanoId: string): Promise<boolean> {
   // Delete tokens first (cascade may not work if table was created before FK)
-  const client = await db.getOne('SELECT id FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
+  const client = await db.getOne<{ id: string }>('SELECT id FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
   if (client) {
     await db.execute('DELETE FROM oauth2_tokens WHERE client_id = ?', [client.id]);
     await db.execute('DELETE FROM oauth2_authorization_codes WHERE client_id = ?', [client.id]);
   }
   const result = await db.execute('DELETE FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
-  return result.affectedRows > 0 || result.rowCount > 0;
+  return (isExecuteWithAffectedRows(result) && result.affectedRows > 0)
+    || (isExecuteWithRowCount(result) && (result.rowCount ?? 0) > 0);
 }
 
 export async function updateClient(nanoId: string, data: Partial<OAuth2Client>): Promise<void> {
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: (string | null)[] = [];
 
   if (data.name !== undefined) {
     fields.push('name = ?');

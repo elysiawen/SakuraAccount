@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from './ToastProvider';
 import AvatarCropper from './AvatarCropper';
 import { getErrorMessage } from '@/lib/api-error';
@@ -34,7 +34,7 @@ export default function AvatarUpload({
     const [isUploading, setIsUploading] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [cropImage, setCropImage] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [fileInput, setFileInput] = useState<HTMLInputElement | null>(null);
     const { success, error } = useToast();
 
     const uploadFile = useCallback(async (file: File | Blob, filename?: string) => {
@@ -107,8 +107,8 @@ export default function AvatarUpload({
     }, [currentAvatar, deleteUrl, onAvatarChange, success, error, t]);
 
     const triggerUpload = useCallback(() => {
-        fileInputRef.current?.click();
-    }, []);
+        fileInput?.click();
+    }, [fileInput]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -119,7 +119,7 @@ export default function AvatarUpload({
     return (
         <>
             <input
-                ref={fileInputRef}
+                ref={setFileInput}
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}

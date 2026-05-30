@@ -16,6 +16,15 @@ const NO_STORE_HEADERS: Record<string, string> = {
   'Pragma': 'no-cache',
 };
 
+interface TokenResponseBody {
+  access_token: string;
+  token_type: 'Bearer';
+  expires_in: number;
+  refresh_token?: string;
+  scope: string;
+  id_token?: string;
+}
+
 function jsonError(status: number, error: string, description: string, extraHeaders?: Record<string, string>): NextResponse {
   return NextResponse.json(
     { error, error_description: description },
@@ -98,7 +107,7 @@ export async function POST(request: NextRequest) {
       // Generate access token
       const token = await generateAccessToken(clientId, authCode.userId, authCode.scopes);
 
-      const response: Record<string, any> = {
+      const response: TokenResponseBody = {
         access_token: token.accessToken,
         token_type: 'Bearer',
         expires_in: ACCESS_TOKEN_EXPIRY,
@@ -142,7 +151,7 @@ export async function POST(request: NextRequest) {
       // Generate new access token
       const newToken = await generateAccessToken(clientId, token.userId, token.scopes);
 
-      const response: Record<string, any> = {
+      const response: TokenResponseBody = {
         access_token: newToken.accessToken,
         token_type: 'Bearer',
         expires_in: ACCESS_TOKEN_EXPIRY,

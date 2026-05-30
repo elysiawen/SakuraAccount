@@ -51,7 +51,7 @@ export class LocalStorageProvider implements IStorageProvider {
             try {
                 await fs.access(filePath);
                 await fs.unlink(filePath);
-            } catch (error) {
+            } catch {
                 // File doesn't exist, ignore
                 console.warn('File not found for deletion:', filePath);
             }

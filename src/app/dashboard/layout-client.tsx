@@ -15,6 +15,7 @@ import {
   Shield,
   LogOut,
   Code2,
+  type LucideIcon,
 } from 'lucide-react';
 
 interface DashboardLayoutClientProps {
@@ -156,7 +157,7 @@ export default function DashboardLayoutClient({
   );
 }
 
-function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
+function NavLink({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
   const pathname = usePathname();
   const active = href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
 

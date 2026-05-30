@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getClientByNanoId, updateClient, deleteClient } from '@/lib/oauth2';
 import { requireAdmin } from '@/lib/require-session';
 import { appNotFound, internalError, appUpdateFailed, appDeleteFailed } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
 export async function GET(
   request: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
     return NextResponse.json({ client });
   } catch (error) {
     console.error('Admin get OAuth2 client error:', error);
-    return internalError('获取应用信息失败');
+    return internalError(await tApi('app.getInfoFailed'));
   }
 }
 

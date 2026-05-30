@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -8,6 +8,14 @@ import AvatarCropper from '@/components/AvatarCropper';
 import Modal from '@/components/Modal';
 import { getErrorMessage } from '@/lib/api-error';
 import { Spinner } from '@/components/Spinner';
+
+interface ProfileUser {
+  id: string;
+  username: string;
+  email: string;
+  nickname?: string;
+  avatar?: string | null;
+}
 
 interface Credential {
   id: string;
@@ -27,7 +35,7 @@ export default function SettingsPage() {
   const { confirm } = useConfirm();
 
   // Profile state
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<ProfileUser | null>(null);
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -52,12 +60,7 @@ export default function SettingsPage() {
   // General
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchProfile();
-    fetchCredentials();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/session');
       const data = await res.json();
@@ -72,9 +75,9 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchCredentials = async () => {
+  const fetchCredentials = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/webauthn');
       const data = await res.json();
@@ -84,15 +87,15 @@ export default function SettingsPage() {
     } finally {
       setLoadingCredentials(false);
     }
-  };
+  }, []);
 
-  const handleAvatarChange = (avatarUrl: string | null) => {
-    setAvatar(avatarUrl);
-    // Update user state
-    if (user) {
-      setUser({ ...user, avatar: avatarUrl });
-    }
-  };
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchProfile();
+      void fetchCredentials();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchCredentials, fetchProfile]);
 
   const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -146,7 +149,7 @@ export default function SettingsPage() {
       } else {
         error(getErrorMessage(data, t('avatarUploadFailed')));
       }
-    } catch (err) {
+    } catch {
       error(t('avatarUploadFailed'));
     } finally {
       setAvatarUploading(false);
@@ -176,7 +179,7 @@ export default function SettingsPage() {
         } else {
           error(getErrorMessage(data, t('avatarDeleteFailed')));
         }
-      } catch (err) {
+      } catch {
         error(t('avatarDeleteFailed'));
       } finally {
         setAvatarUploading(false);
@@ -203,7 +206,7 @@ export default function SettingsPage() {
       } else {
         error(getErrorMessage(data, t('updateFailed')));
       }
-    } catch (err) {
+    } catch {
       error(t('networkError'));
     } finally {
       setSavingProfile(false);
@@ -247,7 +250,7 @@ export default function SettingsPage() {
       } else {
         error(getErrorMessage(data, t('passwordChangeFailed')));
       }
-    } catch (err) {
+    } catch {
       error(t('networkError'));
     } finally {
       setChangingPassword(false);
@@ -293,8 +296,8 @@ export default function SettingsPage() {
       } else {
         error(t('passkeyAddFailed'));
       }
-    } catch (err: any) {
-      if (err.name !== 'NotAllowedError') {
+    } catch (err: unknown) {
+      if (!(err instanceof Error) || err.name !== 'NotAllowedError') {
         error(t('passkeyAddFailed'));
       }
     }
@@ -316,7 +319,7 @@ export default function SettingsPage() {
           } else {
             error(t('passkeyDeleteFailed'));
           }
-        } catch (err) {
+        } catch {
           error(t('passkeyDeleteFailed'));
         }
       },
@@ -339,7 +342,7 @@ export default function SettingsPage() {
           } else {
             error(t('deleteFailed'));
           }
-        } catch (err) {
+        } catch {
           error(t('deleteFailed'));
         }
       },

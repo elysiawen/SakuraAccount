@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -54,11 +54,7 @@ export default function AuthorizedAppsPage() {
   const [apps, setApps] = useState<AuthorizedApp[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchApps();
-  }, []);
-
-  const fetchApps = async () => {
+  const fetchApps = useCallback(async () => {
     try {
       const res = await fetch('/api/applications/tokens');
       const data = await res.json();
@@ -68,7 +64,14 @@ export default function AuthorizedAppsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchApps();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchApps]);
 
   const handleRevoke = (app: AuthorizedApp) => {
     confirm(t('revokeConfirm', { name: app.name }), {
@@ -141,7 +144,7 @@ export default function AuthorizedAppsPage() {
                     <div className="flex items-center gap-1 shrink-0">
                       {app.scopes.map((scope) => (
                         <span key={scope} className="text-xs px-1.5 py-0.5 bg-muted text-text-secondary rounded">
-                          {SCOPE_KEYS[scope] ? t(SCOPE_KEYS[scope] as any) : scope}
+                          {SCOPE_KEYS[scope] ? t(SCOPE_KEYS[scope]) : scope}
                         </span>
                       ))}
                     </div>

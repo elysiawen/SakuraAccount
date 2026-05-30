@@ -2,10 +2,17 @@
 
 import { useLocale } from 'next-intl';
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { LOCALES } from '@/i18n/locales';
+
+function setLocaleCookie(code: string) {
+  const maxAge = 365 * 24 * 60 * 60;
+  window.document.cookie = `NEXT_LOCALE=${code};path=/;max-age=${maxAge};SameSite=Lax`;
+}
 
 export function LanguageSwitcher({ className, dropDown, align = 'left' }: { className?: string; dropDown?: boolean; align?: 'left' | 'right' }) {
   const locale = useLocale();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -22,8 +29,8 @@ export function LanguageSwitcher({ className, dropDown, align = 'left' }: { clas
   }, []);
 
   const switchLocale = (code: string) => {
-    document.cookie = `NEXT_LOCALE=${code};path=/;max-age=${365 * 24 * 60 * 60};SameSite=Lax`;
-    window.location.reload();
+    setLocaleCookie(code);
+    router.refresh();
   };
 
   return (

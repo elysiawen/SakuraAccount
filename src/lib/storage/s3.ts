@@ -86,7 +86,7 @@ export class S3Provider implements IStorageProvider {
         } catch (error) {
             console.error('S3 delete error:', error);
             // Don't throw error if file doesn't exist
-            if ((error as any).name !== 'NoSuchKey') {
+            if (!(error instanceof Error) || error.name !== 'NoSuchKey') {
                 throw new Error('Failed to delete file from S3-compatible storage');
             }
         }

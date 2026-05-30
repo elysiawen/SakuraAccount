@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { SignJWT, jwtVerify } from 'jose';
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { nanoid } from 'nanoid';
 import { uuidv7 } from 'uuidv7';
 import { cookies } from 'next/headers';
@@ -32,6 +32,79 @@ export interface Session {
   expiresAt: Date;
 }
 
+interface DbUserRow extends Record<string, unknown> {
+  id: string;
+  username: string;
+  email: string;
+  password_hash?: string | null;
+  nickname?: string | null;
+  avatar?: string | null;
+  role: string;
+  email_verified: boolean;
+  two_factor_enabled: boolean;
+  created_at?: string;
+}
+
+interface SessionWithUserRow extends Record<string, unknown> {
+  user_id: string;
+  username: string;
+  email: string;
+  nickname?: string | null;
+  avatar?: string | null;
+  role: string;
+  email_verified: boolean;
+  two_factor_enabled: boolean;
+  ip?: string | null;
+}
+
+export interface UserSessionRecord extends Record<string, unknown> {
+  id: string;
+  ip?: string | null;
+  user_agent?: string | null;
+  ip_location?: string | null;
+  isp?: string | null;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface AuditLogRecord extends Record<string, unknown> {
+  id: number;
+  user_id?: string | null;
+  category: string;
+  action: string;
+  details?: string | null;
+  ip?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+  username?: string | null;
+}
+
+interface CountRow extends Record<string, unknown> {
+  total?: number;
+  count?: number;
+}
+
+export interface UserListItem extends Record<string, unknown> {
+  id: string;
+  username: string;
+  email: string;
+  nickname?: string | null;
+  avatar?: string | null;
+  role: string;
+  email_verified: boolean;
+  two_factor_enabled: boolean;
+  created_at: string;
+}
+
+export interface UserSearchItem extends Record<string, unknown> {
+  id: string;
+  username: string;
+  email: string;
+  nickname?: string | null;
+  role: string;
+  created_at: string;
+}
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
 }
@@ -40,7 +113,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function createJWT(payload: any, expiresIn: string = '7d'): Promise<string> {
+export async function createJWT(payload: JWTPayload, expiresIn: string = '7d'): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -48,7 +121,7 @@ export async function createJWT(payload: any, expiresIn: string = '7d'): Promise
     .sign(SECRET);
 }
 
-export async function verifyJWT(token: string): Promise<any> {
+export async function verifyJWT(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
     return payload;
@@ -76,7 +149,7 @@ export async function createSession(userId: string, ip?: string, userAgent?: str
 
   await db.execute(
     'INSERT INTO sessions (id, user_id, ip, user_agent, ip_location, isp, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [sessionId, userId, ip, userAgent, ipLocation, isp, expiresAt]
+    [sessionId, userId, ip ?? null, userAgent ?? null, ipLocation, isp, expiresAt]
   );
 
   return sessionId;
@@ -107,7 +180,7 @@ export function getRequestMetadata(request: Request): { ip: string; userAgent: s
 }
 
 export async function getSession(sessionId: string, ip?: string): Promise<User | null> {
-  const session = await db.getOne(
+  const session = await db.getOne<SessionWithUserRow>(
     `SELECT s.*, u.id as user_id, u.username, u.email, u.nickname, u.avatar, u.role,
             u.email_verified, u.two_factor_enabled
      FROM sessions s
@@ -136,8 +209,8 @@ export async function getSession(sessionId: string, ip?: string): Promise<User |
     id: session.user_id,
     username: session.username,
     email: session.email,
-    nickname: session.nickname,
-    avatar: session.avatar,
+    nickname: session.nickname ?? undefined,
+    avatar: session.avatar ?? undefined,
     role: session.role,
     emailVerified: session.email_verified,
     twoFactorEnabled: session.two_factor_enabled,
@@ -149,7 +222,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
 }
 
 export async function sessionBelongsToUser(sessionId: string, userId: string): Promise<boolean> {
-  const session = await db.getOne(
+  const session = await db.getOne<{ user_id: string }>(
     'SELECT user_id FROM sessions WHERE id = ?',
     [sessionId]
   );
@@ -160,24 +233,24 @@ export async function deleteUserSessions(userId: string): Promise<void> {
   await db.execute('DELETE FROM sessions WHERE user_id = ?', [userId]);
 }
 
-export async function getUserSessions(userId: string): Promise<any[]> {
-  return db.query(
+export async function getUserSessions(userId: string): Promise<UserSessionRecord[]> {
+  return db.query<UserSessionRecord>(
     'SELECT id, ip, user_agent, ip_location, isp, created_at, expires_at FROM sessions WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   );
 }
 
-export async function logAudit(userId: string | null, action: string, details?: any, ip?: string, userAgent?: string, category: string = 'operation'): Promise<void> {
+export async function logAudit(userId: string | null, action: string, details?: unknown, ip?: string, userAgent?: string, category: string = 'operation'): Promise<void> {
   await db.execute(
     'INSERT INTO audit_logs (user_id, category, action, details, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)',
-    [userId, category, action, JSON.stringify(details), ip, userAgent]
+    [userId, category, action, JSON.stringify(details), ip ?? null, userAgent ?? null]
   );
 }
 
-export async function getAuditLogs(page: number = 1, limit: number = 20, category?: string, search?: string): Promise<{ logs: any[]; total: number }> {
+export async function getAuditLogs(page: number = 1, limit: number = 20, category?: string, search?: string): Promise<{ logs: AuditLogRecord[]; total: number }> {
   const offset = (page - 1) * limit;
   const conditions: string[] = [];
-  const params: any[] = [];
+  const params: (string | number)[] = [];
 
   if (category) {
     conditions.push('al.category = ?');
@@ -192,7 +265,7 @@ export async function getAuditLogs(page: number = 1, limit: number = 20, categor
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const [logs, countResult] = await Promise.all([
-    db.query(
+    db.query<AuditLogRecord>(
       `SELECT al.*, u.username
        FROM audit_logs al
        LEFT JOIN users u ON al.user_id = u.id
@@ -201,7 +274,7 @@ export async function getAuditLogs(page: number = 1, limit: number = 20, categor
        LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     ),
-    db.getOne(
+    db.getOne<CountRow>(
       `SELECT COUNT(*) as total FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id ${whereClause}`,
       params
     )
@@ -215,7 +288,7 @@ export async function getAuditLogs(page: number = 1, limit: number = 20, categor
 
 export async function cleanupAuditLogs(retentionDays: number, categories?: string[]): Promise<{ deleted: number }> {
   const conditions: string[] = [];
-  const params: any[] = [];
+  const params: (string | number)[] = [];
 
   if (retentionDays > 0) {
     conditions.push('created_at < ?');
@@ -228,7 +301,7 @@ export async function cleanupAuditLogs(retentionDays: number, categories?: strin
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-  const count = await db.getOne(`SELECT COUNT(*) as count FROM audit_logs ${whereClause}`, params);
+  const count = await db.getOne<CountRow>(`SELECT COUNT(*) as count FROM audit_logs ${whereClause}`, params);
   await db.execute(`DELETE FROM audit_logs ${whereClause}`, params);
   return { deleted: count?.count || 0 };
 }
@@ -253,21 +326,21 @@ export async function createUser(username: string, email: string, password: stri
   };
 }
 
-export async function getUserByUsername(username: string): Promise<any | null> {
-  return db.getOne('SELECT * FROM users WHERE username = ?', [username]);
+export async function getUserByUsername(username: string): Promise<DbUserRow | null> {
+  return db.getOne<DbUserRow>('SELECT * FROM users WHERE username = ?', [username]);
 }
 
-export async function getUserByEmail(email: string): Promise<any | null> {
-  return db.getOne('SELECT * FROM users WHERE email = ?', [email]);
+export async function getUserByEmail(email: string): Promise<DbUserRow | null> {
+  return db.getOne<DbUserRow>('SELECT * FROM users WHERE email = ?', [email]);
 }
 
-export async function getUserById(id: string): Promise<any | null> {
-  return db.getOne('SELECT * FROM users WHERE id = ?', [id]);
+export async function getUserById(id: string): Promise<DbUserRow | null> {
+  return db.getOne<DbUserRow>('SELECT * FROM users WHERE id = ?', [id]);
 }
 
 export async function updateUser(id: string, data: { username?: string; nickname?: string; avatar?: string | null; email?: string }): Promise<void> {
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: (string | null)[] = [];
 
   if (data.username !== undefined) {
     fields.push('username = ?');
@@ -305,15 +378,15 @@ export async function deleteUser(id: string): Promise<void> {
   await db.execute('DELETE FROM users WHERE id = ?', [id]);
 }
 
-export async function getAllUsers(page: number = 1, limit: number = 20): Promise<{ users: any[]; total: number }> {
+export async function getAllUsers(page: number = 1, limit: number = 20): Promise<{ users: UserListItem[]; total: number }> {
   const offset = (page - 1) * limit;
 
   const [users, countResult] = await Promise.all([
-    db.query(
+    db.query<UserListItem>(
       'SELECT id, username, email, nickname, avatar, role, email_verified, two_factor_enabled, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
       [limit, offset]
     ),
-    db.getOne('SELECT COUNT(*) as total FROM users')
+    db.getOne<CountRow>('SELECT COUNT(*) as total FROM users')
   ]);
 
   return {
@@ -322,8 +395,8 @@ export async function getAllUsers(page: number = 1, limit: number = 20): Promise
   };
 }
 
-export async function searchUsers(query: string): Promise<any[]> {
-  return db.query(
+export async function searchUsers(query: string): Promise<UserSearchItem[]> {
+  return db.query<UserSearchItem>(
     `SELECT id, username, email, nickname, role, created_at
      FROM users
      WHERE username LIKE ? OR email LIKE ? OR nickname LIKE ?

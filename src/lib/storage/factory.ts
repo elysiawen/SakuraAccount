@@ -46,29 +46,29 @@ export class StorageFactory {
         const { db } = await import('@/lib/db');
         const globalConfig = await db.getGlobalConfig();
 
+        const str = (v: unknown): string | undefined => typeof v === 'string' ? v : undefined;
         const provider = (globalConfig.storageProvider as 'local' | 's3') || 'local';
 
-        // If S3 is selected but config is incomplete, fallback to local
         if (provider === 's3') {
             if (!globalConfig.s3AccessKeyId || !globalConfig.s3SecretAccessKey ||
                 !globalConfig.s3BucketName || !globalConfig.s3PublicDomain || !globalConfig.s3Endpoint) {
                 console.warn('S3 configuration incomplete, falling back to local storage');
-                return new LocalStorageProvider(storagePath || globalConfig.localStoragePath || '/uploads/avatars');
+                return new LocalStorageProvider(storagePath || str(globalConfig.localStoragePath) || '/uploads/avatars');
             }
         }
 
         const config: StorageConfig = {
             provider,
-            localStoragePath: globalConfig.localStoragePath || '/uploads/avatars',
-            s3Preset: globalConfig.s3Preset,
-            s3Endpoint: globalConfig.s3Endpoint,
-            s3Region: globalConfig.s3Region,
-            s3AccessKeyId: globalConfig.s3AccessKeyId,
-            s3SecretAccessKey: globalConfig.s3SecretAccessKey,
-            s3BucketName: globalConfig.s3BucketName,
-            s3PublicDomain: globalConfig.s3PublicDomain,
-            s3FolderPath: globalConfig.s3FolderPath,
-            s3AccountId: globalConfig.s3AccountId,
+            localStoragePath: str(globalConfig.localStoragePath) || '/uploads/avatars',
+            s3Preset: globalConfig.s3Preset as StorageConfig['s3Preset'],
+            s3Endpoint: str(globalConfig.s3Endpoint),
+            s3Region: str(globalConfig.s3Region),
+            s3AccessKeyId: str(globalConfig.s3AccessKeyId),
+            s3SecretAccessKey: str(globalConfig.s3SecretAccessKey),
+            s3BucketName: str(globalConfig.s3BucketName),
+            s3PublicDomain: str(globalConfig.s3PublicDomain),
+            s3FolderPath: str(globalConfig.s3FolderPath),
+            s3AccountId: str(globalConfig.s3AccountId),
         };
 
         return StorageFactory.createProvider(config, storagePath);

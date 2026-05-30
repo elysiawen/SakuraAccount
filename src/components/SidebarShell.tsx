@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Menu } from 'lucide-react';
@@ -33,12 +33,9 @@ export default function SidebarShell({
   user,
   children,
 }: SidebarShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarPath, setSidebarPath] = useState<string | null>(null);
   const pathname = usePathname();
-
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
+  const sidebarOpen = sidebarPath === pathname;
 
   const sidebarShow = breakpoint === 'md' ? 'md:flex' : 'lg:flex';
   const mobileOnly = breakpoint === 'md' ? 'md:hidden' : 'lg:hidden';
@@ -92,7 +89,7 @@ export default function SidebarShell({
       <div className={`fixed inset-0 z-50 ${mobileOnly} transition-all duration-300 ${sidebarOpen ? 'visible' : 'invisible pointer-events-none'}`}>
         <div
           className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => setSidebarPath(null)}
         />
         <aside className={`fixed inset-y-0 left-0 w-64 bg-card shadow-2xl flex flex-col transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           {sidebarInner}
@@ -104,7 +101,7 @@ export default function SidebarShell({
         {/* Mobile Header */}
         <div className={`${mobileOnly} bg-card/80 backdrop-blur-md border-b border-border p-4 flex items-center sticky top-0 z-30`}>
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setSidebarPath(pathname)}
             className="p-2 -ml-2 text-text-secondary hover:bg-muted rounded-lg"
           >
             <Menu className="h-6 w-6" />

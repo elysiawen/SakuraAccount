@@ -148,7 +148,7 @@ export async function getLocation(ip: string): Promise<{ location: string, isp?:
             location: locationStr,
             isp: ispName || undefined
         };
-    } catch (error) {
+    } catch {
         return { location: '' };
     }
 }

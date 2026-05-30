@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, getUserClientsSummary } from '@/lib/oauth2';
 import { requireAuthenticatedUser } from '@/lib/require-session';
 import { appListFailed, paramInvalid, appCreateFailed, adminPermissionDenied } from '@/lib/api-response';
+import { tApi } from '@/i18n/api-i18n';
 
 export async function GET() {
   try {
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     const { name, description, appUrl, redirectUris, grants, scopes } = body;
 
     if (!name || !redirectUris || !redirectUris.length) {
-      return paramInvalid('请填写必要字段');
+      return paramInvalid(await tApi('app.fieldsRequired'));
     }
 
     const client = await createClient({

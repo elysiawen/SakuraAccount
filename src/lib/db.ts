@@ -2,6 +2,34 @@ import { Pool as PgPool } from 'pg';
 import mysql from 'mysql2/promise';
 
 type DbType = 'postgres' | 'mysql';
+export type SqlValue = string | number | boolean | null | Date | Buffer;
+export type SqlParams = SqlValue[];
+export type SqlRow = Record<string, unknown>;
+
+interface PgResultLike {
+  rows?: SqlRow[];
+  rowCount?: number | null;
+}
+
+interface MysqlResultLike {
+  affectedRows?: number;
+}
+
+export type ExecuteResult = PgResultLike | MysqlResultLike;
+
+export function isExecuteWithAffectedRows(result: ExecuteResult): result is { affectedRows: number } {
+  return 'affectedRows' in result && typeof result.affectedRows === 'number';
+}
+
+export function isExecuteWithRowCount(result: ExecuteResult): result is { rowCount: number | null } {
+  return 'rowCount' in result;
+}
+
+function isColumnExistsError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const knownError = error as { code?: string; errno?: number };
+  return knownError.code === '42701' || knownError.errno === 1060;
+}
 
 interface DatabaseConfig {
   type: DbType;
@@ -25,8 +53,6 @@ class Database {
   private config: DatabaseConfig;
   private pgPool: PgPool | null = null;
   private mysqlPool: mysql.Pool | null = null;
-  private initPromise: Promise<void> | null = null;
-  private initializing = false;
 
   constructor() {
     const dbType = (process.env.DB_TYPE || 'postgres') as DbType;
@@ -88,53 +114,38 @@ class Database {
     return sql.replace(/\?/g, () => `$${++index}`);
   }
 
-  async query(sql: string, params?: any[]): Promise<any[]> {
-    await this.ensureInitialized();
+  async query<T extends SqlRow = SqlRow>(sql: string, params?: SqlParams): Promise<T[]> {
     if (this.config.type === 'postgres') {
       const pool = this.getPgPool();
       const pgSql = this.convertPlaceholders(sql);
       const result = await pool.query(pgSql, params);
-      return result.rows;
+      return result.rows as T[];
     } else {
       const pool = this.getMysqlPool();
       const [rows] = await pool.execute(sql, params);
-      return rows as any[];
+      return rows as T[];
     }
   }
 
-  async getOne(sql: string, params?: any[]): Promise<any | null> {
-    const rows = await this.query(sql, params);
+  async getOne<T extends SqlRow = SqlRow>(sql: string, params?: SqlParams): Promise<T | null> {
+    const rows = await this.query<T>(sql, params);
     return rows[0] || null;
   }
 
-  async execute(sql: string, params?: any[]): Promise<any> {
-    await this.ensureInitialized();
+  async execute(sql: string, params?: SqlParams): Promise<ExecuteResult> {
     if (this.config.type === 'postgres') {
       const pool = this.getPgPool();
       const pgSql = this.convertPlaceholders(sql);
       return await pool.query(pgSql, params);
     } else {
       const pool = this.getMysqlPool();
-      return await pool.execute(sql, params);
+      const [result] = await pool.execute(sql, params);
+      return result as unknown as ExecuteResult;
     }
   }
 
   async initialize(): Promise<void> {
     await this.createTables();
-  }
-
-  private async ensureInitialized(): Promise<void> {
-    if (this.initializing) return;
-    if (!this.initPromise) {
-      this.initializing = true;
-      this.initPromise = this.createTables().catch(e => {
-        console.error('Database initialization failed:', e);
-        this.initPromise = null;
-      }).finally(() => {
-        this.initializing = false;
-      });
-    }
-    return this.initPromise;
   }
 
   private async createTables(): Promise<void> {
@@ -203,8 +214,8 @@ class Database {
     ]) {
       try {
         await this.execute(`ALTER TABLE webauthn_credentials ADD COLUMN ${col.name} ${col.def}`);
-      } catch (e: any) {
-        if (e?.code !== '42701' && e?.errno !== 1060) {
+      } catch (e: unknown) {
+        if (!isColumnExistsError(e)) {
           console.error(`Failed to add ${col.name} column:`, e);
         }
       }
@@ -233,9 +244,9 @@ class Database {
     try {
       await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN status ${varcharType(20)} DEFAULT 'active'`);
       console.log('Added status column to oauth2_clients');
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Column already exists is fine (PostgreSQL: 42701, MySQL: 1060)
-      if (e?.code !== '42701' && e?.errno !== 1060) {
+      if (!isColumnExistsError(e)) {
         console.error('Failed to add status column:', e);
       }
     }
@@ -252,7 +263,7 @@ class Database {
         const { nanoid } = await import('nanoid');
         const rows = await this.query('SELECT id FROM oauth2_clients WHERE nano_id IS NULL');
         for (const row of rows) {
-          await this.execute('UPDATE oauth2_clients SET nano_id = ? WHERE id = ?', [nanoid(32), row.id]);
+          await this.execute('UPDATE oauth2_clients SET nano_id = ? WHERE id = ?', [nanoid(32), String(row.id)]);
         }
         // Add unique constraint after backfill
         await this.execute('ALTER TABLE oauth2_clients ADD CONSTRAINT uq_oauth2_clients_nano_id UNIQUE (nano_id)');
@@ -281,8 +292,8 @@ class Database {
     try {
       await this.execute(`ALTER TABLE oauth2_authorization_codes ADD COLUMN nonce ${textType}`);
       console.log('Added nonce column to oauth2_authorization_codes');
-    } catch (e: any) {
-      if (e?.code !== '42701' && e?.errno !== 1060) {
+    } catch (e: unknown) {
+      if (!isColumnExistsError(e)) {
         console.error('Failed to add nonce column:', e);
       }
     }
@@ -291,8 +302,8 @@ class Database {
     try {
       await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN icon ${textType}`);
       console.log('Added icon column to oauth2_clients');
-    } catch (e: any) {
-      if (e?.code !== '42701' && e?.errno !== 1060) {
+    } catch (e: unknown) {
+      if (!isColumnExistsError(e)) {
         console.error('Failed to add icon column:', e);
       }
     }
@@ -301,8 +312,8 @@ class Database {
     try {
       await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN app_url ${textType}`);
       console.log('Added app_url column to oauth2_clients');
-    } catch (e: any) {
-      if (e?.code !== '42701' && e?.errno !== 1060) {
+    } catch (e: unknown) {
+      if (!isColumnExistsError(e)) {
         console.error('Failed to add app_url column:', e);
       }
     }
@@ -310,15 +321,15 @@ class Database {
     // Add ip_location and isp columns to sessions table
     try {
       await this.execute(`ALTER TABLE sessions ADD COLUMN ip_location ${varcharType(255)}`);
-    } catch (e: any) {
-      if (e?.code !== '42701' && e?.errno !== 1060) {
+    } catch (e: unknown) {
+      if (!isColumnExistsError(e)) {
         console.error('Failed to add ip_location column:', e);
       }
     }
     try {
       await this.execute(`ALTER TABLE sessions ADD COLUMN isp ${varcharType(255)}`);
-    } catch (e: any) {
-      if (e?.code !== '42701' && e?.errno !== 1060) {
+    } catch (e: unknown) {
+      if (!isColumnExistsError(e)) {
         console.error('Failed to add isp column:', e);
       }
     }
@@ -342,8 +353,8 @@ class Database {
     // Add refresh_expires_at column to existing oauth2_tokens tables
     try {
       await this.execute(`ALTER TABLE oauth2_tokens ADD COLUMN refresh_expires_at ${timestampType}`);
-    } catch (e: any) {
-      if (e?.code !== '42701' && e?.errno !== 1060) {
+    } catch (e: unknown) {
+      if (!isColumnExistsError(e)) {
         console.error('Failed to add refresh_expires_at column:', e);
       }
     }
@@ -355,7 +366,7 @@ class Database {
       } else {
         await this.execute(`ALTER TABLE oauth2_tokens ALTER COLUMN user_id DROP NOT NULL`);
       }
-    } catch (e: any) {
+    } catch {
       // Column may already be nullable — ignore
     }
 
@@ -382,7 +393,7 @@ class Database {
           await this.execute(`ALTER TABLE oauth2_tokens ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL`);
         }
       }
-    } catch (e: any) {
+    } catch {
       // Constraint may already be updated — ignore
     }
 
@@ -419,8 +430,8 @@ class Database {
     // Add category column to existing audit_logs tables
     try {
       await this.execute(`ALTER TABLE audit_logs ADD COLUMN category ${varcharType(50)} DEFAULT 'operation'`);
-    } catch (e: any) {
-      if (e?.code !== '42701' && e?.errno !== 1060) {
+    } catch (e: unknown) {
+      if (!isColumnExistsError(e)) {
         console.error('Failed to add category column:', e);
       }
     }
@@ -463,16 +474,18 @@ class Database {
       const rows = await this.query("SELECT id, icon FROM oauth2_clients WHERE icon LIKE '{%}'");
       for (const row of rows) {
         try {
-          const parsed = JSON.parse(row.icon);
+          const icon = String(row.icon);
+          const parsed = JSON.parse(icon);
+          const id = String(row.id);
           if (parsed.mode === 'upload' && parsed.url) {
-            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', [parsed.url, row.id]);
-            console.log(`Migrated icon for client ${row.id}: upload -> ${parsed.url}`);
+            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', [parsed.url, id]);
+            console.log(`Migrated icon for client ${id}: upload -> ${parsed.url}`);
           } else if (parsed.mode === 'auto') {
-            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', ['auto', row.id]);
-            console.log(`Migrated icon for client ${row.id}: auto`);
+            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', ['auto', id]);
+            console.log(`Migrated icon for client ${id}: auto`);
           } else if (parsed.mode === 'default') {
-            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', ['default', row.id]);
-            console.log(`Migrated icon for client ${row.id}: default`);
+            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', ['default', id]);
+            console.log(`Migrated icon for client ${id}: default`);
           }
         } catch {
           // Skip invalid JSON
@@ -519,30 +532,30 @@ class Database {
   }
 
   // Global config methods
-  async getGlobalConfig(): Promise<Record<string, any>> {
+  async getGlobalConfig(): Promise<Record<string, unknown>> {
     const rows = await this.query('SELECT key, value FROM global_config');
-    const config: Record<string, any> = {};
+    const config: Record<string, unknown> = {};
     for (const row of rows) {
       try {
-        config[row.key] = JSON.parse(row.value);
+        config[String(row.key)] = JSON.parse(String(row.value));
       } catch {
-        config[row.key] = row.value;
+        config[String(row.key)] = row.value;
       }
     }
     return config;
   }
 
-  async getGlobalConfigValue(key: string): Promise<any | null> {
+  async getGlobalConfigValue(key: string): Promise<unknown | null> {
     const row = await this.getOne('SELECT value FROM global_config WHERE key = ?', [key]);
     if (!row) return null;
     try {
-      return JSON.parse(row.value);
+      return JSON.parse(String(row.value));
     } catch {
       return row.value;
     }
   }
 
-  async setGlobalConfig(key: string, value: any): Promise<void> {
+  async setGlobalConfig(key: string, value: unknown): Promise<void> {
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
     const isPostgres = this.config.type === 'postgres';
     
@@ -561,7 +574,7 @@ class Database {
     }
   }
 
-  async setGlobalConfigBatch(config: Record<string, any>): Promise<void> {
+  async setGlobalConfigBatch(config: Record<string, unknown>): Promise<void> {
     for (const [key, value] of Object.entries(config)) {
       await this.setGlobalConfig(key, value);
     }

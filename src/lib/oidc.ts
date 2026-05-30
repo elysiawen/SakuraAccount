@@ -22,7 +22,13 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
 
 async function extractPublicKey(privateKey: CryptoKey): Promise<CryptoKey> {
   const jwk = await crypto.subtle.exportKey('jwk', privateKey);
-  const { d, p, q, dp, dq, qi, ...publicJwk } = jwk;
+  const publicJwk = { ...jwk };
+  delete publicJwk.d;
+  delete publicJwk.p;
+  delete publicJwk.q;
+  delete publicJwk.dp;
+  delete publicJwk.dq;
+  delete publicJwk.qi;
   return crypto.subtle.importKey(
     'jwk',
     publicJwk,
@@ -83,7 +89,7 @@ export async function generateIdToken(
 
   const now = Math.floor(Date.now() / 1000);
 
-  const claims: Record<string, any> = {
+  const claims: Record<string, unknown> = {
     iss: ISSUER,
     sub: userId,
     aud: clientId,

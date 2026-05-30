@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
@@ -61,11 +61,7 @@ export default function UserApplicationsPage() {
     grants: ['authorization_code', 'refresh_token'] as string[],
   });
 
-  useEffect(() => {
-    fetchClients();
-  }, []);
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const res = await fetch('/api/user/applications');
       const data = await res.json();
@@ -75,7 +71,14 @@ export default function UserApplicationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchClients();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchClients]);
 
   const handleCreateClient = async () => {
     if (!newClient.name || !newClient.redirectUris) {
@@ -109,7 +112,7 @@ export default function UserApplicationsPage() {
       } else {
         error(getErrorMessage(data, t('createFailed')));
       }
-    } catch (err) {
+    } catch {
       error(t('createFailed'));
     } finally {
       setSaving(false);
@@ -133,7 +136,7 @@ export default function UserApplicationsPage() {
           } else {
             error(t('deleteFailed'));
           }
-        } catch (err) {
+        } catch {
           error(t('deleteFailed'));
         }
       },

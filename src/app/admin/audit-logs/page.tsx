@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Pagination from '@/components/Pagination';
@@ -14,7 +14,7 @@ interface AuditLog {
   username: string;
   category: string;
   action: string;
-  details: any;
+  details: unknown;
   ip: string;
   user_agent: string;
   created_at: string;
@@ -50,11 +50,7 @@ function AuditLogsContent() {
   const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [page, limit, activeCategory, search]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), limit: String(limit), category: activeCategory });
@@ -68,7 +64,14 @@ function AuditLogsContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeCategory, limit, page, search]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchLogs();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchLogs]);
 
   const switchCategory = (category: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -264,7 +267,7 @@ function AuditLogsContent() {
               </div>
             )}
 
-            {selectedLog.details && (
+            {selectedLog.details != null && (
               <div>
                 <p className="text-xs text-text-quaternary mb-1">{t('details')}</p>
                 <pre className="text-sm text-text-secondary bg-muted rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">

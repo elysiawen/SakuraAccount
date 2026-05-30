@@ -7,6 +7,16 @@ const NO_STORE_HEADERS: Record<string, string> = {
   'Pragma': 'no-cache',
 };
 
+interface UserInfoResponse {
+  sub: string;
+  iss: string;
+  name?: string;
+  preferred_username?: string;
+  picture?: string | null;
+  email?: string;
+  email_verified?: boolean;
+}
+
 function bearerError(status: number, error: string, description?: string): NextResponse {
   const challenge = description
     ? `Bearer error="${error}", error_description="${description}"`
@@ -51,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // Build response based on scopes
     const scopes = token.scopes;
-    const userinfo: any = {
+    const userinfo: UserInfoResponse = {
       sub: user.id.toString(),
       iss: ISSUER,
     };
