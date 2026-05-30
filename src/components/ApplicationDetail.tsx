@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -84,12 +85,16 @@ function AppIcon({ client, size = 'w-12 h-12 text-lg' }: { client: Pick<OAuth2Cl
 
   if (iconUrl && !errored) {
     return (
-      <img
-        src={iconUrl}
-        alt={client.name}
-        className={`${size} rounded-xl object-cover bg-muted`}
-        onError={() => setErrored(true)}
-      />
+      <div className={`relative ${size} rounded-xl overflow-hidden bg-muted`}>
+        <Image
+          src={iconUrl}
+          alt={client.name}
+          fill
+          className="object-cover"
+          unoptimized
+          onError={() => setErrored(true)}
+        />
+      </div>
     );
   }
 
@@ -704,7 +709,9 @@ if __name__ == '__main__':
             <div className="flex items-start gap-4">
               <div className="shrink-0">
                 {iconMode === 'custom' && iconUrl ? (
-                  <img src={iconUrl} alt={t('preview')} className="w-16 h-16 rounded-xl object-cover bg-muted border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-muted border border-border">
+                    <Image src={iconUrl} alt={t('preview')} fill className="object-cover" unoptimized onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  </div>
                 ) : (
                   <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${getAvatarColor(editForm.name || 'A')} flex items-center justify-center text-white text-xl font-bold`}>
                     {(editForm.name || 'A').charAt(0).toUpperCase()}

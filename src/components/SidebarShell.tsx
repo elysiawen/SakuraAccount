@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Menu } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -57,9 +58,9 @@ export default function SidebarShell({
             href={user.href || '#'}
             className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-muted transition-colors"
           >
-            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm overflow-hidden">
+            <div className="relative w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm overflow-hidden">
               {user.avatar ? (
-                <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                <Image src={user.avatar} alt="" fill className="object-cover" unoptimized />
               ) : (
                 (user.name || '').charAt(0).toUpperCase()
               )}

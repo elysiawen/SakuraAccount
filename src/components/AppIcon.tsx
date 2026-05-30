@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { resolveAppIcon } from '@/lib/app-icon';
 
 const AVATAR_COLORS = [
@@ -36,12 +37,16 @@ export function AppIcon({ name, icon, size = 'md' }: AppIconProps) {
 
   if (iconUrl && !errored) {
     return (
-      <img
-        src={iconUrl}
-        alt={name}
-        className={`${sizeClass} rounded-lg object-cover bg-muted shrink-0`}
-        onError={() => setErrored(true)}
-      />
+      <div className={`relative ${sizeClass} rounded-lg overflow-hidden bg-muted shrink-0`}>
+        <Image
+          src={iconUrl}
+          alt={name}
+          fill
+          className="object-cover"
+          unoptimized
+          onError={() => setErrored(true)}
+        />
+      </div>
     );
   }
 

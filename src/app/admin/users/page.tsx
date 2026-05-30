@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -39,12 +40,16 @@ function UserAvatar({ user, size = 'sm' }: { user: User; size?: 'sm' | 'md' }) {
 
   if (user.avatar && !errored) {
     return (
-      <img
-        src={user.avatar}
-        alt={user.username}
-        className={`${dim} rounded-full object-cover shrink-0`}
-        onError={() => setErrored(true)}
-      />
+      <div className={`relative ${dim} rounded-full overflow-hidden shrink-0`}>
+        <Image
+          src={user.avatar}
+          alt={user.username}
+          fill
+          className="object-cover"
+          unoptimized
+          onError={() => setErrored(true)}
+        />
+      </div>
     );
   }
 
@@ -422,9 +427,9 @@ export default function AdminUsersPage() {
                 {({ isUploading, preview, triggerUpload, handleDelete }) => (
                   <div className="flex items-center gap-4">
                     <div className="relative">
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
+                      <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
                         {(preview || editingAvatar) ? (
-                          <img src={preview || editingAvatar!} alt="" className="w-full h-full object-cover" />
+                          <Image src={preview || editingAvatar!} alt="" fill className="object-cover" unoptimized />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-text-quaternary text-2xl">
                             👤
@@ -575,7 +580,7 @@ export default function AdminUsersPage() {
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <img src={cred.providerIcon} alt="" className="w-5 h-5 object-contain shrink-0" />
+                      <Image src={cred.providerIcon} alt="" width={20} height={20} className="object-contain shrink-0" unoptimized />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-text-primary truncate">{cred.name || t('passkeyUnnamed')}</p>
                         <p className="text-xs text-text-quaternary">{cred.providerName}</p>

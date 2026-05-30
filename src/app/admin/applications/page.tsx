@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
@@ -31,12 +32,16 @@ function AppIconSmall({ client }: { client: OAuth2Client }) {
 
   if (iconUrl && !errored) {
     return (
-      <img
-        src={iconUrl}
-        alt={client.name}
-        className="w-9 h-9 rounded-lg object-cover bg-muted"
-        onError={() => setErrored(true)}
-      />
+      <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-muted">
+        <Image
+          src={iconUrl}
+          alt={client.name}
+          fill
+          className="object-cover"
+          unoptimized
+          onError={() => setErrored(true)}
+        />
+      </div>
     );
   }
 

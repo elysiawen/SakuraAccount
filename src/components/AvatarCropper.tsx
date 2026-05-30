@@ -153,6 +153,7 @@ export default function AvatarCropper({ image, onCropComplete, onCancel }: Avata
                         aspect={1}
                         circularCrop
                     >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             ref={imgRef}
                             src={image}

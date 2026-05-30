@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -375,9 +376,9 @@ export default function SettingsPage() {
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
           {/* Avatar Preview */}
           <div className="relative">
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
+            <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
               {avatar ? (
-                <img src={avatar} alt={t('avatar')} className="w-full h-full object-cover" />
+                <Image src={avatar} alt={t('avatar')} fill className="object-cover" unoptimized />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-text-quaternary text-2xl">
                   👤
@@ -563,7 +564,7 @@ export default function SettingsPage() {
                     <p className="font-medium text-text-primary truncate">{cred.name || t('passkeyUnnamed')}</p>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-muted rounded-full text-text-tertiary border border-border">
-                        <img src={cred.providerIcon} alt="" className="w-3.5 h-3.5 object-contain" />
+                        <Image src={cred.providerIcon} alt="" width={14} height={14} className="object-contain" unoptimized />
                         {cred.providerName}
                       </span>
                       <span className="text-xs text-text-quaternary">

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { PublicNav } from '@/components/PublicNav';
 import { SakuraPetal } from '@/components/SakuraPetal';
@@ -52,9 +53,9 @@ export default async function Home() {
           <PublicNav
             extra={user && (
               <Link href="/dashboard" className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-accent-button/10 flex items-center justify-center text-accent-button font-semibold text-sm overflow-hidden shrink-0">
+                <div className="relative w-8 h-8 rounded-full bg-accent-button/10 flex items-center justify-center text-accent-button font-semibold text-sm overflow-hidden shrink-0">
                   {user.avatar ? (
-                    <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                    <Image src={user.avatar} alt="" fill className="object-cover" unoptimized />
                   ) : (
                     (user.nickname || user.username || '').charAt(0).toUpperCase()
                   )}

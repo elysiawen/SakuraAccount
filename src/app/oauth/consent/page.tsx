@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Shield, User, Mail, Fingerprint, Check, X } from 'lucide-react';
 import { resolveAppIcon } from '@/lib/app-icon';
 import { useTranslations } from 'next-intl';
@@ -187,14 +188,14 @@ function ConsentContent() {
           }}
         >
           <Link href="/" className="flex items-center gap-2">
-            <img src="/sakura.ico" alt="Sakura" className="w-6 h-6" />
+            <Image src="/sakura.ico" alt="Sakura" width={24} height={24} className="w-6 h-6" />
             <span className="text-sm font-semibold text-foreground tracking-tight">Sakura Account</span>
           </Link>
           {user && (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-accent-button/10 flex items-center justify-center text-accent-button font-semibold text-sm overflow-hidden shrink-0">
+              <div className="relative w-8 h-8 rounded-full bg-accent-button/10 flex items-center justify-center text-accent-button font-semibold text-sm overflow-hidden shrink-0">
                 {user.avatar ? (
-                  <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                  <Image src={user.avatar} alt="" fill className="object-cover" unoptimized />
                 ) : (
                   (user.nickname || user.username || '').charAt(0).toUpperCase()
                 )}
@@ -226,9 +227,9 @@ function ConsentContent() {
                 transitionDelay: '0.3s',
               }}
             >
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 overflow-hidden bg-muted border border-border shadow-sm">
+              <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 overflow-hidden bg-muted border border-border shadow-sm">
                 {clientIcon && !iconErrored ? (
-                  <img src={clientIcon} alt={clientName} className="w-full h-full object-cover" onError={() => setIconErrored(true)} />
+                  <Image src={clientIcon} alt={clientName} fill className="object-cover" unoptimized onError={() => setIconErrored(true)} />
                 ) : (
                   <div className="w-full h-full bg-accent-button/10 flex items-center justify-center">
                     <Shield className="w-7 h-7 text-accent-button" />
