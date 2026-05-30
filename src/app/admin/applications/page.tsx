@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -59,12 +60,21 @@ function AppIconSmall({ client }: { client: OAuth2Client }) {
 }
 
 export default function AdminApplicationsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminApplicationsContent />
+    </Suspense>
+  );
+}
+
+function AdminApplicationsContent() {
   const t = useTranslations('admin.applications');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') || '';
   const [clients, setClients] = useState<OAuth2Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newClient, setNewClient] = useState({
