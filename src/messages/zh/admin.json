@@ -67,7 +67,10 @@
     "avatarHint": "支持 JPG、PNG、WebP 格式，最大 10MB",
     "resetPassword": "重置密码",
     "leaveEmptyForNoChange": "留空则不修改密码",
-    "leaveEmptyForNoChangePassword": "留空表示不修改密码"
+    "leaveEmptyForNoChangePassword": "留空表示不修改密码",
+    "roleUser": "用户",
+    "roleDeveloper": "开发者",
+    "roleAdmin": "管理员"
   },
   "applications": {
     "title": "应用管理",

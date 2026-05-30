@@ -67,7 +67,10 @@
     "avatarHint": "Supports JPG, PNG, WebP, max 10MB",
     "resetPassword": "Reset Password",
     "leaveEmptyForNoChange": "Leave empty to keep current password",
-    "leaveEmptyForNoChangePassword": "Leave empty to keep current password"
+    "leaveEmptyForNoChangePassword": "Leave empty to keep current password",
+    "roleUser": "User",
+    "roleDeveloper": "Developer",
+    "roleAdmin": "Admin"
   },
   "applications": {
     "title": "Application Management",

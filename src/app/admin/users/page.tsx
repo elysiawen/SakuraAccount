@@ -62,6 +62,15 @@ function UserAvatar({ user, size = 'sm' }: { user: User; size?: 'sm' | 'md' }) {
 
 export default function AdminUsersPage() {
   const t = useTranslations('admin.users');
+
+  const getRoleLabel = (role: string) => {
+    const labels: Record<string, string> = {
+      user: t('roleUser'),
+      developer: t('roleDeveloper'),
+      admin: t('roleAdmin'),
+    };
+    return labels[role] || role;
+  };
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const [users, setUsers] = useState<User[]>([]);
@@ -218,7 +227,7 @@ export default function AdminUsersPage() {
                           }`}
                         >
                           <Shield className="w-3 h-3" />
-                          {user.role}
+                          {getRoleLabel(user.role)}
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
@@ -277,7 +286,7 @@ export default function AdminUsersPage() {
                           }`}
                         >
                           <Shield className="w-3 h-3" />
-                          {user.role}
+                          {getRoleLabel(user.role)}
                         </span>
                       </div>
                       <p className="text-xs text-text-tertiary truncate">{user.nickname || '-'}</p>
@@ -496,9 +505,9 @@ export default function AdminUsersPage() {
               onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
               className="w-full px-4 py-2.5 bg-background border border-border-input rounded-xl text-sm text-foreground outline-none transition-all duration-200 focus:border-accent-button focus:ring-2 focus:ring-accent-button/20"
             >
-              <option value="user">User</option>
-              <option value="developer">Developer</option>
-              <option value="admin">Admin</option>
+              <option value="user">{t('roleUser')}</option>
+              <option value="developer">{t('roleDeveloper')}</option>
+              <option value="admin">{t('roleAdmin')}</option>
             </select>
           </div>
 
