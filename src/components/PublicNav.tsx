@@ -18,10 +18,14 @@ export function PublicNav({ absolute, extra }: PublicNavProps) {
         <img src="/sakura.ico" alt="Sakura" className="w-6 h-6 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />
         <span className="text-sm sm:text-sm md:text-base font-semibold text-foreground tracking-tight">Sakura Account</span>
       </Link>
-      <div className="flex items-center gap-2">
-        <ThemeToggle dropDown />
-        <LanguageSwitcher dropDown align="right" />
-        {extra}
+      <div className="flex items-center gap-1.5">
+        <ThemeToggle dropDown /><div className="w-px h-4 bg-border" /><LanguageSwitcher dropDown align="right" />
+        {extra && (
+          <>
+            <div className="w-px h-4 bg-border" />
+            {extra}
+          </>
+        )}
       </div>
     </nav>
   );

@@ -11,6 +11,7 @@ import type {
 } from '@simplewebauthn/server';
 import { db } from './db';
 import { nanoid } from 'nanoid';
+import { getAuthenticatorInfo } from './aaguids';
 
 const rpName = process.env.WEBAUTHN_RP_NAME || 'Sakura Account';
 const rpID = process.env.WEBAUTHN_RP_ID || 'localhost';
@@ -58,7 +59,8 @@ export async function generateRegistration(userId: string, username: string, dis
 export async function verifyRegistration(
   userId: string,
   response: RegistrationResponseJSON,
-  expectedChallenge: string
+  expectedChallenge: string,
+  credentialName?: string
 ) {
   const verification = await verifyRegistrationResponse({
     response,
@@ -76,9 +78,11 @@ export async function verifyRegistration(
     );
 
     if (!existingCredential) {
+      const aaguid = (verification.registrationInfo as any).aaguid || undefined;
+
       await db.execute(
-        `INSERT INTO webauthn_credentials (id, user_id, credential_id, public_key, counter, device_type, backup_eligible, backup_state, transports)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO webauthn_credentials (id, user_id, credential_id, public_key, counter, device_type, backup_eligible, backup_state, transports, name, aaguid, last_used)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [
           nanoid(32),
           userId,
@@ -89,6 +93,8 @@ export async function verifyRegistration(
           credentialBackedUp,
           credentialBackedUp,
           JSON.stringify(response.response?.transports || []),
+          credentialName || 'Passkey',
+          aaguid || null,
         ]
       );
     }
@@ -147,7 +153,7 @@ export async function verifyAuthentication(
 
   if (verification.verified) {
     await db.execute(
-      'UPDATE webauthn_credentials SET counter = ? WHERE id = ?',
+      'UPDATE webauthn_credentials SET counter = ?, last_used = CURRENT_TIMESTAMP WHERE id = ?',
       [verification.authenticationInfo.newCounter, credential.id]
     );
   }
@@ -168,8 +174,23 @@ export async function removeCredential(credentialId: string, userId: string): Pr
 }
 
 export async function getUserCredentials(userId: string) {
-  return db.query(
-    'SELECT id, device_type, backup_state, created_at FROM webauthn_credentials WHERE user_id = ?',
+  const rows = await db.query(
+    'SELECT id, name, device_type, backup_state, aaguid, created_at, last_used FROM webauthn_credentials WHERE user_id = ?',
     [userId]
   );
+
+  return rows.map((cred: any) => {
+    const info = getAuthenticatorInfo(cred.aaguid);
+    return {
+      id: cred.id,
+      name: cred.name || null,
+      device_type: cred.device_type,
+      backup_state: cred.backup_state,
+      aaguid: cred.aaguid || null,
+      providerName: info.name,
+      providerIcon: info.icon,
+      created_at: cred.created_at,
+      last_used: cred.last_used,
+    };
+  });
 }

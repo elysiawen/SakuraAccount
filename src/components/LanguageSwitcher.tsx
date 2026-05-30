@@ -30,7 +30,7 @@ export function LanguageSwitcher({ className, dropDown, align = 'left' }: { clas
     <div ref={ref} className={`relative ${className ?? ''}`}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-colors"
+        className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-colors"
       >
         <span className="text-base leading-none">{current.flag}</span>
         <svg className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

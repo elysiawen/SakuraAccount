@@ -13,6 +13,7 @@ interface OverviewClientProps {
   userCreatedAt: number;
   emailVerified: boolean;
   twoFactorEnabled: boolean;
+  bannerUrl?: string;
 }
 
 export default function OverviewClient({
@@ -24,6 +25,7 @@ export default function OverviewClient({
   userCreatedAt,
   emailVerified,
   twoFactorEnabled,
+  bannerUrl,
 }: OverviewClientProps) {
   const t = useTranslations('dashboard.overview');
 
@@ -42,7 +44,15 @@ export default function OverviewClient({
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Welcome Header */}
       <div className="relative rounded-2xl p-8 text-white shadow-lg overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600"></div>
+        {bannerUrl ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${bannerUrl})` }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600" />
+        )}
+        <div className="absolute inset-0 bg-black/50" />
         <div className="relative z-10">
           <h1 className="text-3xl font-bold mb-2">{t('welcome', { name: nickname || username })}</h1>
           <p className="text-blue-100">{t('subtitle')}</p>
@@ -50,7 +60,7 @@ export default function OverviewClient({
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Account Status */}
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-2xl p-6 border border-blue-200 dark:border-blue-800 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-4">
@@ -83,19 +93,6 @@ export default function OverviewClient({
           <p className="text-xs text-green-700 dark:text-green-300 mt-1">{t('daysUsed', { days: daysUsed })}</p>
         </div>
 
-        {/* Security Score */}
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 rounded-2xl p-6 border border-orange-200 dark:border-orange-800 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-orange-900 dark:text-orange-200">{t('securityScore')}</h3>
-            <span className="text-2xl">🛡️</span>
-          </div>
-          <p className="text-4xl font-bold text-orange-900 dark:text-orange-100">
-            {(emailVerified ? 40 : 0) + (twoFactorEnabled ? 40 : 0) + 20}
-          </p>
-          <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
-            {emailVerified ? t('emailVerified') : t('emailUnverified')}
-          </p>
-        </div>
       </div>
 
       {/* Quick Actions */}

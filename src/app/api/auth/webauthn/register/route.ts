@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const { user } = result;
 
     const body = await request.json();
-    const { action, response, challenge } = body;
+    const { action, response, challenge, credentialName } = body;
 
     if (action === 'generate') {
       const options = await generateRegistration(user.id, user.username, user.nickname);
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
         return passkeyInvalidRequest();
       }
 
-      const verification = await verifyRegistration(user.id, response, challenge);
+      const verification = await verifyRegistration(user.id, response, challenge, credentialName);
       return NextResponse.json({ verified: verification.verified });
     }
 

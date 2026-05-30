@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Menu } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -13,6 +14,13 @@ interface SidebarShellProps {
   headerTitle: string;
   /** Tailwind breakpoint prefix: 'md' or 'lg' */
   breakpoint?: 'md' | 'lg';
+  /** User info displayed above footer buttons */
+  user?: {
+    name: string;
+    role?: string;
+    avatar?: string;
+    href?: string;
+  };
   children: React.ReactNode;
 }
 
@@ -22,6 +30,7 @@ export default function SidebarShell({
   footer,
   headerTitle,
   breakpoint = 'md',
+  user,
   children,
 }: SidebarShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -36,13 +45,35 @@ export default function SidebarShell({
   const sidebarInner = (
     <>
       <div className="p-6 border-b">{logo}</div>
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">{nav}</nav>
+      <nav className="flex-1 p-4 space-y-4 overflow-y-auto">{nav}</nav>
       <div className="p-4 border-t bg-muted/50 space-y-3">
         <div className="flex justify-center items-center gap-2">
           <ThemeToggle />
           <div className="w-px h-4 bg-border" />
           <LanguageSwitcher />
         </div>
+
+        {user && (
+          <Link
+            href={user.href || '#'}
+            className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-muted transition-colors"
+          >
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm overflow-hidden">
+              {user.avatar ? (
+                <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                (user.name || '').charAt(0).toUpperCase()
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-text-primary truncate">{user.name}</div>
+              {user.role && (
+                <div className="text-xs text-text-tertiary truncate">{user.role}</div>
+              )}
+            </div>
+          </Link>
+        )}
+
         {footer}
       </div>
     </>
@@ -67,7 +98,7 @@ export default function SidebarShell({
       </div>
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col ${bp}:pl-64 h-full`}>
+      <div className={`flex-1 flex flex-col ${bp}:pl-64 h-full min-w-0`}>
         {/* Mobile Header */}
         <div className={`${bp}:hidden bg-card/80 backdrop-blur-md border-b border-border p-4 flex items-center sticky top-0 z-30`}>
           <button
@@ -80,8 +111,8 @@ export default function SidebarShell({
         </div>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto w-full">
-          <div key={pathname} className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto animate-slide-in-up">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden w-full min-w-0">
+          <div key={pathname} className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto animate-slide-in-up min-w-0">
             {children}
           </div>
         </main>

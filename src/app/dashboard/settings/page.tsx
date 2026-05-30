@@ -5,13 +5,19 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import AvatarCropper from '@/components/AvatarCropper';
+import Modal from '@/components/Modal';
 import { getErrorMessage } from '@/lib/api-error';
 
 interface Credential {
   id: string;
+  name: string | null;
   device_type: string;
   backup_state: boolean;
+  aaguid: string | null;
+  providerName: string;
+  providerIcon: string;
   created_at: string;
+  last_used: string;
 }
 
 export default function SettingsPage() {
@@ -39,6 +45,8 @@ export default function SettingsPage() {
   // Passkey state
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loadingCredentials, setLoadingCredentials] = useState(true);
+  const [showPasskeyNameModal, setShowPasskeyNameModal] = useState(false);
+  const [passkeyName, setPasskeyName] = useState('');
 
   // General
   const [loading, setLoading] = useState(true);
@@ -245,7 +253,14 @@ export default function SettingsPage() {
     }
   };
 
+  const startAddPasskey = () => {
+    const nextIndex = credentials.length + 1;
+    setPasskeyName(`Passkey #${nextIndex}`);
+    setShowPasskeyNameModal(true);
+  };
+
   const handleAddPasskey = async () => {
+    setShowPasskeyNameModal(false);
     try {
       const { startRegistration } = await import('@simplewebauthn/browser');
 
@@ -265,6 +280,7 @@ export default function SettingsPage() {
           action: 'verify',
           response,
           challenge: options.challenge,
+          credentialName: passkeyName,
         }),
       });
 
@@ -524,7 +540,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <button
-            onClick={handleAddPasskey}
+            onClick={startAddPasskey}
             className="px-4 py-2 bg-accent-button text-white rounded-xl text-sm font-medium hover:bg-accent-button-hover transition-colors flex items-center gap-2"
           >
             <span>+</span>
@@ -547,18 +563,29 @@ export default function SettingsPage() {
                 key={cred.id}
                 className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-accent-foreground/20 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🔑</span>
-                  <div>
-                    <p className="font-medium text-text-primary">{cred.device_type || 'Passkey'}</p>
-                    <p className="text-xs text-text-tertiary">
-                      {t('addedAt', { date: new Date(cred.created_at).toLocaleDateString() })}
-                    </p>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="text-2xl shrink-0">🔑</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-text-primary truncate">{cred.name || t('passkeyUnnamed')}</p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-muted rounded-full text-text-tertiary border border-border">
+                        <img src={cred.providerIcon} alt="" className="w-3.5 h-3.5 object-contain" />
+                        {cred.providerName}
+                      </span>
+                      <span className="text-xs text-text-quaternary">
+                        {t('passkeyCreatedAt')} {new Date(cred.created_at).toLocaleDateString()}
+                      </span>
+                      {cred.last_used && (
+                        <span className="text-xs text-text-quaternary">
+                          {t('passkeyLastUsed')} {new Date(cred.last_used).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <button
                   onClick={() => handleRemovePasskey(cred.id)}
-                  className="px-3 py-1.5 text-sm text-destructive hover:bg-error rounded-lg transition-colors"
+                  className="px-3 py-1.5 text-sm text-destructive hover:bg-error rounded-lg transition-colors shrink-0 ml-3"
                 >
                   {t('delete')}
                 </button>
@@ -606,6 +633,48 @@ export default function SettingsPage() {
           }}
         />
       )}
+
+      {/* Passkey Name Modal */}
+      <Modal
+        isOpen={showPasskeyNameModal}
+        onClose={() => setShowPasskeyNameModal(false)}
+        title={t('addPasskey')}
+        footer={
+          <div className="flex justify-end gap-3 p-4 border-t border-border">
+            <button
+              onClick={() => setShowPasskeyNameModal(false)}
+              className="px-4 py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={handleAddPasskey}
+              disabled={!passkeyName.trim()}
+              className="px-4 py-2 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50"
+            >
+              {t('passkeyContinue')}
+            </button>
+          </div>
+        }
+      >
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('passkeyName')}</label>
+            <input
+              type="text"
+              autoFocus
+              value={passkeyName}
+              onChange={(e) => setPasskeyName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && passkeyName.trim()) handleAddPasskey();
+              }}
+              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
+              placeholder={t('passkeyNamePlaceholder')}
+            />
+            <p className="text-xs text-text-quaternary mt-1.5">{t('passkeyNameHelp')}</p>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

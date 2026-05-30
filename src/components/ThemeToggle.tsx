@@ -63,7 +63,7 @@ export function ThemeToggle({ dropDown }: { dropDown?: boolean }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-colors"
+        className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-colors"
         title={t(currentKey)}
       >
         <Icon className="w-4 h-4" />

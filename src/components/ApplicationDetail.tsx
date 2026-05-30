@@ -423,31 +423,31 @@ if __name__ == '__main__':
 
       {/* Header */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border">
           <Link
             href={backHref}
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary bg-muted rounded-lg hover:bg-border-strong transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            {t('backToList')}
+            <span className="hidden sm:inline">{t('backToList')}</span>
           </Link>
           <button
             onClick={handleDelete}
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-destructive rounded-lg hover:opacity-90 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
-            {t('deleteApp')}
+            <span className="hidden sm:inline">{t('deleteApp')}</span>
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* App Basic Info */}
-          <div className="flex items-center gap-4 mb-6">
-            <AppIcon client={client} size="w-20 h-20 text-2xl" />
-            <div>
-              <h3 className="text-xl font-bold text-text-primary">{client.name}</h3>
-              <p className="text-sm text-text-tertiary mt-0.5">{client.description || t('noDescription')}</p>
-              <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-start sm:items-center gap-4 mb-6">
+            <AppIcon client={client} size="w-14 h-14 sm:w-20 sm:h-20 text-xl sm:text-2xl" />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-lg sm:text-xl font-bold text-text-primary truncate">{client.name}</h3>
+              <p className="text-sm text-text-tertiary mt-0.5 line-clamp-2">{client.description || t('noDescription')}</p>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   client.status === 'disabled'
                     ? 'bg-destructive text-destructive-foreground'
@@ -463,7 +463,7 @@ if __name__ == '__main__':
           </div>
 
           {/* Detail Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
             {/* Client ID */}
             <div className="bg-muted/50 rounded-xl p-4">
               <h6 className="text-xs font-medium text-text-tertiary mb-2">{t('clientId')}</h6>
@@ -530,9 +530,9 @@ if __name__ == '__main__':
               {client.redirectUris.map((uri, index) => (
                 <li
                   key={index}
-                  className="flex items-center justify-between px-4 py-2.5 bg-muted/50 rounded-lg"
+                  className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-muted/50 rounded-lg"
                 >
-                  <span className="text-sm text-text-primary font-mono">{uri}</span>
+                  <span className="text-sm text-text-primary font-mono truncate">{uri}</span>
                   <CopyButton text={uri} />
                 </li>
               ))}
@@ -540,7 +540,7 @@ if __name__ == '__main__':
           </div>
 
           {/* Grant Types & Scopes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
             <div>
               <h5 className="text-base font-semibold text-text-primary mb-3">{t('grantTypes')}</h5>
               <ul className="space-y-2">
@@ -614,10 +614,10 @@ if __name__ == '__main__':
 
       {/* OAuth Endpoints */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
-        <div className="px-6 py-4 border-b border-border">
+        <div className="px-4 sm:px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">{t('oauthEndpoints')}</h2>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           {getOAuthEndpoints(t).map((endpoint) => {
             const url = `${getOrigin()}${endpoint.path}`;
             return (
@@ -628,7 +628,7 @@ if __name__ == '__main__':
                     type="text"
                     value={url}
                     readOnly
-                    className="flex-1 px-3 py-2 text-sm bg-muted border border-border rounded-lg text-text-primary font-mono"
+                    className="flex-1 min-w-0 px-3 py-2 text-sm bg-muted border border-border rounded-lg text-text-primary font-mono"
                   />
                   <CopyButton text={url} />
                 </div>
@@ -643,12 +643,12 @@ if __name__ == '__main__':
 
       {/* Integration Examples */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
-        <div className="px-6 py-4 border-b border-border">
+        <div className="px-4 sm:px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">{t('integrationExamples')}</h2>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Tabs */}
-          <div className="flex border-b border-border mb-4">
+          <div className="flex overflow-x-auto border-b border-border mb-4">
             {[
               { id: 'javascript', label: 'JavaScript' },
               { id: 'php', label: 'PHP' },
@@ -672,12 +672,12 @@ if __name__ == '__main__':
           <div className="relative">
             {mounted ? (
               <>
-                <pre className="bg-muted/50 rounded-xl p-4 overflow-x-auto">
-                  <code className="text-sm text-text-primary font-mono whitespace-pre">
+                <pre className="bg-muted/50 rounded-xl p-3 sm:p-4 overflow-x-auto">
+                  <code className="text-xs sm:text-sm text-text-primary font-mono whitespace-pre">
                     {integrationExamples[activeTab as keyof typeof integrationExamples]}
                   </code>
                 </pre>
-                <div className="absolute top-3 right-3">
+                <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
                   <CopyButton text={integrationExamples[activeTab as keyof typeof integrationExamples]} />
                 </div>
               </>

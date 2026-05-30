@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import AdminSidebar from './sidebar';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import SidebarShell from '@/components/SidebarShell';
 import PageLogger from '@/components/PageLogger';
-import { Menu } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  Link2,
+  FileText,
+  Settings,
+  ArrowLeft,
+} from 'lucide-react';
 
 export default function AdminShell({
   children,
@@ -21,7 +28,6 @@ export default function AdminShell({
   avatar?: string;
   sessionInvalid?: boolean;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const t = useTranslations('admin.nav');
 
@@ -31,7 +37,6 @@ export default function AdminShell({
     }
   }, [sessionInvalid]);
 
-  // Periodic session validation — redirects to login if session is revoked
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -45,57 +50,82 @@ export default function AdminShell({
       }
     };
 
-    const interval = setInterval(checkSession, 5 * 60 * 1000); // every 5 minutes
+    const interval = setInterval(checkSession, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
-
   if (sessionInvalid) return null;
 
+  const isActive = (href: string) => {
+    if (href === '/admin') return pathname === '/admin';
+    return pathname.startsWith(href);
+  };
+
+  const NavLink = ({ href, icon: Icon, label }: { href: string; icon: any; label: string }) => {
+    const active = isActive(href);
+    return (
+      <Link
+        href={href}
+        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+          active
+            ? 'bg-accent text-accent-foreground font-semibold shadow-sm'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        {label}
+      </Link>
+    );
+  };
+
+  const nav = (
+    <>
+      <div className="space-y-1">
+        <NavLink href="/admin" icon={LayoutDashboard} label={t('overview')} />
+      </div>
+      <div className="space-y-1 pt-3 border-t border-border">
+        <p className="px-4 mb-1 text-[11px] font-medium text-text-quaternary uppercase tracking-wider">{t('sectionManagement')}</p>
+        <NavLink href="/admin/users" icon={Users} label={t('users')} />
+        <NavLink href="/admin/applications" icon={Link2} label={t('applications')} />
+        <NavLink href="/admin/audit-logs" icon={FileText} label={t('auditLogs')} />
+      </div>
+      <div className="pt-3 border-t border-border">
+        <NavLink href="/admin/settings" icon={Settings} label={t('settings')} />
+      </div>
+    </>
+  );
+
+  const footer = (
+    <Link
+      href="/dashboard"
+      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-accent-foreground bg-accent border border-accent/60 rounded-xl hover:bg-accent-foreground/10 hover:border-accent-foreground/30 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      {t('backToUser')}
+    </Link>
+  );
+
   return (
-    <div className="h-screen bg-muted flex overflow-hidden">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:flex flex-col w-64 fixed inset-y-0 z-50">
-        <AdminSidebar username={username} nickname={nickname} avatar={avatar} />
-      </div>
-
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="fixed inset-y-0 left-0 w-64 bg-card shadow-2xl flex flex-col">
-            <AdminSidebar username={username} nickname={nickname} avatar={avatar} />
-          </div>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col md:pl-64 h-full">
-        {/* Mobile Header */}
-        <div className="md:hidden bg-card/80 backdrop-blur-md border-b border-border p-4 flex items-center sticky top-0 z-30">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 text-text-secondary hover:bg-muted rounded-lg"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <span className="font-bold text-text-primary text-lg ml-3">{t('adminPanel')}</span>
-        </div>
-
-        {/* Content Area */}
-        <main className="flex-1 overflow-y-auto w-full">
-          <div key={pathname} className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto animate-slide-in-up">
-            <PageLogger />
-            {children}
-          </div>
-        </main>
-      </div>
-    </div>
+    <SidebarShell
+      breakpoint="md"
+      headerTitle={t('adminPanel')}
+      logo={
+        <>
+          <h1 className="text-xl font-bold text-text-primary">{t('adminPanel')}</h1>
+          <p className="text-xs text-text-tertiary mt-0.5">{t('brandSubtitle')}</p>
+        </>
+      }
+      user={{
+        name: nickname || username || '',
+        role: t('adminRole'),
+        avatar,
+        href: '#',
+      }}
+      nav={nav}
+      footer={footer}
+    >
+      <PageLogger />
+      {children}
+    </SidebarShell>
   );
 }

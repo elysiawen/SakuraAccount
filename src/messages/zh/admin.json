@@ -11,7 +11,8 @@
     "adminRole": "管理员",
     "developerRole": "开发者",
     "backToUser": "返回用户端",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "sectionManagement": "管理"
   },
   "overview": {
     "title": "管理后台概览",
@@ -70,7 +71,12 @@
     "leaveEmptyForNoChangePassword": "留空表示不修改密码",
     "roleUser": "用户",
     "roleDeveloper": "开发者",
-    "roleAdmin": "管理员"
+    "roleAdmin": "管理员",
+    "deletePasskeyConfirm": "确定要删除此 Passkey 吗？",
+    "passkeyDeleted": "Passkey 已删除",
+    "passkeyDeleteFailed": "Passkey 删除失败",
+    "passkeyUnnamed": "未命名 Passkey",
+    "noPasskeys": "该用户暂无 Passkey"
   },
   "applications": {
     "title": "应用管理",
@@ -206,7 +212,8 @@
     "actionUpdateSettings": "批量更新设置",
     "actionOAuthAuthorize": "OAuth 授权",
     "actionPageVisit": "页面访问",
-    "systemUser": "系统"
+    "systemUser": "系统",
+    "logDetail": "日志详情"
   },
   "settings": {
     "title": "系统设置",
@@ -216,6 +223,9 @@
     "localStorage": "本地存储",
     "s3Storage": "S3 存储",
     "s3Endpoint": "S3 Endpoint",
+    "s3EndpointHelpAuto": "根据预设和 Account ID 自动生成",
+    "s3EndpointHelpCustom": "手动输入 S3 兼容服务的 Endpoint",
+    "s3RegionDescription": "留空或填 auto 表示自动选择",
     "s3EndpointPlaceholder": "https://s3.amazonaws.com",
     "s3Bucket": "Bucket 名称",
     "s3BucketPlaceholder": "my-bucket",
@@ -252,6 +262,32 @@
     "databaseInfo": "数据库信息",
     "databaseType": "数据库类型",
     "status": "状态",
-    "statusNormal": "正常"
+    "statusNormal": "正常",
+    "logCleanup": {
+      "title": "日志清理",
+      "subtitle": "清理过期的审计日志，释放数据库空间",
+      "retention": "保留时间",
+      "scope": "清理范围",
+      "cat_access": "访问日志",
+      "cat_auth": "授权日志",
+      "cat_operation": "操作日志",
+      "preset30": "30 天（推荐）",
+      "preset180": "6 个月（180 天）",
+      "preset365": "1 年（365 天）",
+      "presetAll": "全部清理",
+      "custom": "自定义",
+      "days": "天",
+      "daysCount": "{days} 天",
+      "allLogs": "所有日志",
+      "execute": "执行清理",
+      "cleanAll": "全部清理",
+      "cleaning": "清理中...",
+      "selectCategoryError": "请至少选择一个日志类型",
+      "confirmMsg": "确定要清理 {range} 之前的日志吗？此操作不可恢复。",
+      "confirmButton": "确认清理",
+      "cleanedSuccess": "清理完成，共删除 {count} 条日志",
+      "cleanFailed": "清理失败",
+      "helpText": "清理操作将删除指定天数之前的所有审计日志，此操作不可逆。"
+    }
   }
 }

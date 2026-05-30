@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { s3Endpoint, s3Region, s3AccessKeyId, s3SecretAccessKey, s3BucketName, s3PublicDomain, s3FolderPath } = body;
 
-        if (!s3Endpoint || !s3AccessKeyId || !s3SecretAccessKey || !s3BucketName || !s3PublicDomain) {
+        if (!s3Endpoint || !s3AccessKeyId || !s3SecretAccessKey || !s3BucketName) {
             return paramInvalid('请填写完整的 S3 配置');
         }
 

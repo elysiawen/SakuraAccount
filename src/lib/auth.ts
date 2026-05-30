@@ -174,13 +174,22 @@ export async function logAudit(userId: string | null, action: string, details?: 
   );
 }
 
-export async function getAuditLogs(page: number = 1, limit: number = 20, category?: string): Promise<{ logs: any[]; total: number }> {
+export async function getAuditLogs(page: number = 1, limit: number = 20, category?: string, search?: string): Promise<{ logs: any[]; total: number }> {
   const offset = (page - 1) * limit;
+  const conditions: string[] = [];
+  const params: any[] = [];
 
-  const whereClause = category ? 'WHERE al.category = ?' : '';
-  const countWhere = category ? 'WHERE category = ?' : '';
-  const queryParams = category ? [category, limit, offset] : [limit, offset];
-  const countParams = category ? [category] : [];
+  if (category) {
+    conditions.push('al.category = ?');
+    params.push(category);
+  }
+  if (search) {
+    conditions.push('(u.username LIKE ? OR al.action LIKE ? OR al.ip LIKE ?)');
+    const q = `%${search}%`;
+    params.push(q, q, q);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const [logs, countResult] = await Promise.all([
     db.query(
@@ -190,15 +199,38 @@ export async function getAuditLogs(page: number = 1, limit: number = 20, categor
        ${whereClause}
        ORDER BY al.created_at DESC
        LIMIT ? OFFSET ?`,
-      queryParams
+      [...params, limit, offset]
     ),
-    db.getOne(`SELECT COUNT(*) as total FROM audit_logs ${countWhere}`, countParams)
+    db.getOne(
+      `SELECT COUNT(*) as total FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id ${whereClause}`,
+      params
+    )
   ]);
 
   return {
     logs,
     total: countResult?.total || 0,
   };
+}
+
+export async function cleanupAuditLogs(retentionDays: number, categories?: string[]): Promise<{ deleted: number }> {
+  const conditions: string[] = [];
+  const params: any[] = [];
+
+  if (retentionDays > 0) {
+    conditions.push('created_at < ?');
+    params.push(new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString());
+  }
+
+  if (categories && categories.length > 0) {
+    conditions.push(`category IN (${categories.map(() => '?').join(', ')})`);
+    params.push(...categories);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const count = await db.getOne(`SELECT COUNT(*) as count FROM audit_logs ${whereClause}`, params);
+  await db.execute(`DELETE FROM audit_logs ${whereClause}`, params);
+  return { deleted: count?.count || 0 };
 }
 
 export async function createUser(username: string, email: string, password: string, nickname?: string): Promise<User> {

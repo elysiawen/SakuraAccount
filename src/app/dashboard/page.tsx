@@ -22,6 +22,7 @@ export default async function DashboardPage() {
       userCreatedAt={userCreatedAt}
       emailVerified={user.emailVerified}
       twoFactorEnabled={user.twoFactorEnabled}
+      bannerUrl={process.env.BANNER_BACKGROUND_URL || ''}
     />
   );
 }

@@ -127,7 +127,7 @@ export default function Home() {
           </div>
 
           {/* Hero */}
-          <div className="flex-1 flex items-center justify-center px-8 md:px-16">
+          <div className="flex-1 flex items-center justify-center px-5 sm:px-8 md:px-16">
             <div className="max-w-4xl w-full">
               {/* Status badge */}
               <div className="flex items-center gap-2 mb-8" style={fadeUp(0.15)}>
@@ -139,22 +139,22 @@ export default function Home() {
 
               {/* Heading */}
               <div style={fadeUp(0.25)}>
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-light text-foreground leading-[0.95] tracking-tight mb-2">
+                <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-light text-foreground leading-[0.95] tracking-tight mb-2">
                   {t('title1')}
                 </h1>
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-light leading-[0.95] tracking-tight mb-8">
+                <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-light leading-[0.95] tracking-tight mb-6 sm:mb-8">
                   <span className="text-foreground">{t('title2')}</span>
-                  <span className="text-muted-foreground/30 ml-4">{t('title3')}</span>
+                  <span className="text-muted-foreground/30 ml-2 sm:ml-4">{t('title3')}</span>
                 </h1>
               </div>
 
               {/* Subtitle */}
-              <p className="text-base md:text-lg text-muted-foreground max-w-lg mb-12 leading-relaxed" style={fadeUp(0.35)}>
+              <p className="text-base md:text-lg text-muted-foreground max-w-lg mb-8 sm:mb-12 leading-relaxed" style={fadeUp(0.35)}>
                 {t('subtitle')}
               </p>
 
               {/* CTA */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-20" style={fadeUp(0.45)}>
+              <div className="flex flex-col sm:flex-row gap-3 mb-12 sm:mb-20" style={fadeUp(0.45)}>
                 {user ? (
                   <Link
                     href="/dashboard"
@@ -226,7 +226,7 @@ export default function Home() {
                 ].map((feature, i) => (
                   <div
                     key={i}
-                    className="group bg-card hover:bg-muted/50 p-6 md:p-8 transition-colors duration-300"
+                    className="group bg-card hover:bg-muted/50 p-5 sm:p-6 md:p-8 transition-colors duration-300"
                   >
                     <div className="text-muted-foreground/50 group-hover:text-accent-button transition-colors duration-300 mb-4">
                       {feature.icon}
@@ -240,7 +240,7 @@ export default function Home() {
           </div>
 
           {/* Footer */}
-          <footer className="px-8 md:px-16 py-6 flex items-center justify-between" style={fadeUp(0.7)}>
+          <footer className="px-5 sm:px-8 md:px-16 py-6 flex items-center justify-between" style={fadeUp(0.7)}>
             <span className="text-xs text-muted-foreground/50">&copy; {new Date().getFullYear()} Sakura Account</span>
             <div className="flex items-center gap-1.5">
               <div className="w-1 h-1 rounded-full bg-emerald-500/60" />

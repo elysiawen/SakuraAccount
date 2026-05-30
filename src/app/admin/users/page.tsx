@@ -8,7 +8,7 @@ import Search from '@/components/Search';
 import Pagination from '@/components/Pagination';
 import Modal from '@/components/Modal';
 import AvatarUpload from '@/components/AvatarUpload';
-import { Shield, User as UserIcon, Mail, Key, Edit, Trash2 } from 'lucide-react';
+import { Shield, User as UserIcon, Mail, Key, Edit, Trash2, Fingerprint } from 'lucide-react';
 import { getErrorMessage } from '@/lib/api-error';
 
 interface User {
@@ -83,6 +83,8 @@ export default function AdminUsersPage() {
   const [editingAvatar, setEditingAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
+  const [userPasskeys, setUserPasskeys] = useState<any[]>([]);
+  const [loadingPasskeys, setLoadingPasskeys] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -123,9 +125,43 @@ export default function AdminUsersPage() {
     });
   };
 
+  const fetchPasskeys = async (userId: string) => {
+    setLoadingPasskeys(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/passkeys`);
+      const data = await res.json();
+      setUserPasskeys(data.credentials || []);
+    } catch {
+      setUserPasskeys([]);
+    } finally {
+      setLoadingPasskeys(false);
+    }
+  };
+
+  const handleDeletePasskey = async (userId: string, credentialId: string) => {
+    confirm(t('deletePasskeyConfirm'), {
+      confirmText: t('delete'),
+      confirmColor: 'red',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/users/${userId}/passkeys?id=${credentialId}`, { method: 'DELETE' });
+          if (res.ok) {
+            success(t('passkeyDeleted'));
+            fetchPasskeys(userId);
+          } else {
+            error(t('passkeyDeleteFailed'));
+          }
+        } catch {
+          error(t('passkeyDeleteFailed'));
+        }
+      },
+    });
+  };
+
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setEditingAvatar(user.avatar || null);
+    fetchPasskeys(String(user.id));
     setEditForm({
       username: user.username || '',
       nickname: user.nickname || '',
@@ -528,6 +564,43 @@ export default function AdminUsersPage() {
               placeholder={t('leaveEmptyForNoChange')}
             />
             <p className="text-xs text-text-quaternary mt-1.5">{t('leaveEmptyForNoChangePassword')}</p>
+          </div>
+
+          {/* Passkeys */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+              <Fingerprint className="w-3.5 h-3.5" />
+              Passkey
+            </label>
+            {loadingPasskeys ? (
+              <div className="animate-pulse h-16 bg-muted rounded-xl" />
+            ) : userPasskeys.length > 0 ? (
+              <div className="space-y-2">
+                {userPasskeys.map((cred) => (
+                  <div
+                    key={cred.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <img src={cred.providerIcon} alt="" className="w-5 h-5 object-contain shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">{cred.name || t('passkeyUnnamed')}</p>
+                        <p className="text-xs text-text-quaternary">{cred.providerName}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeletePasskey(String(editingUser!.id), cred.id)}
+                      className="p-1.5 text-text-quaternary hover:text-destructive hover:bg-error rounded-lg transition-colors shrink-0 ml-2"
+                      title={t('delete')}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-text-quaternary">{t('noPasskeys')}</p>
+            )}
           </div>
         </div>
       </Modal>

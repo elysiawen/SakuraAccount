@@ -187,10 +187,28 @@ class Database {
         backup_eligible BOOLEAN DEFAULT FALSE,
         backup_state BOOLEAN DEFAULT FALSE,
         transports ${textType},
+        name ${varcharType(255)},
+        aaguid ${varcharType(36)},
+        last_used ${timestampType} DEFAULT CURRENT_TIMESTAMP,
         created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    // Migration: add new columns to existing webauthn_credentials tables
+    for (const col of [
+      { name: 'name', def: `${varcharType(255)}` },
+      { name: 'aaguid', def: `${varcharType(36)}` },
+      { name: 'last_used', def: `${timestampType} DEFAULT CURRENT_TIMESTAMP` },
+    ]) {
+      try {
+        await this.execute(`ALTER TABLE webauthn_credentials ADD COLUMN ${col.name} ${col.def}`);
+      } catch (e: any) {
+        if (e?.code !== '42701' && e?.errno !== 1060) {
+          console.error(`Failed to add ${col.name} column:`, e);
+        }
+      }
+    }
 
     // OAuth2 clients table
     await this.execute(`

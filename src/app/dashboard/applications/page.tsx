@@ -154,11 +154,11 @@ export default function UserApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-text-primary truncate">{t('title')}</h1>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-accent-button rounded-lg hover:bg-accent-button-hover transition-colors"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-accent-button rounded-lg hover:bg-accent-button-hover transition-colors shrink-0"
         >
           <Plus className="w-4 h-4" />
           {t('createNew')}
@@ -166,9 +166,9 @@ export default function UserApplicationsPage() {
       </div>
 
       <div className="bg-card rounded-xl shadow-sm border border-border">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[1, 2].map((i) => (
                 <div key={i} className="animate-pulse">
                   <div className="h-40 bg-muted rounded-xl"></div>
@@ -176,16 +176,27 @@ export default function UserApplicationsPage() {
               ))}
             </div>
           ) : clients.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {clients.map((client) => (
                 <Link
                   key={client.nanoId}
                   href={`/dashboard/applications/${client.nanoId}`}
-                  className="border border-border rounded-xl p-4 hover:border-accent-foreground/20 hover:shadow-md transition-all block"
+                  className="relative border border-border rounded-xl p-4 hover:border-accent-foreground/20 hover:shadow-md transition-all block"
                 >
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteClient(client.nanoId, client.name);
+                    }}
+                    className="absolute top-3 right-3 p-1.5 text-destructive hover:bg-error rounded-lg transition-colors"
+                    title={t('delete')}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                   <div className="flex items-center gap-3 mb-3">
                     <AppIconSmall client={client} />
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pr-8">
                       <h3 className="font-semibold text-text-primary truncate">{client.name}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         client.status === 'disabled'
@@ -196,25 +207,12 @@ export default function UserApplicationsPage() {
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-text-tertiary mb-3 line-clamp-2">
+                  <p className="text-sm text-text-tertiary line-clamp-2">
                     {client.description || t('noDescription')}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-text-quaternary">
-                      NanoID: {client.nanoId}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleDeleteClient(client.nanoId, client.name);
-                      }}
-                      className="flex items-center gap-1 text-xs text-destructive hover:bg-error px-2 py-1 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      {t('delete')}
-                    </button>
-                  </div>
+                  <span className="text-xs text-text-quaternary mt-2 block truncate">
+                    NanoID: {client.nanoId}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -230,10 +228,10 @@ export default function UserApplicationsPage() {
 
       {/* Documentation */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
-        <div className="px-6 py-4 border-b border-border">
+        <div className="px-4 sm:px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">{t('docTitle')}</h2>
         </div>
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           <div>
             <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
               <Info className="w-4 h-4 text-primary" />
@@ -249,7 +247,7 @@ export default function UserApplicationsPage() {
               <Shield className="w-4 h-4 text-primary" />
               {t('docAuthMethods')}
             </h3>
-            <ul className="text-sm text-text-secondary space-y-1.5 ml-6">
+            <ul className="text-sm text-text-secondary space-y-1.5 ml-4 sm:ml-6">
               <li><strong>OAuth 2.0</strong> - {t('docOAuthDesc')}</li>
               <li><strong>OpenID Connect</strong> - {t('docOIDCDesc')}</li>
               <li><strong>{t('docSSO')}</strong> - {t('docSSODesc')}</li>
