@@ -12,10 +12,11 @@ import type {
 import { db } from './db';
 import { nanoid } from 'nanoid';
 import { getAuthenticatorInfo } from './aaguids';
+import { DEFAULT_BASE_URL } from './utils';
 
 const rpName = process.env.WEBAUTHN_RP_NAME || 'Sakura Account';
 const rpID = process.env.WEBAUTHN_RP_ID || 'localhost';
-const origin = process.env.WEBAUTHN_ORIGIN || 'http://localhost:3000';
+const origin = process.env.WEBAUTHN_ORIGIN || DEFAULT_BASE_URL;
 
 export async function getAuthenticators(userId: string) {
   const credentials = await db.query(

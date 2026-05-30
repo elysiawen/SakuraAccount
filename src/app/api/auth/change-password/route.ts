@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserById, verifyPassword, updateUserPassword, getRequestMetadata, logAudit } from '@/lib/auth';
 import { requireAuthenticatedUser } from '@/lib/require-session';
-import { validatePassword } from '@/lib/utils';
+import { validatePassword, VALIDATION_KEY_MAP } from '@/lib/utils';
 import { paramInvalid, authWeakPassword, userPasswordNotSet, authPasswordWrong, userPasswordChangeFailed } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
-
-const VALIDATION_KEY_MAP: Record<string, string> = {
-  'PASSWORD_TOO_SHORT': 'validation.passwordTooShort',
-  'PASSWORD_NEEDS_LETTER_AND_NUMBER': 'validation.passwordNeedsLetterAndNumber',
-};
 
 export async function POST(request: NextRequest) {
   try {

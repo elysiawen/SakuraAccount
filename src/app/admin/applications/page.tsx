@@ -11,6 +11,8 @@ import Modal from '@/components/Modal';
 import { Plus, Trash2, Edit, Box } from 'lucide-react';
 import { resolveAppIcon } from '@/lib/app-icon';
 import { getErrorMessage } from '@/lib/api-error';
+import { getAvatarColor } from '@/components/AppIcon';
+import { Spinner } from '@/components/Spinner';
 
 interface OAuth2Client {
   nanoId: string;
@@ -21,20 +23,6 @@ interface OAuth2Client {
   userId: string;
   username?: string;
   createdAt: string;
-}
-
-const AVATAR_COLORS = [
-  'from-pink-500/80 to-rose-500/80',
-  'from-violet-500/80 to-purple-500/80',
-  'from-sky-500/80 to-cyan-500/80',
-  'from-emerald-500/80 to-teal-500/80',
-  'from-amber-500/80 to-orange-500/80',
-];
-
-function getAvatarColor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 function AppIconSmall({ client }: { client: OAuth2Client }) {
@@ -360,12 +348,7 @@ function AdminApplicationsContent() {
               disabled={saving}
               className="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {saving && (
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
+              {saving && <Spinner className="h-4 w-4" />}
               {saving ? t('saving') : t('save')}
             </button>
           </div>

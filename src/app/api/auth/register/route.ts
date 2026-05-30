@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser, getUserByUsername, getUserByEmail, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
-import { isValidEmail, isValidUsername, validatePassword, validateNickname } from '@/lib/utils';
+import { isValidEmail, isValidUsername, validatePassword, validateNickname, VALIDATION_KEY_MAP } from '@/lib/utils';
 import { paramInvalid, authUsernameExists, authEmailExists, authWeakPassword, internalError } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
-
-const VALIDATION_KEY_MAP: Record<string, string> = {
-  'PASSWORD_TOO_SHORT': 'validation.passwordTooShort',
-  'PASSWORD_NEEDS_LETTER_AND_NUMBER': 'validation.passwordNeedsLetterAndNumber',
-  'NICKNAME_EMPTY': 'validation.nicknameEmpty',
-  'NICKNAME_TOO_LONG': 'validation.nicknameTooLong',
-};
 
 async function translateValidationKey(key: string): Promise<string> {
   const mapped = VALIDATION_KEY_MAP[key];

@@ -2,16 +2,17 @@ import { timingSafeEqual } from 'crypto';
 import { nanoid } from 'nanoid';
 import { SignJWT, jwtVerify } from 'jose';
 import { db } from './db';
+import { DEFAULT_BASE_URL } from './utils';
 
 const APP_SECRET = process.env.APP_SECRET;
 if (!APP_SECRET) {
   throw new Error('FATAL: APP_SECRET environment variable is required.');
 }
 const SECRET = new TextEncoder().encode(APP_SECRET);
-const ACCESS_TOKEN_EXPIRY = parseInt(process.env.OAUTH2_ACCESS_TOKEN_EXPIRY || '3600');
+export const ACCESS_TOKEN_EXPIRY = parseInt(process.env.OAUTH2_ACCESS_TOKEN_EXPIRY || '3600');
 const REFRESH_TOKEN_EXPIRY = parseInt(process.env.OAUTH2_REFRESH_TOKEN_EXPIRY || '2592000');
 const AUTHORIZATION_CODE_EXPIRY = parseInt(process.env.OAUTH2_AUTHORIZATION_CODE_EXPIRY || '600');
-export const ISSUER = process.env.OAUTH2_ISSUER || 'http://localhost:3000';
+export const ISSUER = process.env.OAUTH2_ISSUER || DEFAULT_BASE_URL;
 
 export interface OAuth2Client {
   id: string;

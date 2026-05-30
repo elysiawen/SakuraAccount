@@ -7,27 +7,8 @@ import { useTranslations } from 'next-intl';
 import { PublicNav } from '@/components/PublicNav';
 import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage } from '@/lib/api-error';
-
-function SakuraPetal({ delay, left, size, duration }: { delay: number; left: string; size: number; duration: number }) {
-  return (
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        left,
-        top: '-20px',
-        animation: `petalFall ${duration}s linear ${delay}s infinite`,
-      }}
-    >
-      <svg width={size} height={size} viewBox="0 0 12 12" fill="none" style={{ opacity: 0.25 }}>
-        <path
-          d="M6 0C6 0 8 3 10 5C12 7 10 10 8 11C6 12 4 10 2 8C0 6 2 3 4 1.5C5 0.5 6 0 6 0Z"
-          fill="currentColor"
-          className="text-pink-400"
-        />
-      </svg>
-    </div>
-  );
-}
+import { Spinner } from '@/components/Spinner';
+import { SakuraPetal } from '@/components/SakuraPetal';
 
 export default function RegisterPage() {
   const t = useTranslations('auth.register');
@@ -95,27 +76,6 @@ export default function RegisterPage() {
 
   return (
     <>
-      <style jsx global>{`
-        @keyframes petalFall {
-          0% { transform: translateY(-20px) rotate(0deg) translateX(0); opacity: 0; }
-          10% { opacity: 0.6; }
-          90% { opacity: 0.3; }
-          100% { transform: translateY(100vh) rotate(360deg) translateX(50px); opacity: 0; }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-      `}</style>
-
       <main className="min-h-screen relative overflow-hidden flex items-center justify-center bg-background">
         {/* Nav */}
         <PublicNav absolute />
@@ -291,12 +251,7 @@ export default function RegisterPage() {
                   disabled={loading}
                   className="w-full py-2.5 bg-accent-button text-white rounded-lg font-medium text-sm hover:bg-accent-button-hover transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
                 >
-                  {loading && (
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  )}
+                  {loading && <Spinner className="h-4 w-4" />}
                   {loading ? t('registering') : t('createAccount')}
                 </button>
               </form>

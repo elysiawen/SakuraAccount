@@ -9,6 +9,7 @@ import { useConfirm } from '@/components/ConfirmProvider';
 import { resolveAppIcon } from '@/lib/app-icon';
 import Modal from '@/components/Modal';
 import { getErrorMessage } from '@/lib/api-error';
+import { Spinner } from '@/components/Spinner';
 import {
   ArrowLeft,
   Trash2,
@@ -706,12 +707,7 @@ if __name__ == '__main__':
               disabled={saving}
               className="px-4 py-2 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50 flex items-center gap-2"
             >
-              {saving && (
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
+              {saving && <Spinner className="h-4 w-4" />}
               {saving ? t('saving') : t('save')}
             </button>
           </div>
@@ -787,10 +783,7 @@ if __name__ == '__main__':
                         <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border-input rounded-lg cursor-pointer hover:bg-muted transition-colors text-sm text-text-secondary">
                           {uploadingIcon ? (
                             <>
-                              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
+                              <Spinner className="h-4 w-4" />
                               {t('saving')}
                             </>
                           ) : (

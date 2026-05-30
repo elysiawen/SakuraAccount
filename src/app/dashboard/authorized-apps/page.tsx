@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { resolveAppIcon } from '@/lib/app-icon';
+import { getAvatarColor } from '@/components/AppIcon';
 
 interface AuthorizedApp {
   clientId: string;
@@ -23,20 +24,6 @@ const SCOPE_KEYS: Record<string, string> = {
   email: 'scopeEmail',
   openid: 'scopeOpenID',
 };
-
-const AVATAR_COLORS = [
-  'from-pink-500/80 to-rose-500/80',
-  'from-violet-500/80 to-purple-500/80',
-  'from-sky-500/80 to-cyan-500/80',
-  'from-emerald-500/80 to-teal-500/80',
-  'from-amber-500/80 to-orange-500/80',
-];
-
-function getAvatarColor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 function AppIcon({ app }: { app: AuthorizedApp }) {
   const [errored, setErrored] = useState(false);

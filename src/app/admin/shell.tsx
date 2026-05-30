@@ -15,6 +15,25 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 
+function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
+  const pathname = usePathname();
+  const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
+
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+        active
+          ? 'bg-accent text-accent-foreground font-semibold shadow-sm'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+      }`}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {label}
+    </Link>
+  );
+}
+
 export default function AdminShell({
   children,
   username,
@@ -28,7 +47,6 @@ export default function AdminShell({
   avatar?: string;
   sessionInvalid?: boolean;
 }) {
-  const pathname = usePathname();
   const t = useTranslations('admin.nav');
 
   useEffect(() => {
@@ -55,28 +73,6 @@ export default function AdminShell({
   }, []);
 
   if (sessionInvalid) return null;
-
-  const isActive = (href: string) => {
-    if (href === '/admin') return pathname === '/admin';
-    return pathname.startsWith(href);
-  };
-
-  const NavLink = ({ href, icon: Icon, label }: { href: string; icon: any; label: string }) => {
-    const active = isActive(href);
-    return (
-      <Link
-        href={href}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-          active
-            ? 'bg-accent text-accent-foreground font-semibold shadow-sm'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-        }`}
-      >
-        <Icon className="h-4 w-4 shrink-0" />
-        {label}
-      </Link>
-    );
-  };
 
   const nav = (
     <>

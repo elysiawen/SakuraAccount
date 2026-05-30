@@ -47,7 +47,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-screen">
         <Providers locale={locale} messages={messages} timeZone={timeZone}>
           <Suspense fallback={null}>
             <ProgressBar />

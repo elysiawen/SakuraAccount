@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, getUserByUsername, logAudit } from '@/lib/auth';
 import { requireAdmin } from '@/lib/require-session';
-import { isValidEmail, validatePassword, validateNickname } from '@/lib/utils';
+import { isValidEmail, validatePassword, validateNickname, VALIDATION_KEY_MAP } from '@/lib/utils';
 import {
     paramInvalid,
     adminUserIdRequired,
@@ -15,13 +15,6 @@ import {
     authUsernameExists,
 } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
-
-const VALIDATION_KEY_MAP: Record<string, string> = {
-  'PASSWORD_TOO_SHORT': 'validation.passwordTooShort',
-  'PASSWORD_NEEDS_LETTER_AND_NUMBER': 'validation.passwordNeedsLetterAndNumber',
-  'NICKNAME_EMPTY': 'validation.nicknameEmpty',
-  'NICKNAME_TOO_LONG': 'validation.nicknameTooLong',
-};
 
 export async function GET(request: NextRequest) {
   try {

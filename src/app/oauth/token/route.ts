@@ -7,6 +7,7 @@ import {
   getTokenByRefreshToken,
   revokeToken,
   getConsentedScopes,
+  ACCESS_TOKEN_EXPIRY,
 } from '@/lib/oauth2';
 import { generateIdToken } from '@/lib/oidc';
 
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       const response: Record<string, any> = {
         access_token: token.accessToken,
         token_type: 'Bearer',
-        expires_in: parseInt(process.env.OAUTH2_ACCESS_TOKEN_EXPIRY || '3600'),
+        expires_in: ACCESS_TOKEN_EXPIRY,
         refresh_token: token.refreshToken,
         scope: authCode.scopes.join(' '),
       };
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
       const response: Record<string, any> = {
         access_token: newToken.accessToken,
         token_type: 'Bearer',
-        expires_in: parseInt(process.env.OAUTH2_ACCESS_TOKEN_EXPIRY || '3600'),
+        expires_in: ACCESS_TOKEN_EXPIRY,
         refresh_token: newToken.refreshToken,
         scope: token.scopes.join(' '),
       };
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         access_token: token.accessToken,
         token_type: 'Bearer',
-        expires_in: parseInt(process.env.OAUTH2_ACCESS_TOKEN_EXPIRY || '3600'),
+        expires_in: ACCESS_TOKEN_EXPIRY,
         scope: scopes.join(' '),
       }, { headers: NO_STORE_HEADERS });
     }

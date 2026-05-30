@@ -40,7 +40,9 @@ export default function SidebarShell({
     setSidebarOpen(false);
   }, [pathname]);
 
-  const bp = breakpoint;
+  const sidebarShow = breakpoint === 'md' ? 'md:flex' : 'lg:flex';
+  const mobileOnly = breakpoint === 'md' ? 'md:hidden' : 'lg:hidden';
+  const sidebarPadding = breakpoint === 'md' ? 'md:pl-64' : 'lg:pl-64';
 
   const sidebarInner = (
     <>
@@ -82,12 +84,12 @@ export default function SidebarShell({
   return (
     <div className="h-screen bg-muted flex overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className={`hidden ${bp}:flex flex-col w-64 fixed inset-y-0 z-50 bg-card border-r`}>
+      <aside className={`hidden ${sidebarShow} flex-col w-64 fixed inset-y-0 z-50 bg-card border-r`}>
         {sidebarInner}
       </aside>
 
       {/* Mobile Sidebar Overlay */}
-      <div className={`fixed inset-0 z-50 ${bp}:hidden transition-all duration-300 ${sidebarOpen ? 'visible' : 'invisible pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-50 ${mobileOnly} transition-all duration-300 ${sidebarOpen ? 'visible' : 'invisible pointer-events-none'}`}>
         <div
           className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
           onClick={() => setSidebarOpen(false)}
@@ -98,9 +100,9 @@ export default function SidebarShell({
       </div>
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col ${bp}:pl-64 h-full min-w-0`}>
+      <div className={`flex-1 flex flex-col ${sidebarPadding} h-full min-w-0`}>
         {/* Mobile Header */}
-        <div className={`${bp}:hidden bg-card/80 backdrop-blur-md border-b border-border p-4 flex items-center sticky top-0 z-30`}>
+        <div className={`${mobileOnly} bg-card/80 backdrop-blur-md border-b border-border p-4 flex items-center sticky top-0 z-30`}>
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 -ml-2 text-text-secondary hover:bg-muted rounded-lg"

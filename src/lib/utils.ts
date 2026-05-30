@@ -2,6 +2,8 @@ import { randomBytes } from 'crypto';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+export const DEFAULT_BASE_URL = 'http://localhost:3000';
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -10,7 +12,7 @@ export function getBaseUrl(): string {
   if (typeof window !== 'undefined') {
     return window.location.origin;
   }
-  return process.env.APP_URL || 'http://localhost:3000';
+  return process.env.APP_URL || DEFAULT_BASE_URL;
 }
 
 export function formatDate(date: Date | string | number, locale: string = 'zh-CN'): string {
@@ -81,6 +83,13 @@ export function validatePassword(password: string): string | null {
   if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) return 'PASSWORD_NEEDS_LETTER_AND_NUMBER';
   return null;
 }
+
+export const VALIDATION_KEY_MAP: Record<string, string> = {
+  'PASSWORD_TOO_SHORT': 'validation.passwordTooShort',
+  'PASSWORD_NEEDS_LETTER_AND_NUMBER': 'validation.passwordNeedsLetterAndNumber',
+  'NICKNAME_EMPTY': 'validation.nicknameEmpty',
+  'NICKNAME_TOO_LONG': 'validation.nicknameTooLong',
+};
 
 export function validateNickname(nickname: unknown): string | null {
   if (nickname === undefined || nickname === null) return null;
