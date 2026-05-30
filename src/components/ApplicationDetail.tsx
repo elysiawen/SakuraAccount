@@ -34,6 +34,7 @@ interface ApplicationDetailProps {
   client: OAuth2Client;
   apiPrefix?: string;
   backHref?: string;
+  appUrl: string;
 }
 
 function getGrantLabels(t: (key: string) => string): Record<string, { label: string; icon: typeof Key }> {
@@ -82,7 +83,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function ApplicationDetail({ client: initialClient, apiPrefix = '/api/admin/applications', backHref = '/admin/applications' }: ApplicationDetailProps) {
+export default function ApplicationDetail({ client: initialClient, apiPrefix = '/api/admin/applications', backHref = '/admin/applications', appUrl }: ApplicationDetailProps) {
   const t = useTranslations('admin.applications');
   const router = useRouter();
   const { success, error } = useToast();
@@ -179,7 +180,7 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
     return new Date(dateStr).toLocaleString('zh-CN');
   };
 
-  const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const origin = appUrl;
 
   const integrationExamples = {
     javascript: `// 使用授权码流程进行OAuth认证

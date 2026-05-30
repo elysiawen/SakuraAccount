@@ -61,7 +61,7 @@ function validateOrigin(request: NextRequest): boolean {
     return false;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
   const allowedOrigins = [appUrl];
 
   if (process.env.WEBAUTHN_ORIGIN && process.env.WEBAUTHN_ORIGIN !== appUrl) {

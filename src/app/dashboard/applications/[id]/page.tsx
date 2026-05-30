@@ -26,11 +26,13 @@ export default async function UserApplicationDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
   return (
     <ApplicationDetail
       client={client}
       apiPrefix="/api/user/applications"
       backHref="/dashboard/applications"
+      appUrl={appUrl}
     />
   );
 }
