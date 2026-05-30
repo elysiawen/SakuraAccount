@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import dns from 'dns/promises';
 
 const FETCH_TIMEOUT = 5000;
 const USER_AGENT = 'Mozilla/5.0 (compatible; SakuraAccount/1.0)';
@@ -10,6 +11,29 @@ function isValidDomain(domain: string): boolean {
   if (domain === '169.254.169.254' || domain.endsWith('.169.254.169.254')) return false;
   if (domain.startsWith('[') || domain.includes(':')) return false;
   return /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(domain);
+}
+
+function isPrivateIP(ip: string): boolean {
+  if (ip.startsWith('10.')) return true;
+  if (ip.startsWith('172.')) {
+    const second = parseInt(ip.split('.')[1], 10);
+    if (second >= 16 && second <= 31) return true;
+  }
+  if (ip.startsWith('192.168.')) return true;
+  if (ip.startsWith('127.')) return true;
+  if (ip === '169.254.169.254') return true;
+  if (ip === '::1' || ip === 'fc00::' || ip === 'fe80::') return true;
+  return false;
+}
+
+async function resolvesToPrivateIP(domain: string): Promise<boolean> {
+  try {
+    const addresses = await dns.resolve4(domain);
+    return addresses.some(isPrivateIP);
+  } catch {
+    // If DNS resolution fails, allow the request to proceed (fetch will fail naturally)
+    return false;
+  }
 }
 
 async function tryFetchFavicon(url: string): Promise<Response | null> {
@@ -39,6 +63,11 @@ export async function GET(request: NextRequest) {
   const domain = request.nextUrl.searchParams.get('domain');
 
   if (!domain || !isValidDomain(domain)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  // DNS rebinding protection: verify the domain doesn't resolve to a private IP
+  if (await resolvesToPrivateIP(domain)) {
     return new NextResponse(null, { status: 404 });
   }
 

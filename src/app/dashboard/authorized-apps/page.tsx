@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import { resolveAppIcon } from '@/lib/app-icon';
-import { getAvatarColor } from '@/components/AppIcon';
+import { AppIcon } from '@/components/AppIcon';
 
 interface AuthorizedApp {
   clientId: string;
@@ -25,32 +23,6 @@ const SCOPE_KEYS: Record<string, string> = {
   email: 'scopeEmail',
   openid: 'scopeOpenID',
 };
-
-function AppIcon({ app }: { app: AuthorizedApp }) {
-  const [errored, setErrored] = useState(false);
-  const iconUrl = resolveAppIcon(app.icon);
-
-  if (iconUrl && !errored) {
-    return (
-      <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
-        <Image
-          src={iconUrl}
-          alt={app.name}
-          fill
-          className="object-cover"
-          unoptimized
-          onError={() => setErrored(true)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarColor(app.name)} flex items-center justify-center text-white font-bold shadow-md shadow-black/10 shrink-0`}>
-      {app.name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
 
 export default function AuthorizedAppsPage() {
   const t = useTranslations('dashboard.authorizedApps');
@@ -133,7 +105,7 @@ export default function AuthorizedAppsPage() {
               className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-accent-foreground/20 transition-colors bg-card"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <AppIcon app={app} />
+                <AppIcon name={app.name} icon={app.icon} size="md" />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-text-primary truncate">{app.name}</p>

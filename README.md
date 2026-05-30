@@ -13,6 +13,7 @@
   <a href="#features">Features</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#api-reference">API</a> •
+  <a href="#security">Security</a> •
   <a href="#tech-stack">Tech Stack</a> •
   <a href="#deployment">Deployment</a>
 </p>
@@ -110,6 +111,19 @@ npm run dev
 | GET | `/oauth/userinfo` | UserInfo endpoint |
 | GET | `/oauth/.well-known/openid-configuration` | OIDC discovery |
 | GET | `/oauth/.well-known/jwks.json` | JWKS |
+
+## Security
+
+- **SQL Injection** — All database queries use parameterized statements
+- **XSS Protection** — HTML output is escaped; CSP headers configured
+- **CSRF Protection** — Origin/Referer header validation on state-changing requests
+- **Password Hashing** — bcrypt with cost factor 12
+- **Session Security** — HttpOnly, Secure, SameSite=Strict cookies
+- **OAuth2 Timing Safety** — Client secret comparison uses `timingSafeEqual`
+- **SSRF Prevention** — Favicon proxy validates DNS resolution against private IP ranges
+- **Path Traversal Prevention** — Local storage delete verifies resolved paths stay within storage directory
+- **Open Redirect Prevention** — Logout callback URL validated against protocol schemes
+- **Rate Limiting** — Login, register, and WebAuthn endpoints are rate-limited in production
 
 ## Tech Stack
 

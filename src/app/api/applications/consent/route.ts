@@ -8,11 +8,22 @@ const NO_STORE_HEADERS: Record<string, string> = {
   'Pragma': 'no-cache',
 };
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function htmlError(status: number, title: string, message: string): NextResponse {
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
   const body = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><title>${title}</title></head>
-<body><h1>${title}</h1><p>${message}</p></body>
+<head><meta charset="utf-8"><title>${safeTitle}</title></head>
+<body><h1>${safeTitle}</h1><p>${safeMessage}</p></body>
 </html>`;
   return new NextResponse(body, {
     status,

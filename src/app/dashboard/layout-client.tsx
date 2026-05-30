@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useConfirm } from '@/components/ConfirmProvider';
 import SidebarShell from '@/components/SidebarShell';
 import PageLogger from '@/components/PageLogger';
+import { LOGIN_PATH, BRAND_NAME } from '@/lib/constants';
 import {
   LayoutDashboard,
   Link2,
@@ -15,6 +16,7 @@ import {
   Shield,
   LogOut,
   Code2,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -40,7 +42,7 @@ export default function DashboardLayoutClient({
 
   useEffect(() => {
     if (sessionInvalid) {
-      window.location.href = '/auth/login';
+      window.location.href = LOGIN_PATH;
     }
   }, [sessionInvalid]);
 
@@ -50,7 +52,7 @@ export default function DashboardLayoutClient({
         const res = await fetch('/api/auth/session');
         const data = await res.json();
         if (!data.user) {
-          window.location.href = '/auth/login';
+          window.location.href = LOGIN_PATH;
         }
       } catch {
         // Network error — don't redirect, just skip this check
@@ -83,7 +85,7 @@ export default function DashboardLayoutClient({
       {/* Account */}
       <div className="space-y-1">
         <p className="px-4 mb-1 text-[11px] font-medium text-text-quaternary uppercase tracking-wider">{t('sectionAccount')}</p>
-        <NavLink href="/dashboard" icon={LayoutDashboard} label={t('overview')} />
+        <NavLink href="/dashboard" icon={LayoutDashboard} label={t('overview')} exact />
       </div>
 
       {/* Security */}
@@ -97,7 +99,8 @@ export default function DashboardLayoutClient({
       {isDeveloperOrAdmin && (
         <div className="space-y-1 pt-3 border-t border-border">
           <p className="px-4 mb-1 text-[11px] font-medium text-text-quaternary uppercase tracking-wider">{t('sectionDeveloper')}</p>
-          <NavLink href="/dashboard/applications" icon={Code2} label={t('applications')} />
+          <NavLink href="/dashboard/applications" icon={Code2} label={t('applications')} exact />
+          <NavLink href="/dashboard/applications/docs" icon={FileText} label={t('documentation')} />
         </div>
       )}
 
@@ -137,7 +140,7 @@ export default function DashboardLayoutClient({
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="text-2xl">🌸</span>
           <div>
-            <span className="text-xl font-bold tracking-tight text-text-primary">Sakura Account</span>
+            <span className="text-xl font-bold tracking-tight text-text-primary">{BRAND_NAME}</span>
             <p className="text-xs text-text-tertiary mt-0.5">{t('brandSubtitle')}</p>
           </div>
         </Link>
@@ -157,9 +160,9 @@ export default function DashboardLayoutClient({
   );
 }
 
-function NavLink({ href, icon: Icon, label }: { href: string; icon: LucideIcon; label: string }) {
+function NavLink({ href, icon: Icon, label, exact }: { href: string; icon: LucideIcon; label: string; exact?: boolean }) {
   const pathname = usePathname();
-  const active = href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
+  const active = exact ? pathname === href : pathname.startsWith(href);
 
   return (
     <Link

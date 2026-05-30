@@ -13,8 +13,9 @@ import { db, isExecuteWithAffectedRows, isExecuteWithRowCount } from './db';
 import { nanoid } from 'nanoid';
 import { getAuthenticatorInfo } from './aaguids';
 import { DEFAULT_BASE_URL } from './utils';
+import { BRAND_NAME } from './constants';
 
-const rpName = process.env.WEBAUTHN_RP_NAME || 'Sakura Account';
+const rpName = process.env.WEBAUTHN_RP_NAME || BRAND_NAME;
 const rpID = process.env.WEBAUTHN_RP_ID || 'localhost';
 const origin = process.env.WEBAUTHN_ORIGIN || DEFAULT_BASE_URL;
 

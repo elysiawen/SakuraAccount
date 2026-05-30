@@ -7,6 +7,7 @@ import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage } from '@/lib/api-error';
 import { Spinner } from '@/components/Spinner';
 import { useTranslations } from 'next-intl';
+import { JSON_HEADERS } from '@/lib/constants';
 import { PublicNav } from '@/components/PublicNav';
 import { SakuraPetal } from '@/components/SakuraPetal';
 
@@ -34,7 +35,7 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ username, password }),
       });
       const data = await response.json();
@@ -60,14 +61,14 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
       const { startAuthentication } = await import('@simplewebauthn/browser');
       const optionsRes = await fetch('/api/auth/webauthn/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ action: 'generate' }),
       });
       const { options } = await optionsRes.json();
       const response = await startAuthentication({ optionsJSON: options });
       const verifyRes = await fetch('/api/auth/webauthn/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ action: 'verify', response, challenge: options.challenge }),
       });
       const data = await verifyRes.json();

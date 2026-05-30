@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { Spinner } from '@/components/Spinner';
+import { JSON_HEADERS } from '@/lib/constants';
 
 const CATEGORIES = ['access', 'auth', 'operation'] as const;
 
@@ -51,7 +52,7 @@ export default function LogCleanupPanel() {
         try {
           const res = await fetch('/api/admin/audit-logs/cleanup', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: JSON_HEADERS,
             body: JSON.stringify({ days, categories }),
           });
           const data = await res.json();

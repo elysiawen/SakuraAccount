@@ -15,6 +15,7 @@ import {
     authUsernameExists,
 } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
+    const limit = Math.min(parseInt(searchParams.get('limit') || String(DEFAULT_PAGE_SIZE)), 100);
 
     const data = await getAllUsers(page, limit);
     return NextResponse.json(data);

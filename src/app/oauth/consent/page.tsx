@@ -9,6 +9,7 @@ import { resolveAppIcon } from '@/lib/app-icon';
 import { useTranslations } from 'next-intl';
 import { Spinner } from '@/components/Spinner';
 import { SakuraPetal } from '@/components/SakuraPetal';
+import { BRAND_NAME } from '@/lib/constants';
 
 interface ConsentUser {
   username: string;
@@ -189,7 +190,7 @@ function ConsentContent() {
         >
           <Link href="/" className="flex items-center gap-2">
             <Image src="/sakura.ico" alt="Sakura" width={24} height={24} className="w-6 h-6" />
-            <span className="text-sm font-semibold text-foreground tracking-tight">Sakura Account</span>
+            <span className="text-sm font-semibold text-foreground tracking-tight">{BRAND_NAME}</span>
           </Link>
           {user && (
             <div className="flex items-center gap-3">

@@ -2,52 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import Modal from '@/components/Modal';
 import { Plus, Box, Info, Shield, Code, Trash2 } from 'lucide-react';
-import { resolveAppIcon } from '@/lib/app-icon';
 import { getErrorMessage } from '@/lib/api-error';
-import { getAvatarColor } from '@/components/AppIcon';
+import { AppIcon } from '@/components/AppIcon';
+import { JSON_HEADERS } from '@/lib/constants';
 import { Spinner } from '@/components/Spinner';
 
-interface OAuth2Client {
-  nanoId: string;
-  name: string;
-  description: string;
-  icon?: string;
-  status: 'active' | 'disabled';
-  userId: string;
-  createdAt: string;
-}
-
-function AppIconSmall({ client }: { client: OAuth2Client }) {
-  const [errored, setErrored] = useState(false);
-  const iconUrl = resolveAppIcon(client.icon);
-
-  if (iconUrl && !errored) {
-    return (
-      <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
-        <Image
-          src={iconUrl}
-          alt={client.name}
-          fill
-          className="object-cover"
-          unoptimized
-          onError={() => setErrored(true)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold shadow-md shadow-black/10`}>
-      {client.name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
+import type { OAuth2Client } from '@/types';
 
 export default function UserApplicationsPage() {
   const t = useTranslations('dashboard.applications');
@@ -96,7 +61,7 @@ export default function UserApplicationsPage() {
       const res = await fetch('/api/user/applications', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           name: newClient.name,
           description: newClient.description,
@@ -191,7 +156,7 @@ export default function UserApplicationsPage() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <div className="flex items-center gap-3 mb-3">
-                    <AppIconSmall client={client} />
+                    <AppIcon name={client.name} icon={client.icon} size="md" />
                     <div className="flex-1 min-w-0 pr-8">
                       <h3 className="font-semibold text-text-primary truncate">{client.name}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${

@@ -3,6 +3,8 @@ import { getClientByNanoId, updateClient } from '@/lib/oauth2';
 import { requireAdmin } from '@/lib/require-session';
 import { StorageFactory } from '@/lib/storage';
 import { db } from '@/lib/db';
+import { getIconStoragePath } from '@/lib/storage/utils';
+import { MAX_ICON_SIZE, DEFAULT_ICON } from '@/lib/constants';
 import {
   appNotFound,
   paramInvalid,
@@ -12,19 +14,6 @@ import {
   internalError,
 } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
-
-function getConfigString(globalConfig: Record<string, unknown>, key: string): string | undefined {
-  const value = globalConfig[key];
-  return typeof value === 'string' ? value : undefined;
-}
-
-function getIconStoragePath(globalConfig: Record<string, unknown>): string {
-  const provider = getConfigString(globalConfig, 'storageProvider') || 'local';
-  if (provider === 's3') {
-    return getConfigString(globalConfig, 's3IconFolderPath') || 'icons';
-  }
-  return getConfigString(globalConfig, 'iconStoragePath') || '/uploads/icons';
-}
 
 export async function POST(
   request: NextRequest,
@@ -47,7 +36,7 @@ export async function POST(
       return paramInvalid(await tApi('app.iconRequired'));
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > MAX_ICON_SIZE) {
       return appIconSizeLimit();
     }
 
@@ -104,7 +93,7 @@ export async function DELETE(
     }
 
     // 删除存储的图标文件（如果是上传的URL）
-    if (client.icon && !client.icon.startsWith('default') && !client.icon.startsWith('auto')) {
+    if (client.icon && !client.icon.startsWith(DEFAULT_ICON) && !client.icon.startsWith('auto')) {
       try {
         const globalConfig = await db.getGlobalConfig();
         const iconPath = getIconStoragePath(globalConfig);
@@ -116,7 +105,7 @@ export async function DELETE(
     }
 
     // 恢复为默认图标
-    await updateClient(id, { icon: 'default' });
+    await updateClient(id, { icon: DEFAULT_ICON });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -6,6 +6,7 @@ import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage } from '@/lib/api-error';
 import { S3_PRESETS, buildS3Endpoint } from '@/lib/storage/utils';
 import { Spinner } from '@/components/Spinner';
+import { JSON_HEADERS } from '@/lib/constants';
 
 export default function StorageSettingsPanel() {
   const t = useTranslations('admin.settings');
@@ -126,7 +127,7 @@ export default function StorageSettingsPanel() {
 
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ config: storageConfig }),
       });
 
@@ -153,7 +154,7 @@ export default function StorageSettingsPanel() {
     try {
       const res = await fetch('/api/admin/settings/test-connection', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           s3Endpoint: formData.get('s3Endpoint'),
           s3Region: formData.get('s3Region') || 'auto',

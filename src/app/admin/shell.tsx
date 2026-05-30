@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import SidebarShell from '@/components/SidebarShell';
 import PageLogger from '@/components/PageLogger';
+import { LOGIN_PATH } from '@/lib/constants';
 import {
   LayoutDashboard,
   Users,
@@ -52,7 +53,7 @@ export default function AdminShell({
 
   useEffect(() => {
     if (sessionInvalid) {
-      window.location.href = '/auth/login';
+      window.location.href = LOGIN_PATH;
     }
   }, [sessionInvalid]);
 
@@ -62,7 +63,7 @@ export default function AdminShell({
         const res = await fetch('/api/auth/session');
         const data = await res.json();
         if (!data.user) {
-          window.location.href = '/auth/login';
+          window.location.href = LOGIN_PATH;
         }
       } catch {
         // Network error — don't redirect, just skip this check

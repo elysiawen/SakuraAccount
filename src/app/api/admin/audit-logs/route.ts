@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuditLogs } from '@/lib/auth';
 import { requireAdmin } from '@/lib/require-session';
 import { adminAuditLogFailed } from '@/lib/api-response';
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
+    const limit = Math.min(parseInt(searchParams.get('limit') || String(DEFAULT_PAGE_SIZE)), 100);
     const category = searchParams.get('category') || undefined;
     const search = searchParams.get('search') || undefined;
 

@@ -89,8 +89,7 @@
 | `AUTH_LOGIN_FAILED` | 用户名或密码错误 | 401 |
 | `AUTH_PASSWORD_WRONG` | 当前密码错误 | 401 |
 | `AUTH_USER_NOT_FOUND` | 用户不存在 | 404 |
-| `AUTH_USERNAME_EXISTS` | 用户名已被注册 | 409 |
-| `AUTH_EMAIL_EXISTS` | 邮箱已被注册 | 409 |
+| `AUTH_USERNAME_EXISTS` | 用户名或邮箱已被注册 | 409 |
 | `AUTH_WEAK_PASSWORD` | 密码强度不足 | 400 |
 | `AUTH_PASSKEY_NOT_FOUND` | Passkey 不存在或无权操作 | 404 |
 | `AUTH_PASSKEY_VERIFY_FAILED` | Passkey 认证失败 | 401 |
@@ -298,7 +297,7 @@ export default api;
 | API 路径 | 方法 | 使用的错误函数 |
 |----------|------|---------------|
 | `/api/auth/login` | POST | `paramInvalid`, `authLoginFailed`, `internalError` |
-| `/api/auth/register` | POST | `paramInvalid`, `authUsernameExists`, `authWeakPassword` |
+| `/api/auth/register` | POST | `paramInvalid`, `authUsernameExists`（用户名或邮箱重复统一返回）, `authWeakPassword` |
 | `/api/auth/session` | GET | `internalError` (仅 catch 块) |
 | `/api/auth/sessions` | GET/DELETE | `sessionListFailed`, `sessionCannotRevokeCurrent`, `sessionNotFound` |
 | `/api/auth/change-password` | POST | `paramInvalid`, `authPasswordWrong`, `userPasswordNotSet` |

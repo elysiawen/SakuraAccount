@@ -13,6 +13,7 @@
   <a href="#功能特性">功能特性</a> •
   <a href="#快速开始">快速开始</a> •
   <a href="#api-参考">API</a> •
+  <a href="#安全特性">安全</a> •
   <a href="#技术栈">技术栈</a> •
   <a href="#部署">部署</a>
 </p>
@@ -110,6 +111,19 @@ npm run dev
 | GET | `/oauth/userinfo` | 用户信息端点 |
 | GET | `/oauth/.well-known/openid-configuration` | OIDC 发现 |
 | GET | `/oauth/.well-known/jwks.json` | JWKS |
+
+## 安全特性
+
+- **SQL 注入防护** — 所有数据库查询使用参数化语句
+- **XSS 防护** — HTML 输出进行转义处理；配置 CSP 响应头
+- **CSRF 防护** — 通过 Origin/Referer 头校验状态变更请求
+- **密码哈希** — 使用 bcrypt，代价因子 12
+- **会话安全** — Cookie 设置 HttpOnly、Secure、SameSite=Strict
+- **OAuth2 时序安全** — Client Secret 比较使用 `timingSafeEqual`
+- **SSRF 防护** — Favicon 代理通过 DNS 解析校验私有 IP 范围
+- **路径遍历防护** — 本地存储删除时校验解析路径不逃逸出存储目录
+- **开放重定向防护** — 登出回调 URL 校验协议方案
+- **速率限制** — 登录、注册、WebAuthn 端点在生产环境启用速率限制
 
 ## 技术栈
 

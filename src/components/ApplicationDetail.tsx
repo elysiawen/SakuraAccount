@@ -7,7 +7,8 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import { resolveAppIcon } from '@/lib/app-icon';
+import { AppIcon, getAvatarColor } from '@/components/AppIcon';
+import { JSON_HEADERS } from '@/lib/constants';
 import Modal from '@/components/Modal';
 import { getErrorMessage } from '@/lib/api-error';
 import { Spinner } from '@/components/Spinner';
@@ -27,21 +28,7 @@ import {
   Shield,
 } from 'lucide-react';
 
-interface OAuth2Client {
-  id: string;
-  nanoId: string;
-  secret: string;
-  name: string;
-  description?: string;
-  icon?: string | null;
-  appUrl?: string | null;
-  redirectUris: string[];
-  grants: string[];
-  scopes: string[];
-  status?: 'active' | 'disabled';
-  userId?: string;
-  createdAt?: string;
-}
+import type { OAuth2Client } from '@/types';
 
 interface ApplicationDetailProps {
   client: OAuth2Client;
@@ -63,46 +50,6 @@ function getScopeLabels(t: (key: string) => string): Record<string, { label: str
     email: { label: t('scopeEmail'), icon: Mail },
     openid: { label: t('scopeOpenid'), icon: Fingerprint },
   };
-}
-
-const AVATAR_COLORS = [
-  'from-pink-500/80 to-rose-500/80',
-  'from-violet-500/80 to-purple-500/80',
-  'from-sky-500/80 to-cyan-500/80',
-  'from-emerald-500/80 to-teal-500/80',
-  'from-amber-500/80 to-orange-500/80',
-];
-
-function getAvatarColor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function AppIcon({ client, size = 'w-12 h-12 text-lg' }: { client: Pick<OAuth2Client, 'name' | 'icon'>; size?: string }) {
-  const [errored, setErrored] = useState(false);
-  const iconUrl = resolveAppIcon(client.icon);
-
-  if (iconUrl && !errored) {
-    return (
-      <div className={`relative ${size} rounded-xl overflow-hidden bg-muted`}>
-        <Image
-          src={iconUrl}
-          alt={client.name}
-          fill
-          className="object-cover"
-          unoptimized
-          onError={() => setErrored(true)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${size} rounded-xl bg-gradient-to-br ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold shadow-lg shadow-black/10`}>
-      {client.name.charAt(0).toUpperCase()}
-    </div>
-  );
 }
 
 function getOAuthEndpoints(t: (key: string) => string) {
@@ -198,7 +145,7 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
       const res = await fetch(`${apiPrefix}/${client.nanoId}`, {
         method: 'PATCH',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           name: editForm.name,
           description: editForm.description,
@@ -437,7 +384,7 @@ if __name__ == '__main__':
         <div className="p-4 sm:p-6">
           {/* App Basic Info */}
           <div className="flex items-start sm:items-center gap-4 mb-6">
-            <AppIcon client={client} size="w-14 h-14 sm:w-20 sm:h-20 text-xl sm:text-2xl" />
+            <AppIcon name={client.name} icon={client.icon} className="w-14 h-14 sm:w-20 sm:h-20 text-xl sm:text-2xl" />
             <div className="min-w-0 flex-1">
               <h3 className="text-lg sm:text-xl font-bold text-text-primary truncate">{client.name}</h3>
               <p className="text-sm text-text-tertiary mt-0.5 line-clamp-2">{client.description || t('noDescription')}</p>

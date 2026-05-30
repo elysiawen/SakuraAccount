@@ -1,3 +1,5 @@
+import { DEFAULT_ICON } from './constants';
+
 /**
  * 解析图标配置
  * @param icon 图标字段值
@@ -19,13 +21,13 @@ export function parseIconConfig(icon?: string | null): { mode: 'default' | 'auto
 /**
  * 解析应用图标
  * @param icon 图标字段值：
- *   - null/空/'default' = 默认图标（首字母）
+ *   - null/空/DEFAULT_ICON = 默认图标（首字母）
  *   - '/api/applications/favicon?domain=xxx' = 自动获取的favicon
  *   - 'https://oss...' = 上传的自定义图标URL
  * @returns 图标URL或null
  */
 export function resolveAppIcon(icon?: string | null): string | null {
-  if (!icon || icon === 'default') {
+  if (!icon || icon === DEFAULT_ICON) {
     return null; // 使用默认首字母图标
   }
   return icon;

@@ -45,7 +45,12 @@ export class LocalStorageProvider implements IStorageProvider {
                 throw new Error('Invalid URL');
             }
 
-            const filePath = path.join(this.storagePath, filename);
+            const filePath = path.resolve(this.storagePath, filename);
+
+            // Path traversal protection: ensure resolved path is within storage directory
+            if (!filePath.startsWith(this.storagePath + path.sep) && filePath !== this.storagePath) {
+                throw new Error('Path traversal detected');
+            }
 
             // Check if file exists
             try {

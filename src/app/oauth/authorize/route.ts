@@ -2,17 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getClient, getConsentedScopes, generateAuthorizationCode } from '@/lib/oauth2';
 import { cookies } from 'next/headers';
+import { SESSION_COOKIE_NAME, LOGIN_PATH } from '@/lib/constants';
 
 const NO_STORE_HEADERS = {
   'Cache-Control': 'no-store',
   'Pragma': 'no-cache',
 };
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function htmlError(status: number, title: string, message: string): NextResponse {
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
   const body = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><title>${title}</title></head>
-<body><h1>${title}</h1><p>${message}</p></body>
+<head><meta charset="utf-8"><title>${safeTitle}</title></head>
+<body><h1>${safeTitle}</h1><p>${safeMessage}</p></body>
 </html>`;
   return new NextResponse(body, {
     status,
@@ -77,7 +89,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is authenticated
     const cookieStore = await cookies();
-    const sessionId = cookieStore.get('account_session')?.value;
+    const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
     const requestedScopes = scope ? scope.split(' ') : ['openid', 'profile'];
 
@@ -120,7 +132,7 @@ export async function GET(request: NextRequest) {
 
     // Not logged in — redirect to login
     if (!sessionId) {
-      const loginUrl = new URL('/auth/login', request.url);
+      const loginUrl = new URL(LOGIN_PATH, request.url);
       loginUrl.searchParams.set('callbackUrl', request.url);
       return NextResponse.redirect(loginUrl, { headers: NO_STORE_HEADERS });
     }
@@ -129,7 +141,7 @@ export async function GET(request: NextRequest) {
     const user = await getSession(sessionId, ip);
 
     if (!user) {
-      const loginUrl = new URL('/auth/login', request.url);
+      const loginUrl = new URL(LOGIN_PATH, request.url);
       loginUrl.searchParams.set('callbackUrl', request.url);
       return NextResponse.redirect(loginUrl, { headers: NO_STORE_HEADERS });
     }
@@ -140,11 +152,11 @@ export async function GET(request: NextRequest) {
       const callbackUrl = new URL(request.url);
       callbackUrl.searchParams.delete('prompt');
 
-      const loginUrl = new URL('/auth/login', request.url);
+      const loginUrl = new URL(LOGIN_PATH, request.url);
       loginUrl.searchParams.set('callbackUrl', callbackUrl.toString());
       loginUrl.searchParams.set('reauth', '1');
       const response = NextResponse.redirect(loginUrl, { headers: NO_STORE_HEADERS });
-      response.cookies.delete('account_session');
+      response.cookies.delete(SESSION_COOKIE_NAME);
       return response;
     }
 

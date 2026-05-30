@@ -14,21 +14,8 @@ const REFRESH_TOKEN_EXPIRY = parseInt(process.env.OAUTH2_REFRESH_TOKEN_EXPIRY ||
 const AUTHORIZATION_CODE_EXPIRY = parseInt(process.env.OAUTH2_AUTHORIZATION_CODE_EXPIRY || '600');
 export const ISSUER = process.env.OAUTH2_ISSUER || DEFAULT_BASE_URL;
 
-export interface OAuth2Client {
-  id: string;
-  nanoId: string;
-  secret: string;
-  name: string;
-  description?: string;
-  icon?: string | null;
-  appUrl?: string | null;
-  redirectUris: string[];
-  grants: string[];
-  scopes: string[];
-  status?: 'active' | 'disabled';
-  userId?: string;
-  createdAt?: string;
-}
+import type { OAuth2Client } from '@/types';
+export type { OAuth2Client };
 
 export interface AuthorizationCode {
   id: string;

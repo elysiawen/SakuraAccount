@@ -76,10 +76,6 @@ export async function authUsernameExists() {
   return errorResponse('AUTH_USERNAME_EXISTS', await tApi('auth.usernameExists'), 409);
 }
 
-export async function authEmailExists() {
-  return errorResponse('AUTH_EMAIL_EXISTS', await tApi('auth.emailExists'), 409);
-}
-
 export async function authWeakPassword(detail?: string) {
   const msg = detail || await tApi('auth.weakPassword');
   return errorResponse('AUTH_WEAK_PASSWORD', msg, 400);

@@ -9,6 +9,7 @@ import AvatarCropper from '@/components/AvatarCropper';
 import Modal from '@/components/Modal';
 import { getErrorMessage } from '@/lib/api-error';
 import { Spinner } from '@/components/Spinner';
+import { MAX_AVATAR_SIZE, JSON_HEADERS, LOGIN_PATH } from '@/lib/constants';
 
 interface ProfileUser {
   id: string;
@@ -103,7 +104,7 @@ export default function SettingsPage() {
     if (!file) return;
 
     // Check file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > MAX_AVATAR_SIZE) {
       error(t('avatarSizeLimit'));
       return;
     }
@@ -195,7 +196,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/auth/update-profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ nickname, email }),
       });
 
@@ -237,7 +238,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ currentPassword, newPassword }),
       });
 
@@ -271,7 +272,7 @@ export default function SettingsPage() {
 
       const optionsRes = await fetch('/api/auth/webauthn/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ action: 'generate' }),
       });
 
@@ -280,7 +281,7 @@ export default function SettingsPage() {
 
       const verifyRes = await fetch('/api/auth/webauthn/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           action: 'verify',
           response,
@@ -339,7 +340,7 @@ export default function SettingsPage() {
 
           if (res.ok) {
             success(t('accountDeleted'));
-            window.location.href = '/auth/login';
+            window.location.href = LOGIN_PATH;
           } else {
             error(t('deleteFailed'));
           }

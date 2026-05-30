@@ -2,10 +2,11 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getSession, getRequestMetadata, User } from '@/lib/auth';
 import { authNotLoggedIn, authTokenExpired, adminPermissionDenied } from '@/lib/api-response';
+import { SESSION_COOKIE_NAME } from '@/lib/constants';
 
 export async function requireSession(request?: Request): Promise<User | null> {
   const cookieStore = await cookies();
-  const sessionId = cookieStore.get('account_session')?.value;
+  const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionId) return null;
 
@@ -18,7 +19,7 @@ export async function requireAuthenticatedUser(request?: Request): Promise<
   | { error: NextResponse }
 > {
   const cookieStore = await cookies();
-  const sessionId = cookieStore.get('account_session')?.value;
+  const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionId) {
     return { error: await authNotLoggedIn() };

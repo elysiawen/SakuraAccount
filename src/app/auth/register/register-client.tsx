@@ -9,6 +9,7 @@ import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage } from '@/lib/api-error';
 import { Spinner } from '@/components/Spinner';
 import { SakuraPetal } from '@/components/SakuraPetal';
+import { JSON_HEADERS, LOGIN_PATH } from '@/lib/constants';
 
 export default function RegisterClient() {
   const t = useTranslations('auth.register');
@@ -41,7 +42,7 @@ export default function RegisterClient() {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ username, email, password, nickname: nickname || username }),
       });
       const data = await response.json();
@@ -230,7 +231,7 @@ export default function RegisterClient() {
 
             <p className="text-center text-sm text-muted-foreground mt-7">
               {t('hasAccount')}{' '}
-              <Link href="/auth/login" className="text-accent-button hover:text-accent-button-hover transition-colors font-medium">
+              <Link href={LOGIN_PATH} className="text-accent-button hover:text-accent-button-hover transition-colors font-medium">
                 {t('login')}
               </Link>
             </p>

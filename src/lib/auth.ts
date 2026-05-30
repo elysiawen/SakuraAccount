@@ -5,6 +5,7 @@ import { uuidv7 } from 'uuidv7';
 import { cookies } from 'next/headers';
 import { db } from './db';
 import { getLocation } from './ip-location';
+import { SESSION_COOKIE_NAME, DEFAULT_PAGE_SIZE } from './constants';
 
 const APP_SECRET = process.env.APP_SECRET;
 if (!APP_SECRET) {
@@ -13,16 +14,8 @@ if (!APP_SECRET) {
 const SECRET = new TextEncoder().encode(APP_SECRET);
 const SESSION_EXPIRY = parseInt(process.env.SESSION_EXPIRY || '604800');
 
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  nickname?: string;
-  avatar?: string;
-  role: string;
-  emailVerified: boolean;
-  twoFactorEnabled: boolean;
-}
+import type { User } from '@/types';
+export type { User };
 
 export interface Session {
   id: string;
@@ -157,7 +150,7 @@ export async function createSession(userId: string, ip?: string, userAgent?: str
 
 export async function setSessionCookie(sessionId: string): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set('account_session', sessionId, {
+  cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
@@ -247,7 +240,7 @@ export async function logAudit(userId: string | null, action: string, details?: 
   );
 }
 
-export async function getAuditLogs(page: number = 1, limit: number = 20, category?: string, search?: string): Promise<{ logs: AuditLogRecord[]; total: number }> {
+export async function getAuditLogs(page: number = 1, limit: number = DEFAULT_PAGE_SIZE, category?: string, search?: string): Promise<{ logs: AuditLogRecord[]; total: number }> {
   const offset = (page - 1) * limit;
   const conditions: string[] = [];
   const params: (string | number)[] = [];
@@ -378,7 +371,7 @@ export async function deleteUser(id: string): Promise<void> {
   await db.execute('DELETE FROM users WHERE id = ?', [id]);
 }
 
-export async function getAllUsers(page: number = 1, limit: number = 20): Promise<{ users: UserListItem[]; total: number }> {
+export async function getAllUsers(page: number = 1, limit: number = DEFAULT_PAGE_SIZE): Promise<{ users: UserListItem[]; total: number }> {
   const offset = (page - 1) * limit;
 
   const [users, countResult] = await Promise.all([
@@ -400,7 +393,7 @@ export async function searchUsers(query: string): Promise<UserSearchItem[]> {
     `SELECT id, username, email, nickname, role, created_at
      FROM users
      WHERE username LIKE ? OR email LIKE ? OR nickname LIKE ?
-     LIMIT 20`,
+     LIMIT 10`,
     [`%${query}%`, `%${query}%`, `%${query}%`]
   );
 }

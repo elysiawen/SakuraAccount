@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
@@ -10,47 +9,14 @@ import { useConfirm } from '@/components/ConfirmProvider';
 import Search from '@/components/Search';
 import Modal from '@/components/Modal';
 import { Plus, Trash2, Edit, Box } from 'lucide-react';
-import { resolveAppIcon } from '@/lib/app-icon';
 import { getErrorMessage } from '@/lib/api-error';
-import { getAvatarColor } from '@/components/AppIcon';
+import { AppIcon } from '@/components/AppIcon';
+import { JSON_HEADERS } from '@/lib/constants';
 import { Spinner } from '@/components/Spinner';
 
-interface OAuth2Client {
-  nanoId: string;
-  name: string;
-  description: string;
-  icon?: string;
-  status: 'active' | 'disabled';
-  userId: string;
-  username?: string;
-  createdAt: string;
-}
+import type { OAuth2Client } from '@/types';
 
-function AppIconSmall({ client }: { client: OAuth2Client }) {
-  const [errored, setErrored] = useState(false);
-  const iconUrl = resolveAppIcon(client.icon);
-
-  if (iconUrl && !errored) {
-    return (
-      <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-muted">
-        <Image
-          src={iconUrl}
-          alt={client.name}
-          fill
-          className="object-cover"
-          unoptimized
-          onError={() => setErrored(true)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold text-sm shadow-md shadow-black/10`}>
-      {client.name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
+type AdminClientSummary = Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'status' | 'userId' | 'createdAt'> & { username?: string };
 
 export default function AdminApplicationsPage() {
   return (
@@ -66,7 +32,7 @@ function AdminApplicationsContent() {
   const { confirm } = useConfirm();
   const searchParams = useSearchParams();
   const search = searchParams.get('search') || '';
-  const [clients, setClients] = useState<OAuth2Client[]>([]);
+  const [clients, setClients] = useState<AdminClientSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -118,7 +84,7 @@ function AdminApplicationsContent() {
       const res = await fetch('/api/admin/applications', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           name: newClient.name,
           description: newClient.description,
@@ -228,7 +194,7 @@ function AdminApplicationsContent() {
                     <tr key={client.nanoId} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
                       <td className="px-5 py-3.5">
                         <Link href={`/admin/applications/${client.nanoId}`} className="flex items-center gap-3 group">
-                          <AppIconSmall client={client} />
+                          <AppIcon name={client.name} icon={client.icon} className="w-9 h-9 text-sm" />
                           <div className="min-w-0">
                             <p className="font-medium text-text-primary truncate group-hover:text-accent-foreground transition-colors">{client.name}</p>
                             <p className="text-xs text-text-tertiary truncate">{client.description || '-'}</p>
@@ -286,7 +252,7 @@ function AdminApplicationsContent() {
                   className="block p-4 active:bg-muted/60 transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <AppIconSmall client={client} />
+                    <AppIcon name={client.name} icon={client.icon} className="w-9 h-9 text-sm" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-text-primary truncate">{client.name}</p>

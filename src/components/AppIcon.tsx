@@ -22,6 +22,8 @@ interface AppIconProps {
   name: string;
   icon?: string | null;
   size?: 'sm' | 'md' | 'lg';
+  /** Override size classes entirely (e.g. 'w-9 h-9 text-sm') */
+  className?: string;
 }
 
 const SIZE_CLASSES = {
@@ -30,10 +32,10 @@ const SIZE_CLASSES = {
   lg: 'w-16 h-16 text-xl',
 };
 
-export function AppIcon({ name, icon, size = 'md' }: AppIconProps) {
+export function AppIcon({ name, icon, size = 'md', className }: AppIconProps) {
   const [errored, setErrored] = useState(false);
   const iconUrl = resolveAppIcon(icon);
-  const sizeClass = SIZE_CLASSES[size];
+  const sizeClass = className ?? SIZE_CLASSES[size];
 
   if (iconUrl && !errored) {
     return (

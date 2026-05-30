@@ -13,6 +13,7 @@ import { Shield, User as UserIcon, Mail, Key, Edit, Trash2, Fingerprint } from '
 import { getErrorMessage } from '@/lib/api-error';
 import { getAvatarColor } from '@/components/AppIcon';
 import { Spinner } from '@/components/Spinner';
+import { JSON_HEADERS, DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
 interface User {
   id: number;
@@ -77,7 +78,7 @@ export default function AdminUsersPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const page = 1;
-  const limit = 20;
+  const limit = DEFAULT_PAGE_SIZE;
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ username: '', nickname: '', email: '', newPassword: '', role: 'user' });
   const [editingAvatar, setEditingAvatar] = useState<string | null>(null);
@@ -180,7 +181,7 @@ export default function AdminUsersPage() {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           id: editingUser.id,
           username: editForm.username,

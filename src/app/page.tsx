@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { PublicNav } from '@/components/PublicNav';
 import { SakuraPetal } from '@/components/SakuraPetal';
 import { requireSession } from '@/lib/require-session';
+import { BRAND_NAME } from '@/lib/constants';
 
 export default async function Home() {
   const t = await getTranslations('common.home');
@@ -167,7 +168,7 @@ export default async function Home() {
         </div>
 
         <footer className="px-5 sm:px-8 md:px-16 py-6 flex items-center justify-between animate-slide-in-up" style={{ animationDelay: '0.7s' }}>
-          <span className="text-xs text-muted-foreground/50">&copy; {new Date().getFullYear()} Sakura Account</span>
+          <span className="text-xs text-muted-foreground/50">&copy; {new Date().getFullYear()} {BRAND_NAME}</span>
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-1 rounded-full bg-emerald-500/60" />
             <span className="text-xs text-muted-foreground/50">v0.1.0</span>

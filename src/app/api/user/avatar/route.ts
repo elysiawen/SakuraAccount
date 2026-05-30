@@ -12,6 +12,7 @@ import {
     userAvatarDeleteFailed,
 } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
+import { MAX_AVATAR_SIZE } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
     try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check file size (10MB)
-        if (file.size > 10 * 1024 * 1024) {
+        if (file.size > MAX_AVATAR_SIZE) {
             return userAvatarSizeLimit();
         }
 

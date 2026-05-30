@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser, getUserByUsername, getUserByEmail, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
 import { isValidEmail, isValidUsername, validatePassword, validateNickname, VALIDATION_KEY_MAP } from '@/lib/utils';
-import { paramInvalid, authUsernameExists, authEmailExists, authWeakPassword, internalError } from '@/lib/api-response';
+import { paramInvalid, authUsernameExists, authWeakPassword, internalError } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
 
 async function translateValidationKey(key: string): Promise<string> {
@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
     const existingUser = await getUserByUsername(username);
     const existingEmail = await getUserByEmail(email);
     if (existingUser || existingEmail) {
-      if (existingUser) return authUsernameExists();
-      return authEmailExists();
+      // Return the same error for both cases to prevent user enumeration
+      return authUsernameExists();
     }
 
     const user = await createUser(username, email, password, nickname?.trim());

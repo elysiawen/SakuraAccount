@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { JSON_HEADERS } from '@/lib/constants';
 
 export default function PageLogger() {
   const pathname = usePathname();
@@ -13,7 +14,7 @@ export default function PageLogger() {
 
     fetch('/api/user/log-visit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: JSON_HEADERS,
       body: JSON.stringify({ path: pathname }),
       keepalive: true,
     }).catch(() => {});
