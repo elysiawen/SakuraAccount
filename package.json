@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:init": "ts-node --project tsconfig.node.json scripts/init.ts",
-    "db:migrate-uuid": "ts-node --project tsconfig.node.json scripts/migrate-uuid.ts"
+    "db:init": "ts-node --project tsconfig.node.json scripts/init.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.969.0",

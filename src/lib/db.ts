@@ -25,12 +25,6 @@ export function isExecuteWithRowCount(result: ExecuteResult): result is { rowCou
   return 'rowCount' in result;
 }
 
-function isColumnExistsError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const knownError = error as { code?: string; errno?: number };
-  return knownError.code === '42701' || knownError.errno === 1060;
-}
-
 interface DatabaseConfig {
   type: DbType;
   postgres?: {
@@ -180,6 +174,8 @@ class Database {
         user_id ${varcharType(36)} NOT NULL,
         ip ${varcharType(45)},
         user_agent ${textType},
+        ip_location ${varcharType(255)},
+        isp ${varcharType(255)},
         expires_at ${timestampType} NOT NULL,
         created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -206,21 +202,6 @@ class Database {
       )
     `);
 
-    // Migration: add new columns to existing webauthn_credentials tables
-    for (const col of [
-      { name: 'name', def: `${varcharType(255)}` },
-      { name: 'aaguid', def: `${varcharType(36)}` },
-      { name: 'last_used', def: `${timestampType} DEFAULT CURRENT_TIMESTAMP` },
-    ]) {
-      try {
-        await this.execute(`ALTER TABLE webauthn_credentials ADD COLUMN ${col.name} ${col.def}`);
-      } catch (e: unknown) {
-        if (!isColumnExistsError(e)) {
-          console.error(`Failed to add ${col.name} column:`, e);
-        }
-      }
-    }
-
     // OAuth2 clients table
     await this.execute(`
       CREATE TABLE IF NOT EXISTS oauth2_clients (
@@ -229,6 +210,8 @@ class Database {
         secret ${varcharType(255)} NOT NULL,
         name ${varcharType(255)} NOT NULL,
         description ${textType},
+        icon ${textType},
+        app_url ${textType},
         redirect_uris ${jsonType} NOT NULL,
         grants ${jsonType} NOT NULL,
         scopes ${jsonType} NOT NULL,
@@ -239,38 +222,6 @@ class Database {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
-
-    // Add status column to existing oauth2_clients tables
-    try {
-      await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN status ${varcharType(20)} DEFAULT 'active'`);
-      console.log('Added status column to oauth2_clients');
-    } catch (e: unknown) {
-      // Column already exists is fine (PostgreSQL: 42701, MySQL: 1060)
-      if (!isColumnExistsError(e)) {
-        console.error('Failed to add status column:', e);
-      }
-    }
-
-    // Add nano_id column to existing oauth2_clients tables
-    try {
-      // Check if column exists first
-      const checkCol = await this.query(
-        `SELECT column_name FROM information_schema.columns WHERE table_name = 'oauth2_clients' AND column_name = 'nano_id'`
-      );
-      if (checkCol.length === 0) {
-        await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN nano_id ${varcharType(32)}`);
-        // Backfill existing rows with generated nano_ids
-        const { nanoid } = await import('nanoid');
-        const rows = await this.query('SELECT id FROM oauth2_clients WHERE nano_id IS NULL');
-        for (const row of rows) {
-          await this.execute('UPDATE oauth2_clients SET nano_id = ? WHERE id = ?', [nanoid(32), String(row.id)]);
-        }
-        // Add unique constraint after backfill
-        await this.execute('ALTER TABLE oauth2_clients ADD CONSTRAINT uq_oauth2_clients_nano_id UNIQUE (nano_id)');
-      }
-    } catch (e) {
-      console.error('Failed to add nano_id column:', e);
-    }
 
     // OAuth2 authorization codes table
     await this.execute(`
@@ -288,52 +239,6 @@ class Database {
       )
     `);
 
-    // Add nonce column to existing oauth2_authorization_codes tables
-    try {
-      await this.execute(`ALTER TABLE oauth2_authorization_codes ADD COLUMN nonce ${textType}`);
-      console.log('Added nonce column to oauth2_authorization_codes');
-    } catch (e: unknown) {
-      if (!isColumnExistsError(e)) {
-        console.error('Failed to add nonce column:', e);
-      }
-    }
-
-    // Add icon column to existing oauth2_clients tables
-    try {
-      await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN icon ${textType}`);
-      console.log('Added icon column to oauth2_clients');
-    } catch (e: unknown) {
-      if (!isColumnExistsError(e)) {
-        console.error('Failed to add icon column:', e);
-      }
-    }
-
-    // Add app_url column to existing oauth2_clients tables
-    try {
-      await this.execute(`ALTER TABLE oauth2_clients ADD COLUMN app_url ${textType}`);
-      console.log('Added app_url column to oauth2_clients');
-    } catch (e: unknown) {
-      if (!isColumnExistsError(e)) {
-        console.error('Failed to add app_url column:', e);
-      }
-    }
-
-    // Add ip_location and isp columns to sessions table
-    try {
-      await this.execute(`ALTER TABLE sessions ADD COLUMN ip_location ${varcharType(255)}`);
-    } catch (e: unknown) {
-      if (!isColumnExistsError(e)) {
-        console.error('Failed to add ip_location column:', e);
-      }
-    }
-    try {
-      await this.execute(`ALTER TABLE sessions ADD COLUMN isp ${varcharType(255)}`);
-    } catch (e: unknown) {
-      if (!isColumnExistsError(e)) {
-        console.error('Failed to add isp column:', e);
-      }
-    }
-
     // OAuth2 tokens table
     await this.execute(`
       CREATE TABLE IF NOT EXISTS oauth2_tokens (
@@ -342,6 +247,7 @@ class Database {
         user_id ${varcharType(36)},
         access_token ${textType} UNIQUE NOT NULL,
         refresh_token ${textType},
+        refresh_expires_at ${timestampType},
         scopes ${jsonType} NOT NULL,
         expires_at ${timestampType} NOT NULL,
         created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
@@ -349,53 +255,6 @@ class Database {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
-
-    // Add refresh_expires_at column to existing oauth2_tokens tables
-    try {
-      await this.execute(`ALTER TABLE oauth2_tokens ADD COLUMN refresh_expires_at ${timestampType}`);
-    } catch (e: unknown) {
-      if (!isColumnExistsError(e)) {
-        console.error('Failed to add refresh_expires_at column:', e);
-      }
-    }
-
-    // Make user_id nullable for client_credentials (no user context)
-    try {
-      if (this.config.type === 'mysql') {
-        await this.execute(`ALTER TABLE oauth2_tokens MODIFY user_id ${varcharType(36)}`);
-      } else {
-        await this.execute(`ALTER TABLE oauth2_tokens ALTER COLUMN user_id DROP NOT NULL`);
-      }
-    } catch {
-      // Column may already be nullable — ignore
-    }
-
-    // Update FK constraint to SET NULL on delete (for client_credentials tokens)
-    try {
-      if (this.config.type === 'mysql') {
-        const fkRows = await this.query(
-          `SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
-           WHERE TABLE_NAME = 'oauth2_tokens' AND COLUMN_NAME = 'user_id'
-           AND REFERENCED_TABLE_NAME = 'users' AND CONSTRAINT_SCHEMA = DATABASE()`
-        );
-        if (fkRows.length > 0) {
-          await this.execute(`ALTER TABLE oauth2_tokens DROP FOREIGN KEY \`${fkRows[0].CONSTRAINT_NAME}\``);
-          await this.execute(`ALTER TABLE oauth2_tokens ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL`);
-        }
-      } else {
-        const fkRows = await this.query(
-          `SELECT constraint_name FROM information_schema.table_constraints
-           WHERE table_name = 'oauth2_tokens' AND constraint_type = 'FOREIGN KEY'
-           AND constraint_name LIKE '%user_id%'`
-        );
-        if (fkRows.length > 0) {
-          await this.execute(`ALTER TABLE oauth2_tokens DROP CONSTRAINT "${fkRows[0].constraint_name}"`);
-          await this.execute(`ALTER TABLE oauth2_tokens ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL`);
-        }
-      }
-    } catch {
-      // Constraint may already be updated — ignore
-    }
 
     // OAuth2 consents table
     await this.execute(`
@@ -426,15 +285,6 @@ class Database {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
-
-    // Add category column to existing audit_logs tables
-    try {
-      await this.execute(`ALTER TABLE audit_logs ADD COLUMN category ${varcharType(50)} DEFAULT 'operation'`);
-    } catch (e: unknown) {
-      if (!isColumnExistsError(e)) {
-        console.error('Failed to add category column:', e);
-      }
-    }
 
     // Email verification tokens table
     await this.execute(`
@@ -468,35 +318,6 @@ class Database {
         updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP
       )
     `);
-
-    // Migrate old icon format: {"mode":"upload","url":"..."} -> new format
-    try {
-      const rows = await this.query("SELECT id, icon FROM oauth2_clients WHERE icon LIKE '{%}'");
-      for (const row of rows) {
-        try {
-          const icon = String(row.icon);
-          const parsed = JSON.parse(icon);
-          const id = String(row.id);
-          if (parsed.mode === 'upload' && parsed.url) {
-            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', [parsed.url, id]);
-            console.log(`Migrated icon for client ${id}: upload -> ${parsed.url}`);
-          } else if (parsed.mode === 'auto') {
-            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', ['auto', id]);
-            console.log(`Migrated icon for client ${id}: auto`);
-          } else if (parsed.mode === 'default') {
-            await this.execute('UPDATE oauth2_clients SET icon = ? WHERE id = ?', ['default', id]);
-            console.log(`Migrated icon for client ${id}: default`);
-          }
-        } catch {
-          // Skip invalid JSON
-        }
-      }
-      // Also migrate NULL to 'default'
-      await this.execute("UPDATE oauth2_clients SET icon = 'default' WHERE icon IS NULL");
-    } catch (e) {
-      // Migration may fail if table doesn't exist yet, that's ok
-      console.log('Icon migration skipped:', (e as Error).message);
-    }
 
     // Create indexes
     await this.createIndexes();
