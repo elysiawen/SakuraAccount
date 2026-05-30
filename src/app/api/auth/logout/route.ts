@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     if (sessionId) {
       const { ip, userAgent } = getRequestMetadata(request);
       await deleteSession(sessionId);
-      await logAudit(null, 'logout', { sessionId }, ip, userAgent);
+      await logAudit(null, 'logout', { sessionId }, ip, userAgent, 'access');
     }
 
     cookieStore.delete('account_session');

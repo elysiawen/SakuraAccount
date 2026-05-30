@@ -294,13 +294,33 @@ export async function getAllClients(): Promise<OAuth2Client[]> {
   return Promise.all(clients.map(client => ensureNanoId(client)));
 }
 
-export async function getAllClientsSummary(): Promise<Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'status' | 'userId' | 'createdAt'>[]> {
+export async function getAllClientsSummary(): Promise<(Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'status' | 'userId' | 'createdAt'> & { username?: string })[]> {
   let clients: any[];
   try {
-    clients = await db.query('SELECT nano_id, name, description, icon, status, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
+    clients = await db.query('SELECT c.nano_id, c.name, c.description, c.icon, c.status, c.user_id, c.created_at, u.username FROM oauth2_clients c LEFT JOIN users u ON c.user_id = u.id ORDER BY c.created_at DESC');
   } catch {
     // Fallback if status/icon columns don't exist yet
     clients = await db.query('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
+  }
+
+  return clients.map(c => ({
+    nanoId: c.nano_id,
+    name: c.name,
+    description: c.description,
+    icon: c.icon || undefined,
+    status: c.status || 'active',
+    userId: c.user_id,
+    username: c.username || undefined,
+    createdAt: c.created_at,
+  }));
+}
+
+export async function getUserClientsSummary(userId: string): Promise<Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'status' | 'userId' | 'createdAt'>[]> {
+  let clients: any[];
+  try {
+    clients = await db.query('SELECT nano_id, name, description, icon, status, user_id, created_at FROM oauth2_clients WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+  } catch {
+    clients = await db.query('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients WHERE user_id = ? ORDER BY created_at DESC', [userId]);
   }
 
   return clients.map(c => ({

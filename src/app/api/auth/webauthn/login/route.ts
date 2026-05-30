@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       const { ip, userAgent } = getRequestMetadata(request);
       const sessionId = await createSession(user.id, ip, userAgent);
       await setSessionCookie(sessionId);
-      await logAudit(user.id, 'login_success', { method: 'webauthn' }, ip, userAgent);
+      await logAudit(user.id, 'login_success', { method: 'webauthn' }, ip, userAgent, 'access');
 
       return NextResponse.json({
         verified: true,

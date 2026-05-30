@@ -11,8 +11,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
+    const category = searchParams.get('category') || undefined;
 
-    const data = await getAuditLogs(page, limit);
+    const data = await getAuditLogs(page, limit, category);
     return NextResponse.json(data);
   } catch (error) {
     console.error('Admin audit logs error:', error);

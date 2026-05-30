@@ -8,6 +8,8 @@
     "brandName": "Sakura Account",
     "brandSubtitle": "统一身份认证",
     "adminPanel": "管理后台",
+    "adminRole": "管理员",
+    "developerRole": "开发者",
     "backToUser": "返回用户端",
     "logout": "退出登录"
   },
@@ -77,6 +79,7 @@
     "noAppsHint": "点击上方按钮创建第一个应用",
     "appName": "应用名称",
     "clientId": "Client ID",
+    "owner": "创建者",
     "status": "状态",
     "createdAt": "创建时间",
     "actions": "操作",
@@ -173,6 +176,9 @@
   "auditLogs": {
     "title": "审计日志",
     "subtitle": "查看系统操作记录",
+    "tabAccess": "访问日志",
+    "tabAuth": "授权日志",
+    "tabOperation": "操作日志",
     "searchPlaceholder": "搜索用户或操作...",
     "loading": "加载中...",
     "noLogs": "暂无审计日志",
@@ -186,10 +192,16 @@
     "actionRegister": "注册账号",
     "actionLogout": "退出登录",
     "actionChangePassword": "修改密码",
+    "actionProfileUpdated": "更新个人资料",
+    "actionAccountDeleted": "删除账号",
     "actionRevokeSession": "撤销会话",
     "actionRevokeAllSessions": "撤销所有会话",
     "actionDeleteUser": "删除用户",
     "actionChangeRole": "修改用户角色",
+    "actionUpdateUser": "更新用户信息",
+    "actionUpdateSetting": "更新系统设置",
+    "actionUpdateSettings": "批量更新设置",
+    "actionOAuthAuthorize": "OAuth 授权",
     "systemUser": "系统"
   },
   "settings": {

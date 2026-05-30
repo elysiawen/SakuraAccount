@@ -58,7 +58,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await deleteUser(userId);
-    await logAudit(admin.id, 'admin_delete_user', { targetUserId: userId }, 'admin', 'admin');
+    await logAudit(admin.id, 'admin_delete_user', { targetUserId: userId }, 'admin', 'admin', 'operation');
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -80,7 +80,7 @@ export async function PATCH(request: NextRequest) {
       return paramInvalid(await tApi('sys.paramInvalid'));
     }
 
-    if (!['user', 'admin'].includes(role)) {
+    if (!['user', 'developer', 'admin'].includes(role)) {
       return adminInvalidRole();
     }
 
@@ -89,7 +89,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     await updateUserRole(id, role);
-    await logAudit(admin.id, 'admin_update_user_role', { targetUserId: id, newRole: role }, 'admin', 'admin');
+    await logAudit(admin.id, 'admin_update_user_role', { targetUserId: id, newRole: role }, 'admin', 'admin', 'operation');
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -105,7 +105,7 @@ export async function PUT(request: NextRequest) {
     const { user: admin } = result;
 
     const body = await request.json();
-    const { id, username, nickname, email, newPassword } = body;
+    const { id, username, nickname, email, newPassword, role } = body;
 
     if (!id) {
       return adminUserIdRequired();
@@ -139,7 +139,14 @@ export async function PUT(request: NextRequest) {
       await updateUserPassword(id, newPassword);
     }
 
-    await logAudit(admin.id, 'admin_update_user', { targetUserId: id, nickname, email, passwordChanged: !!newPassword }, 'admin', 'admin');
+    if (role && ['user', 'developer', 'admin'].includes(role)) {
+      if (id === admin.id) {
+        return adminCannotChangeSelfRole();
+      }
+      await updateUserRole(id, role);
+    }
+
+    await logAudit(admin.id, 'admin_update_user', { targetUserId: id, nickname, email, roleChanged: !!role, passwordChanged: !!newPassword }, 'admin', 'admin', 'operation');
 
     return NextResponse.json({ success: true });
   } catch (error) {

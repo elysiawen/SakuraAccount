@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getClient, generateAuthorizationCode, saveConsent } from '@/lib/oauth2';
 import { requireAuthenticatedUser } from '@/lib/require-session';
+import { logAudit, getRequestMetadata } from '@/lib/auth';
 
 const NO_STORE_HEADERS: Record<string, string> = {
   'Cache-Control': 'no-store',
@@ -78,6 +79,10 @@ export async function POST(request: NextRequest) {
     await saveConsent(result.user.id, clientId, scopes);
 
     const code = await generateAuthorizationCode(clientId, result.user.id, redirectUri, scopes, nonce || undefined);
+
+    // Log authorization event
+    const { ip, userAgent } = getRequestMetadata(request);
+    await logAudit(result.user.id, 'oauth_authorize', { clientId, scopes, approved: true }, ip, userAgent, 'auth');
 
     const callbackUrl = new URL(redirectUri);
     callbackUrl.searchParams.set('code', code);

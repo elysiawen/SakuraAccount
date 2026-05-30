@@ -48,3 +48,18 @@ export async function requireAdmin(): Promise<
 
   return result;
 }
+
+export async function requireDeveloperOrAdmin(): Promise<
+  | { user: User; sessionId: string }
+  | { error: NextResponse }
+> {
+  const result = await requireAuthenticatedUser();
+
+  if ('error' in result) return result;
+
+  if (!['admin', 'developer'].includes(result.user.role)) {
+    return { error: await adminPermissionDenied() };
+  }
+
+  return result;
+}

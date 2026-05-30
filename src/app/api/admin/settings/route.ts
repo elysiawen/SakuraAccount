@@ -31,7 +31,7 @@ export async function PUT(request: NextRequest) {
         }
 
         await db.setGlobalConfig(key, value);
-        await logAudit(admin.id, 'admin_update_setting', { key, value }, 'admin', 'admin');
+        await logAudit(admin.id, 'admin_update_setting', { key, value }, 'admin', 'admin', 'operation');
 
         return NextResponse.json({ success: true });
     } catch (error) {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         }
 
         await db.setGlobalConfigBatch(config);
-        await logAudit(admin.id, 'admin_update_settings', { keys: Object.keys(config) }, 'admin', 'admin');
+        await logAudit(admin.id, 'admin_update_settings', { keys: Object.keys(config) }, 'admin', 'admin', 'operation');
 
         return NextResponse.json({ success: true });
     } catch (error) {

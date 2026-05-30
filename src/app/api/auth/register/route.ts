@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const { ip, userAgent } = getRequestMetadata(request);
     const sessionId = await createSession(user.id, ip, userAgent);
     await setSessionCookie(sessionId);
-    await logAudit(user.id, 'register', { username, email }, ip, userAgent);
+    await logAudit(user.id, 'register', { username, email }, ip, userAgent, 'access');
 
     return NextResponse.json({
       success: true,

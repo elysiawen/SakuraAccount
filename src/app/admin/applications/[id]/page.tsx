@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getClientByNanoId } from '@/lib/oauth2';
-import ApplicationDetail from './application-detail';
+import ApplicationDetail from '@/components/ApplicationDetail';
 
 interface PageProps {
   params: Promise<{ id: string }>;

@@ -167,26 +167,32 @@ export async function getUserSessions(userId: string): Promise<any[]> {
   );
 }
 
-export async function logAudit(userId: string | null, action: string, details?: any, ip?: string, userAgent?: string): Promise<void> {
+export async function logAudit(userId: string | null, action: string, details?: any, ip?: string, userAgent?: string, category: string = 'operation'): Promise<void> {
   await db.execute(
-    'INSERT INTO audit_logs (user_id, action, details, ip, user_agent) VALUES (?, ?, ?, ?, ?)',
-    [userId, action, JSON.stringify(details), ip, userAgent]
+    'INSERT INTO audit_logs (user_id, category, action, details, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)',
+    [userId, category, action, JSON.stringify(details), ip, userAgent]
   );
 }
 
-export async function getAuditLogs(page: number = 1, limit: number = 20): Promise<{ logs: any[]; total: number }> {
+export async function getAuditLogs(page: number = 1, limit: number = 20, category?: string): Promise<{ logs: any[]; total: number }> {
   const offset = (page - 1) * limit;
+
+  const whereClause = category ? 'WHERE al.category = ?' : '';
+  const countWhere = category ? 'WHERE category = ?' : '';
+  const queryParams = category ? [category, limit, offset] : [limit, offset];
+  const countParams = category ? [category] : [];
 
   const [logs, countResult] = await Promise.all([
     db.query(
       `SELECT al.*, u.username
        FROM audit_logs al
        LEFT JOIN users u ON al.user_id = u.id
+       ${whereClause}
        ORDER BY al.created_at DESC
        LIMIT ? OFFSET ?`,
-      [limit, offset]
+      queryParams
     ),
-    db.getOne('SELECT COUNT(*) as total FROM audit_logs')
+    db.getOne(`SELECT COUNT(*) as total FROM audit_logs ${countWhere}`, countParams)
   ]);
 
   return {

@@ -31,7 +31,7 @@ export async function DELETE(request: NextRequest) {
       await deleteUserSessions(user.id);
       const newSessionId = await createSession(user.id, ip, userAgent);
       await setSessionCookie(newSessionId);
-      await logAudit(user.id, 'sessions_revoked_all', {}, ip, userAgent);
+      await logAudit(user.id, 'sessions_revoked_all', {}, ip, userAgent, 'operation');
       return NextResponse.json({ success: true });
     }
 
@@ -46,7 +46,7 @@ export async function DELETE(request: NextRequest) {
       }
 
       await deleteSession(targetSessionId);
-      await logAudit(user.id, 'session_revoked', { sessionId: targetSessionId }, ip, userAgent);
+      await logAudit(user.id, 'session_revoked', { sessionId: targetSessionId }, ip, userAgent, 'operation');
       return NextResponse.json({ success: true });
     }
 

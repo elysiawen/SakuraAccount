@@ -318,7 +318,7 @@ export default function SettingsPage() {
 
           if (res.ok) {
             success(t('accountDeleted'));
-            window.location.href = '/';
+            window.location.href = '/auth/login';
           } else {
             error(t('deleteFailed'));
           }

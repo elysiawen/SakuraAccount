@@ -44,6 +44,8 @@ interface OAuth2Client {
 
 interface ApplicationDetailProps {
   client: OAuth2Client;
+  apiPrefix?: string;
+  backHref?: string;
 }
 
 function getGrantLabels(t: (key: string) => string): Record<string, { label: string; icon: typeof Key }> {
@@ -128,7 +130,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function ApplicationDetail({ client: initialClient }: ApplicationDetailProps) {
+export default function ApplicationDetail({ client: initialClient, apiPrefix = '/api/admin/applications', backHref = '/admin/applications' }: ApplicationDetailProps) {
   const t = useTranslations('admin.applications');
   const router = useRouter();
   const { success, error } = useToast();
@@ -164,10 +166,10 @@ export default function ApplicationDetail({ client: initialClient }: Application
       confirmColor: 'red',
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/applications/${client.nanoId}`, { method: 'DELETE', credentials: 'include' });
+          const res = await fetch(`${apiPrefix}/${client.nanoId}`, { method: 'DELETE', credentials: 'include' });
           if (res.ok) {
             success(t('appDeleted'));
-            router.push('/admin/applications');
+            router.push(backHref);
           } else {
             error(t('deleteFailed'));
           }
@@ -193,7 +195,7 @@ export default function ApplicationDetail({ client: initialClient }: Application
     }
 
     try {
-      const res = await fetch(`/api/admin/applications/${client.nanoId}`, {
+      const res = await fetch(`${apiPrefix}/${client.nanoId}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -423,7 +425,7 @@ if __name__ == '__main__':
       <div className="bg-card rounded-xl shadow-sm border border-border">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <Link
-            href="/admin/applications"
+            href={backHref}
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary bg-muted rounded-lg hover:bg-border-strong transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -805,7 +807,7 @@ if __name__ == '__main__':
                               try {
                                 const formData = new FormData();
                                 formData.append('icon', file);
-                                const res = await fetch(`/api/admin/applications/${client.nanoId}/icon`, {
+                                const res = await fetch(`${apiPrefix}/${client.nanoId}/icon`, {
                                   method: 'POST',
                                   credentials: 'include',
                                   body: formData,

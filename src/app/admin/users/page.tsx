@@ -183,7 +183,8 @@ export default function AdminUsersPage() {
           </div>
         ) : users.length > 0 ? (
           <>
-            <div className="overflow-x-auto">
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
@@ -258,6 +259,69 @@ export default function AdminUsersPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden divide-y divide-border">
+              {users.map((user) => (
+                <div key={user.id} className="p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <UserAvatar user={user} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-text-primary truncate">{user.username}</p>
+                        <span
+                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                            user.role === 'admin'
+                              ? 'bg-accent-button/10 text-accent-button'
+                              : 'bg-muted text-text-secondary'
+                          }`}
+                        >
+                          <Shield className="w-3 h-3" />
+                          {user.role}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-tertiary truncate">{user.nickname || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-text-secondary">
+                    <Mail className="w-3.5 h-3.5 shrink-0 text-text-quaternary" />
+                    <span className="truncate">{user.email}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {user.email_verified ? (
+                        <span className="text-xs px-2 py-0.5 bg-success/10 text-success-foreground rounded-full">{t('verified')}</span>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 bg-warning/10 text-warning-foreground rounded-full">{t('unverified')}</span>
+                      )}
+                      {user.two_factor_enabled && (
+                        <span className="text-xs px-2 py-0.5 bg-info/10 text-info-foreground rounded-full">2FA</span>
+                      )}
+                      <span className="text-xs text-text-quaternary">
+                        {new Date(user.created_at).toLocaleDateString('zh-CN')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="inline-flex items-center gap-1 text-sm text-accent-foreground hover:bg-accent px-2.5 py-1.5 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        {t('edit')}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.id, user.username)}
+                        className="inline-flex items-center gap-1 text-sm text-destructive hover:bg-error px-2.5 py-1.5 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {t('delete')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <Pagination total={total} currentPage={page} itemsPerPage={limit} />
           </>
         ) : (
@@ -433,6 +497,7 @@ export default function AdminUsersPage() {
               className="w-full px-4 py-2.5 bg-background border border-border-input rounded-xl text-sm text-foreground outline-none transition-all duration-200 focus:border-accent-button focus:ring-2 focus:ring-accent-button/20"
             >
               <option value="user">User</option>
+              <option value="developer">Developer</option>
               <option value="admin">Admin</option>
             </select>
           </div>

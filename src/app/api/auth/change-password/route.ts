@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     await updateUserPassword(user.id, newPassword);
 
     const { ip, userAgent } = getRequestMetadata(request);
-    await logAudit(user.id, 'password_changed', {}, ip, userAgent);
+    await logAudit(user.id, 'password_changed', {}, ip, userAgent, 'operation');
 
     return NextResponse.json({ success: true });
   } catch (error) {

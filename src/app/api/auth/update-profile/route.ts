@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     await updateUser(user.id, { nickname: nickname?.trim(), email });
 
     const { ip, userAgent } = getRequestMetadata(request);
-    await logAudit(user.id, 'profile_updated', { nickname, email }, ip, userAgent);
+    await logAudit(user.id, 'profile_updated', { nickname, email }, ip, userAgent, 'operation');
 
     return NextResponse.json({ success: true });
   } catch (error) {

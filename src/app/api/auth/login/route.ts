@@ -24,13 +24,13 @@ export async function POST(request: NextRequest) {
 
     const isValid = await verifyPassword(password, user.password_hash);
     if (!isValid) {
-      await logAudit(user.id, 'login_failed', { reason: 'invalid_password' }, ip, userAgent);
+      await logAudit(user.id, 'login_failed', { reason: 'invalid_password' }, ip, userAgent, 'access');
       return authLoginFailed();
     }
 
     const sessionId = await createSession(user.id, ip, userAgent);
     await setSessionCookie(sessionId);
-    await logAudit(user.id, 'login_success', { method: 'password' }, ip, userAgent);
+    await logAudit(user.id, 'login_success', { method: 'password' }, ip, userAgent, 'access');
 
     return NextResponse.json({
       success: true,

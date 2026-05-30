@@ -69,7 +69,7 @@ export default function OverviewClient({
           </div>
           <p className="text-4xl font-bold text-purple-900 dark:text-purple-100">{sessionsCount}</p>
           <Link href="/dashboard/sessions" className="text-xs text-purple-700 dark:text-purple-300 mt-1 hover:underline">
-            {t('manageSessions')} →
+            {t('manageSessions')}
           </Link>
         </div>
 

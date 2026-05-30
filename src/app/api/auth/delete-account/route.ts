@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const { user } = result;
 
     const { ip, userAgent } = getRequestMetadata(request);
-    await logAudit(user.id, 'account_deleted', {}, ip, userAgent);
+    await logAudit(user.id, 'account_deleted', {}, ip, userAgent, 'operation');
     await deleteUser(user.id);
 
     const cookieStore = await cookies();

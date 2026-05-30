@@ -388,6 +388,7 @@ class Database {
       CREATE TABLE IF NOT EXISTS audit_logs (
         id SERIAL PRIMARY KEY,
         user_id ${varcharType(36)},
+        category ${varcharType(50)} DEFAULT 'operation',
         action ${varcharType(100)} NOT NULL,
         details ${jsonType},
         ip ${varcharType(45)},
@@ -396,6 +397,15 @@ class Database {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
+
+    // Add category column to existing audit_logs tables
+    try {
+      await this.execute(`ALTER TABLE audit_logs ADD COLUMN category ${varcharType(50)} DEFAULT 'operation'`);
+    } catch (e: any) {
+      if (e?.code !== '42701' && e?.errno !== 1060) {
+        console.error('Failed to add category column:', e);
+      }
+    }
 
     // Email verification tokens table
     await this.execute(`
@@ -471,6 +481,7 @@ class Database {
       'CREATE INDEX IF NOT EXISTS idx_oauth2_clients_nano_id ON oauth2_clients(nano_id)',
       'CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)',
+      'CREATE INDEX IF NOT EXISTS idx_audit_logs_category ON audit_logs(category)',
       'CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(token)',
       'CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token)',
     ];

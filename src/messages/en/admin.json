@@ -8,6 +8,8 @@
     "brandName": "Sakura Account",
     "brandSubtitle": "Unified Identity",
     "adminPanel": "Admin Panel",
+    "adminRole": "Admin",
+    "developerRole": "Developer",
     "backToUser": "Back to User",
     "logout": "Logout"
   },
@@ -77,6 +79,7 @@
     "noAppsHint": "Click the button above to create your first application",
     "appName": "App Name",
     "clientId": "Client ID",
+    "owner": "Owner",
     "status": "Status",
     "createdAt": "Created",
     "actions": "Actions",
@@ -173,6 +176,9 @@
   "auditLogs": {
     "title": "Audit Logs",
     "subtitle": "View system operation records",
+    "tabAccess": "Access Logs",
+    "tabAuth": "Authorization Logs",
+    "tabOperation": "Operation Logs",
     "searchPlaceholder": "Search user or action...",
     "loading": "Loading...",
     "noLogs": "No audit logs",
@@ -186,10 +192,16 @@
     "actionRegister": "Register",
     "actionLogout": "Logout",
     "actionChangePassword": "Change Password",
+    "actionProfileUpdated": "Profile Updated",
+    "actionAccountDeleted": "Account Deleted",
     "actionRevokeSession": "Revoke Session",
     "actionRevokeAllSessions": "Revoke All Sessions",
     "actionDeleteUser": "Delete User",
     "actionChangeRole": "Change Role",
+    "actionUpdateUser": "Update User",
+    "actionUpdateSetting": "Update Setting",
+    "actionUpdateSettings": "Update Settings",
+    "actionOAuthAuthorize": "OAuth Authorization",
     "systemUser": "System"
   },
   "settings": {

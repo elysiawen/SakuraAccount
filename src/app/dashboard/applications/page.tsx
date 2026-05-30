@@ -5,9 +5,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import Search from '@/components/Search';
 import Modal from '@/components/Modal';
-import { Plus, Trash2, Edit, ExternalLink, Box } from 'lucide-react';
+import { Plus, Box, Info, Shield, Code, Trash2 } from 'lucide-react';
 import { resolveAppIcon } from '@/lib/app-icon';
 import { getErrorMessage } from '@/lib/api-error';
 
@@ -18,7 +17,6 @@ interface OAuth2Client {
   icon?: string;
   status: 'active' | 'disabled';
   userId: string;
-  username?: string;
   createdAt: string;
 }
 
@@ -45,26 +43,25 @@ function AppIconSmall({ client }: { client: OAuth2Client }) {
       <img
         src={iconUrl}
         alt={client.name}
-        className="w-9 h-9 rounded-lg object-cover bg-muted"
+        className="w-12 h-12 rounded-lg object-cover bg-muted"
         onError={() => setErrored(true)}
       />
     );
   }
 
   return (
-    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold text-sm shadow-md shadow-black/10`}>
+    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold shadow-md shadow-black/10`}>
       {client.name.charAt(0).toUpperCase()}
     </div>
   );
 }
 
-export default function AdminApplicationsPage() {
-  const t = useTranslations('admin.applications');
+export default function UserApplicationsPage() {
+  const t = useTranslations('dashboard.applications');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const [clients, setClients] = useState<OAuth2Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newClient, setNewClient] = useState({
@@ -82,7 +79,7 @@ export default function AdminApplicationsPage() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch('/api/admin/applications');
+      const res = await fetch('/api/user/applications');
       const data = await res.json();
       setClients(data.clients || []);
     } catch (err) {
@@ -92,15 +89,6 @@ export default function AdminApplicationsPage() {
     }
   };
 
-  const filteredClients = clients.filter((client) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      client.name.toLowerCase().includes(q) ||
-      client.nanoId.toLowerCase().includes(q)
-    );
-  });
-
   const handleCreateClient = async () => {
     if (!newClient.name || !newClient.redirectUris) {
       error(t('fillRequired'));
@@ -109,7 +97,7 @@ export default function AdminApplicationsPage() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/admin/applications', {
+      const res = await fetch('/api/user/applications', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -146,7 +134,7 @@ export default function AdminApplicationsPage() {
       confirmColor: 'red',
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/admin/applications/${nanoId}`, {
+          const res = await fetch(`/api/user/applications/${nanoId}`, {
             method: 'DELETE',
             credentials: 'include',
           });
@@ -164,15 +152,6 @@ export default function AdminApplicationsPage() {
     });
   };
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -186,144 +165,107 @@ export default function AdminApplicationsPage() {
         </button>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
-        <div className="p-4 border-b border-border">
-          <Search placeholder={t('searchPlaceholder')} />
-        </div>
-
-        {loading ? (
-          <div className="p-4 space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-16 bg-muted rounded-lg" />
-              </div>
-            ))}
-          </div>
-        ) : filteredClients.length > 0 ? (
-          <>
-            {/* Desktop table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('appName')}</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">NanoID</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('owner')}</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('status')}</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('createdAt')}</th>
-                    <th className="text-right px-5 py-3 text-xs font-medium text-text-tertiary tracking-wider uppercase">{t('actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredClients.map((client) => (
-                    <tr key={client.nanoId} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <Link href={`/admin/applications/${client.nanoId}`} className="flex items-center gap-3 group">
-                          <AppIconSmall client={client} />
-                          <div className="min-w-0">
-                            <p className="font-medium text-text-primary truncate group-hover:text-accent-foreground transition-colors">{client.name}</p>
-                            <p className="text-xs text-text-tertiary truncate">{client.description || '-'}</p>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-sm text-text-secondary font-mono">{client.nanoId}</span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-sm text-text-secondary">{client.username || '-'}</span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center text-xs px-2.5 py-1 rounded-full font-medium ${
-                          client.status === 'disabled'
-                            ? 'bg-destructive/10 text-destructive'
-                            : 'bg-success/10 text-success-foreground'
-                        }`}>
-                          {client.status === 'disabled' ? t('statusDisabled') : t('statusActive')}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-text-tertiary">
-                        {formatDate(client.createdAt)}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link
-                            href={`/admin/applications/${client.nanoId}`}
-                            className="inline-flex items-center gap-1 text-sm text-accent-foreground hover:bg-accent px-2.5 py-1.5 rounded-lg transition-colors"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                            {t('edit')}
-                          </Link>
-                          <button
-                            onClick={() => handleDeleteClient(client.nanoId, client.name)}
-                            className="inline-flex items-center gap-1 text-sm text-destructive hover:bg-error px-2.5 py-1.5 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            {t('delete')}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile cards */}
-            <div className="md:hidden divide-y divide-border">
-              {filteredClients.map((client) => (
-                <div key={client.nanoId} className="p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <AppIconSmall client={client} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-text-primary truncate">{client.name}</p>
-                        <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                          client.status === 'disabled'
-                            ? 'bg-destructive/10 text-destructive'
-                            : 'bg-success/10 text-success-foreground'
-                        }`}>
-                          {client.status === 'disabled' ? t('statusDisabled') : t('statusActive')}
-                        </span>
-                      </div>
-                      <p className="text-xs text-text-tertiary truncate">{client.description || '-'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-text-quaternary">
-                    <span className="font-mono">{client.nanoId}</span>
-                    <span>·</span>
-                    <span>{client.username || '-'}</span>
-                    <span>·</span>
-                    <span>{formatDate(client.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Link
-                      href={`/admin/applications/${client.nanoId}`}
-                      className="inline-flex items-center gap-1 text-sm text-accent-foreground hover:bg-accent px-2.5 py-1.5 rounded-lg transition-colors"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                      {t('edit')}
-                    </Link>
-                    <button
-                      onClick={() => handleDeleteClient(client.nanoId, client.name)}
-                      className="inline-flex items-center gap-1 text-sm text-destructive hover:bg-error px-2.5 py-1.5 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      {t('delete')}
-                    </button>
-                  </div>
+      <div className="bg-card rounded-xl shadow-sm border border-border">
+        <div className="p-6">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-40 bg-muted rounded-xl"></div>
                 </div>
               ))}
             </div>
-          </>
-        ) : (
-          <div className="text-center py-16">
-            <div className="w-14 h-14 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Box className="w-7 h-7 text-text-quaternary" />
+          ) : clients.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {clients.map((client) => (
+                <Link
+                  key={client.nanoId}
+                  href={`/dashboard/applications/${client.nanoId}`}
+                  className="border border-border rounded-xl p-4 hover:border-accent-foreground/20 hover:shadow-md transition-all block"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <AppIconSmall client={client} />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-text-primary truncate">{client.name}</h3>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        client.status === 'disabled'
+                          ? 'bg-destructive text-destructive-foreground'
+                          : 'bg-success text-success-foreground'
+                      }`}>
+                        {client.status === 'disabled' ? t('statusDisabled') : t('statusActive')}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-text-tertiary mb-3 line-clamp-2">
+                    {client.description || t('noDescription')}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-text-quaternary">
+                      NanoID: {client.nanoId}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDeleteClient(client.nanoId, client.name);
+                      }}
+                      className="flex items-center gap-1 text-xs text-destructive hover:bg-error px-2 py-1 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      {t('delete')}
+                    </button>
+                  </div>
+                </Link>
+              ))}
             </div>
-            <p className="text-text-secondary font-medium">{t('noApps')}</p>
-            <p className="text-sm text-text-quaternary mt-1">{t('noAppsHint')}</p>
+          ) : (
+            <div className="text-center py-12">
+              <Box className="w-12 h-12 text-text-quaternary mx-auto mb-4" />
+              <p className="text-text-tertiary">{t('noApps')}</p>
+              <p className="text-sm text-text-quaternary mt-1">{t('noAppsHint')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Documentation */}
+      <div className="bg-card rounded-xl shadow-sm border border-border">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-text-primary">{t('docTitle')}</h2>
+        </div>
+        <div className="p-6 space-y-6">
+          <div>
+            <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
+              <Info className="w-4 h-4 text-primary" />
+              {t('docWhatIs')}
+            </h3>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              {t('docWhatIsDesc')}
+            </p>
           </div>
-        )}
+
+          <div>
+            <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
+              <Shield className="w-4 h-4 text-primary" />
+              {t('docAuthMethods')}
+            </h3>
+            <ul className="text-sm text-text-secondary space-y-1.5 ml-6">
+              <li><strong>OAuth 2.0</strong> - {t('docOAuthDesc')}</li>
+              <li><strong>OpenID Connect</strong> - {t('docOIDCDesc')}</li>
+              <li><strong>{t('docSSO')}</strong> - {t('docSSODesc')}</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="flex items-center gap-2 text-base font-medium text-text-primary mb-2">
+              <Code className="w-4 h-4 text-primary" />
+              {t('docResources')}
+            </h3>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              {t('docResourcesDesc')}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Create Modal */}
