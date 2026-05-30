@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { deleteUser, getRequestMetadata, logAudit } from '@/lib/auth';
 import { requireAuthenticatedUser } from '@/lib/require-session';
 import { cookies } from 'next/headers';
-import { userDeleteFailed } from '@/lib/api-response';
+import { userDeleteFailed, adminCannotDeleteSelf } from '@/lib/api-response';
 import { SESSION_COOKIE_NAME } from '@/lib/constants';
 
 export async function POST(request: Request) {
@@ -10,6 +10,10 @@ export async function POST(request: Request) {
     const result = await requireAuthenticatedUser();
     if ('error' in result) return result.error;
     const { user } = result;
+
+    if (user.role === 'admin') {
+      return adminCannotDeleteSelf();
+    }
 
     const { ip, userAgent } = getRequestMetadata(request);
     await logAudit(user.id, 'account_deleted', {}, ip, userAgent, 'operation');

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -42,7 +42,7 @@ export default function SidebarShell({
   const mobileOnly = breakpoint === 'md' ? 'md:hidden' : 'lg:hidden';
   const sidebarPadding = breakpoint === 'md' ? 'md:pl-64' : 'lg:pl-64';
 
-  const sidebarInner = (
+  const sidebarInner = useMemo(() => (
     <>
       <div className="p-6 border-b">{logo}</div>
       <nav className="flex-1 p-4 space-y-4 overflow-y-auto">{nav}</nav>
@@ -77,7 +77,7 @@ export default function SidebarShell({
         {footer}
       </div>
     </>
-  );
+  ), [logo, nav, user, footer]);
 
   return (
     <div className="h-screen bg-muted flex overflow-hidden">
@@ -100,7 +100,7 @@ export default function SidebarShell({
       {/* Main Content */}
       <div className={`flex-1 flex flex-col ${sidebarPadding} h-full min-w-0`}>
         {/* Mobile Header */}
-        <div className={`${mobileOnly} bg-card/80 backdrop-blur-md border-b border-border p-4 flex items-center sticky top-0 z-30`}>
+        <div className={`${mobileOnly} bg-card/80 backdrop-blur-md border-b border-border py-2 px-4 flex items-center sticky top-0 z-30`}>
           <button
             onClick={() => setSidebarPath(pathname)}
             className="p-2 -ml-2 text-text-secondary hover:bg-muted rounded-lg"

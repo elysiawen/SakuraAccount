@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
@@ -34,10 +34,12 @@ interface UserPasskey {
   providerIcon: string;
 }
 
-function UserAvatar({ user, size = 'sm' }: { user: User; size?: 'sm' | 'md' }) {
+const UserAvatar = memo(function UserAvatar({ user, size = 'sm' }: { user: User; size?: 'sm' | 'md' }) {
   const [errored, setErrored] = useState(false);
   const dim = size === 'sm' ? 'w-9 h-9' : 'w-16 h-16';
   const textSize = size === 'sm' ? 'text-sm' : 'text-xl';
+
+  const handleError = useCallback(() => setErrored(true), []);
 
   if (user.avatar && !errored) {
     return (
@@ -48,7 +50,7 @@ function UserAvatar({ user, size = 'sm' }: { user: User; size?: 'sm' | 'md' }) {
           fill
           className="object-cover"
           unoptimized
-          onError={() => setErrored(true)}
+          onError={handleError}
         />
       </div>
     );
@@ -59,7 +61,7 @@ function UserAvatar({ user, size = 'sm' }: { user: User; size?: 'sm' | 'md' }) {
       {(user.nickname || user.username).charAt(0).toUpperCase()}
     </div>
   );
-}
+});
 
 export default function AdminUsersPage() {
   const t = useTranslations('admin.users');

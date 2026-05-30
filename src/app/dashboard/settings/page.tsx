@@ -17,6 +17,7 @@ interface ProfileUser {
   email: string;
   nickname?: string;
   avatar?: string | null;
+  role?: string;
 }
 
 interface Credential {
@@ -611,7 +612,8 @@ export default function SettingsPage() {
           </div>
           <button
             onClick={handleDeleteAccount}
-            className="px-4 py-2 text-sm text-destructive border border-destructive/30 rounded-xl hover:bg-error transition-colors"
+            disabled={user?.role === 'admin'}
+            className="px-4 py-2 text-sm text-destructive border border-destructive/30 rounded-xl hover:bg-error transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           >
             {t('deleteAccountBtn')}
           </button>
