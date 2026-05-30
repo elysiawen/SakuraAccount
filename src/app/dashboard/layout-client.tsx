@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import PageLogger from '@/components/PageLogger';
 import {
   LayoutDashboard,
   Link2,
@@ -218,6 +219,7 @@ export default function DashboardLayoutClient({
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto w-full">
           <div key={pathname} className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto animate-slide-in-up">
+            <PageLogger />
             {children}
           </div>
         </main>

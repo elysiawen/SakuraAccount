@@ -73,6 +73,8 @@ function AuditLogsContent() {
 
   const getActionLabel = (action: string) => {
     const labels: Record<string, string> = {
+      // Access (page visits)
+      page_visit: t('actionPageVisit'),
       // Auth (login/register/logout)
       login_success: t('actionLoginSuccess'),
       login_failed: t('actionLoginFailed'),

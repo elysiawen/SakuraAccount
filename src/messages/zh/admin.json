@@ -202,6 +202,7 @@
     "actionUpdateSetting": "更新系统设置",
     "actionUpdateSettings": "批量更新设置",
     "actionOAuthAuthorize": "OAuth 授权",
+    "actionPageVisit": "页面访问",
     "systemUser": "系统"
   },
   "settings": {
@@ -239,7 +240,7 @@
     "s3Custom": "自定义",
     "s3PresetDescription": "选择预设的 S3 服务商配置",
     "s3AccountIdDescription": "Cloudflare R2 账户 ID",
-    "s3R2EndpointHint": "R2 Endpoint 格式：https://{account-id}.r2.cloudflarestorage.com",
+
     "s3PublicDomainDescription": "用于生成文件访问 URL 的公网域名",
     "s3AvatarFolderPath": "头像文件夹路径",
     "s3AvatarFolderPathDescription": "S3 Bucket 中的头像存储路径前缀",

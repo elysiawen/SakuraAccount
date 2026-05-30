@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import AdminSidebar from './sidebar';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import PageLogger from '@/components/PageLogger';
 import { Menu } from 'lucide-react';
 
 export default function AdminShell({
@@ -90,6 +91,7 @@ export default function AdminShell({
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto w-full">
           <div key={pathname} className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto animate-slide-in-up">
+            <PageLogger />
             {children}
           </div>
         </main>

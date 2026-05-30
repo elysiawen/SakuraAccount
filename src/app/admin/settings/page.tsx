@@ -227,7 +227,7 @@ export default function AdminSettingsPage() {
                 />
                 {s3Preset === 'cloudflare-r2' && (
                   <p className="mt-1 text-sm text-text-tertiary">
-                    {t('s3R2EndpointHint')}
+                    R2 Endpoint 格式：https://{"{account-id}"}.r2.cloudflarestorage.com
                   </p>
                 )}
               </div>

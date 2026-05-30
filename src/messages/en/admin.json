@@ -202,6 +202,7 @@
     "actionUpdateSetting": "Update Setting",
     "actionUpdateSettings": "Update Settings",
     "actionOAuthAuthorize": "OAuth Authorization",
+    "actionPageVisit": "Page Visit",
     "systemUser": "System"
   },
   "settings": {
@@ -239,7 +240,7 @@
     "s3Custom": "Custom",
     "s3PresetDescription": "Select a preset S3 provider configuration",
     "s3AccountIdDescription": "Cloudflare R2 Account ID",
-    "s3R2EndpointHint": "R2 Endpoint format: https://{account-id}.r2.cloudflarestorage.com",
+
     "s3PublicDomainDescription": "Public domain for generating file access URLs",
     "s3AvatarFolderPath": "Avatar Folder Path",
     "s3AvatarFolderPathDescription": "Avatar storage path prefix in S3 Bucket",
