@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   X,
+  Code2,
 } from 'lucide-react';
 
 interface DashboardLayoutClientProps {
@@ -71,8 +72,11 @@ export default function DashboardLayoutClient({
 
   if (sessionInvalid) return null;
 
+  const isDeveloperOrAdmin = role === 'admin' || role === 'developer';
+
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('overview') },
+    ...(isDeveloperOrAdmin ? [{ href: '/dashboard/applications', icon: Code2, label: t('applications') }] : []),
     { href: '/dashboard/authorized-apps', icon: Link2, label: t('authorizedApps') },
     { href: '/dashboard/sessions', icon: Smartphone, label: t('sessions') },
     { href: '/dashboard/settings', icon: Settings, label: t('settings') },
@@ -152,7 +156,7 @@ export default function DashboardLayoutClient({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium text-text-primary truncate">{nickname || username}</div>
-            <div className="text-xs text-text-tertiary truncate">{role === 'admin' ? t('admin') : t('user')}</div>
+            <div className="text-xs text-text-tertiary truncate">{role === 'admin' ? t('admin') : role === 'developer' ? t('developer') : t('user')}</div>
           </div>
         </Link>
 
