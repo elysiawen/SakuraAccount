@@ -897,6 +897,7 @@ if __name__ == '__main__':
                         alt={u.nickname}
                         width={40}
                         height={40}
+                        unoptimized
                         className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-background"
                       />
                     ) : (
