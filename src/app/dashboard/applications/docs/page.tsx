@@ -74,7 +74,7 @@ const AUTH_PARAMS = [
 
 type CodeTab = 'nextjs' | 'nodejs' | 'python' | 'go';
 
-const DUMMY_BASE = 'https://account.sakura.example.com';
+const DUMMY_BASE = 'https://account.example.com';
 
 function getCodeSamples(baseUrl: string): Record<CodeTab, { code: string }> {
   const replace = (s: string) => s.replaceAll(DUMMY_BASE, baseUrl);
@@ -110,7 +110,7 @@ const params = new URLSearchParams({
   prompt: 'consent',
 });
 
-const authUrl = \`https://account.sakura.example.com/oauth/authorize?\${params}\`;
+const authUrl = \`https://account.example.com/oauth/authorize?\${params}\`;
 
 // 存储 code_verifier（Session 或临时存储）
 // res.redirect(authUrl);
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
   // 验证 state 防止 CSRF
   if (returnedState !== storedState) throw new Error('Invalid state');
 
-  const res = await fetch('https://account.sakura.example.com/oauth/token', {
+  const res = await fetch('https://account.example.com/oauth/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
   // tokens.access_token, tokens.id_token, tokens.refresh_token
 
   // 4. 获取用户信息
-  const userRes = await fetch('https://account.sakura.example.com/oauth/userinfo', {
+  const userRes = await fetch('https://account.example.com/oauth/userinfo', {
     headers: { Authorization: \`Bearer \${tokens.access_token}\` },
   });
   const user = await userRes.json();
@@ -184,7 +184,7 @@ app.get('/auth/login', (req, res) => {
     prompt: 'consent',
   });
 
-  res.redirect(\`https://account.sakura.example.com/oauth/authorize?\${params}\`);
+  res.redirect(\`https://account.example.com/oauth/authorize?\${params}\`);
 });
 
 // 3. 回调处理 - 换取令牌
@@ -193,7 +193,7 @@ app.get('/auth/callback', async (req, res) => {
   const session = sessions.get(state);
   if (!session) return res.status(400).send('Invalid state');
 
-  const tokenRes = await fetch('https://account.sakura.example.com/oauth/token', {
+  const tokenRes = await fetch('https://account.example.com/oauth/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -211,7 +211,7 @@ app.get('/auth/callback', async (req, res) => {
   sessions.set(tokens.access_token, tokens);
 
   // 4. 获取用户信息
-  const userRes = await fetch('https://account.sakura.example.com/oauth/userinfo', {
+  const userRes = await fetch('https://account.example.com/oauth/userinfo', {
     headers: { Authorization: \`Bearer \${tokens.access_token}\` },
   });
   const user = await userRes.json();
@@ -248,7 +248,7 @@ def generate_code_challenge(verifier: str) -> str:
 CLIENT_ID = "YOUR_CLIENT_ID"
 CLIENT_SECRET = "YOUR_CLIENT_SECRET"
 REDIRECT_URI = "http://localhost:8000/auth/callback"
-SAKURA_BASE = "https://account.sakura.example.com"
+SAKURA_BASE = "https://account.example.com"
 
 # 2. 登录 - 重定向到 Sakura Account
 @app.get("/auth/login")
@@ -323,7 +323,7 @@ const (
 	clientID     = "YOUR_CLIENT_ID"
 	clientSecret = "YOUR_CLIENT_SECRET"
 	redirectURI  = "http://localhost:8080/auth/callback"
-	sakuraBase   = "https://account.sakura.example.com"
+	sakuraBase   = "https://account.example.com"
 )
 
 var sessions = map[string]string{} // state -> codeVerifier
@@ -718,13 +718,13 @@ export default function DocsPage() {
                     <h3 className="text-sm font-semibold text-text-primary">{t(ep.key)}</h3>
                   </div>
                   <p className="text-xs text-text-tertiary mb-2">{t(ep.desc)}</p>
-                  <code className="text-xs sm:text-sm font-mono text-text-secondary bg-muted px-2 py-1 rounded-lg break-all">
+                  <code className="block sm:inline text-xs sm:text-sm font-mono text-text-secondary bg-muted px-2 py-1.5 rounded-lg break-all">
                     {baseUrl}{ep.path}
                   </code>
                 </div>
                 <button
                   onClick={() => handleCopyEndpoint(ep.path)}
-                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary bg-muted rounded-lg hover:bg-border-strong hover:text-text-primary transition-all active:scale-95"
+                  className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary bg-muted rounded-lg hover:bg-border-strong hover:text-text-primary transition-all active:scale-95 w-full sm:w-auto"
                 >
                   {copiedEndpoint === ep.path ? (
                     <CopyCheck className="w-3.5 h-3.5 text-emerald-500" />
@@ -750,31 +750,44 @@ export default function DocsPage() {
             <h2 className="text-lg font-semibold text-text-primary">{t('authCode')}</h2>
             <p className="text-sm text-text-tertiary mt-1">{t('authCodeDesc')}</p>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Mobile: card layout */}
+          <div className="sm:hidden divide-y divide-border">
+            {AUTH_PARAMS.map((p) => (
+              <div key={p.param} className="p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <code className="text-xs font-mono text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-500/10 px-1.5 py-0.5 rounded">
+                    {p.param}
+                  </code>
+                  <div className="flex items-center gap-3 text-xs text-text-tertiary">
+                    <span className="font-mono">{p.type}</span>
+                    <span className="inline-flex items-center gap-1 font-medium text-rose-600 dark:text-rose-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      {t('required')}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed">{t(p.desc)}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted">
-                  <th className="text-left px-4 sm:px-6 py-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">
-                    {t('param')}
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">
-                    {t('type')}
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">
-                    {t('required')}
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">
-                    {t('description')}
-                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">{t('param')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">{t('type')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">{t('required')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">{t('description')}</th>
                 </tr>
               </thead>
               <tbody>
                 {AUTH_PARAMS.map((p) => (
                   <tr key={p.param} className="border-b border-border/50 hover:bg-muted transition-colors">
-                    <td className="px-4 sm:px-6 py-3">
-                      <code className="text-xs font-mono text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-500/10 px-1.5 py-0.5 rounded">
-                        {p.param}
-                      </code>
+                    <td className="px-6 py-3">
+                      <code className="text-xs font-mono text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-500/10 px-1.5 py-0.5 rounded">{p.param}</code>
                     </td>
                     <td className="px-4 py-3 text-text-tertiary text-xs font-mono">{p.type}</td>
                     <td className="px-4 py-3">
@@ -791,7 +804,7 @@ export default function DocsPage() {
           </div>
 
           {/* Notes */}
-          <div className="p-4 sm:p-6 space-y-2">
+          <div className="p-4 sm:p-6 space-y-2 border-t border-border">
             <div className="flex items-start gap-2.5 p-3 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-xl">
               <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <div>

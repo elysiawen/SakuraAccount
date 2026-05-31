@@ -361,7 +361,7 @@
       "scopeProfileInfo": "获取昵称、头像等个人资料信息",
       "scopeEmailInfo": "获取用户邮箱地址",
       "copySuccess": "已复制",
-      "copyEndpoint": "复制端点",
+      "copyEndpoint": "复制",
       "note": "提示",
       "notePkce": "我们强制要求使用 PKCE（S256），请勿在请求中省略 code_challenge 和 code_challenge_method 参数",
       "noteRedirectUri": "redirect_uri 必须与您在应用管理中配置的回调地址完全一致",

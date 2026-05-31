@@ -395,9 +395,9 @@ export async function getUserById(id: string): Promise<DbUserRow | null> {
   return db.getOne<DbUserRow>('SELECT * FROM users WHERE id = ?', [id]);
 }
 
-export async function updateUser(id: string, data: { username?: string; nickname?: string; avatar?: string | null; email?: string }): Promise<void> {
+export async function updateUser(id: string, data: { username?: string; nickname?: string; avatar?: string | null; email?: string; email_verified?: boolean }): Promise<void> {
   const fields: string[] = [];
-  const values: (string | null)[] = [];
+  const values: (string | null | boolean)[] = [];
 
   if (data.username !== undefined) {
     fields.push('username = ?');
@@ -414,6 +414,10 @@ export async function updateUser(id: string, data: { username?: string; nickname
   if (data.email !== undefined) {
     fields.push('email = ?');
     values.push(data.email);
+  }
+  if (data.email_verified !== undefined) {
+    fields.push('email_verified = ?');
+    values.push(data.email_verified);
   }
 
   if (fields.length === 0) return;

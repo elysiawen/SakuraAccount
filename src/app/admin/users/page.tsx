@@ -9,7 +9,7 @@ import Search from '@/components/Search';
 import Pagination from '@/components/Pagination';
 import Modal from '@/components/Modal';
 import AvatarUpload from '@/components/AvatarUpload';
-import { Shield, User as UserIcon, Mail, Key, Edit, Trash2, Fingerprint } from 'lucide-react';
+import { Shield, User as UserIcon, Mail, Key, Edit, Trash2, Fingerprint, CalendarClock } from 'lucide-react';
 import { getErrorMessage } from '@/lib/api-error';
 import { getAvatarColor } from '@/components/AppIcon';
 import { Spinner } from '@/components/Spinner';
@@ -83,7 +83,7 @@ export default function AdminUsersPage() {
   const page = 1;
   const limit = DEFAULT_PAGE_SIZE;
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ username: '', nickname: '', email: '', newPassword: '', role: 'user' });
+  const [editForm, setEditForm] = useState({ username: '', nickname: '', email: '', newPassword: '', role: 'user', emailVerified: false });
   const [editingAvatar, setEditingAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
@@ -181,6 +181,7 @@ export default function AdminUsersPage() {
       email: user.email || '',
       newPassword: '',
       role: user.role || 'user',
+      emailVerified: user.email_verified,
     });
   };
 
@@ -197,6 +198,7 @@ export default function AdminUsersPage() {
           username: editForm.username,
           nickname: editForm.nickname,
           email: editForm.email,
+          email_verified: editForm.emailVerified,
           newPassword: editForm.newPassword || undefined,
           ...(isSelf ? {} : { role: editForm.role }),
         }),
@@ -320,61 +322,107 @@ export default function AdminUsersPage() {
             </div>
 
             {/* Mobile cards */}
-            <div className="md:hidden divide-y divide-border">
+            <div className="md:hidden p-3 space-y-3">
               {users.map((user) => (
-                <div key={user.id} className="p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <UserAvatar user={user} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-text-primary truncate">{user.username}</p>
-                        <span
-                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                            user.role === 'admin'
-                              ? 'bg-accent-button/10 text-accent-button'
-                              : 'bg-muted text-text-secondary'
-                          }`}
-                        >
-                          <Shield className="w-3 h-3" />
-                          {getRoleLabel(user.role)}
-                        </span>
+                <div
+                  key={user.id}
+                  className={`relative rounded-2xl overflow-hidden shadow-sm border transition-shadow hover:shadow-md ${
+                    user.role === 'admin'
+                      ? 'border-accent-button/30 bg-card'
+                      : 'border-border/60 bg-card'
+                  }`}
+                >
+                  {/* Role accent bar */}
+                  {user.role === 'admin' && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent-button rounded-l-2xl" />
+                  )}
+
+                  <div className={`p-4 ${user.role === 'admin' ? 'pl-5' : ''}`}>
+                    {/* Top: Avatar + Info + Actions */}
+                    <div className="flex items-start gap-3.5">
+                      <UserAvatar user={user} />
+                      <div className="min-w-0 flex-1">
+                        {/* Username + Role */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-text-primary truncate text-[15px] leading-tight">
+                            {user.username}
+                          </p>
+                          <span
+                            className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                              user.role === 'admin'
+                                ? 'bg-accent-button/10 text-accent-button'
+                                : user.role === 'developer'
+                                  ? 'bg-info/10 text-info-foreground'
+                                  : 'bg-muted text-text-secondary'
+                            }`}
+                          >
+                            <Shield className="w-3 h-3" />
+                            {getRoleLabel(user.role)}
+                          </span>
+                        </div>
+                        {/* Nickname */}
+                        {user.nickname && (
+                          <p className="text-xs text-text-tertiary mt-0.5 truncate">{user.nickname}</p>
+                        )}
                       </div>
-                      <p className="text-xs text-text-tertiary truncate">{user.nickname || '-'}</p>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={() => handleEditUser(user)}
+                          className="p-2 text-accent-foreground hover:bg-accent/10 rounded-xl transition-colors"
+                          title={t('edit')}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.username)}
+                          className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-xl transition-colors"
+                          title={t('delete')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-text-secondary">
-                    <Mail className="w-3.5 h-3.5 shrink-0 text-text-quaternary" />
-                    <span className="truncate">{user.email}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {user.email_verified ? (
-                        <span className="text-xs px-2 py-0.5 bg-success/10 text-success-foreground rounded-full">{t('verified')}</span>
-                      ) : (
-                        <span className="text-xs px-2 py-0.5 bg-warning/10 text-warning-foreground rounded-full">{t('unverified')}</span>
-                      )}
-                      {user.two_factor_enabled && (
-                        <span className="text-xs px-2 py-0.5 bg-info/10 text-info-foreground rounded-full">2FA</span>
-                      )}
-                      <span className="text-xs text-text-quaternary">
-                        {new Date(user.created_at).toLocaleDateString('zh-CN')}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleEditUser(user)}
-                        className="inline-flex items-center gap-1 text-sm text-accent-foreground hover:bg-accent px-2.5 py-1.5 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                        {t('edit')}
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(user.id, user.username)}
-                        className="inline-flex items-center gap-1 text-sm text-destructive hover:bg-error px-2.5 py-1.5 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        {t('delete')}
-                      </button>
+
+                    {/* Divider */}
+                    <div className="mt-3.5 mb-3 h-px bg-border/60" />
+
+                    {/* Bottom: Email, Status, Date */}
+                    <div className="space-y-2">
+                      {/* Email */}
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
+                          <Mail className="w-3.5 h-3.5 text-text-quaternary" />
+                        </div>
+                        <span className="text-sm text-text-secondary truncate">{user.email}</span>
+                      </div>
+
+                      {/* Status + Date */}
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
+                          <CalendarClock className="w-3.5 h-3.5 text-text-quaternary" />
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                          {user.email_verified ? (
+                            <span className="text-[11px] px-2 py-0.5 bg-success/10 text-success-foreground rounded-full font-medium shrink-0">
+                              {t('verified')}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] px-2 py-0.5 bg-warning/10 text-warning-foreground rounded-full font-medium shrink-0">
+                              {t('unverified')}
+                            </span>
+                          )}
+                          {user.two_factor_enabled && (
+                            <span className="text-[11px] px-2 py-0.5 bg-info/10 text-info-foreground rounded-full font-medium shrink-0">
+                              2FA
+                            </span>
+                          )}
+                          <span className="text-xs text-text-quaternary ml-auto shrink-0">
+                            {new Date(user.created_at).toLocaleDateString('zh-CN')}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -384,9 +432,9 @@ export default function AdminUsersPage() {
             <Pagination total={total} currentPage={page} itemsPerPage={limit} />
           </>
         ) : (
-          <div className="text-center py-16">
-            <div className="w-14 h-14 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <UserIcon className="w-7 h-7 text-text-quaternary" />
+          <div className="text-center py-16 md:py-20">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <UserIcon className="w-8 h-8 text-text-quaternary" />
             </div>
             <p className="text-text-secondary font-medium">{t('noUsers')}</p>
             <p className="text-sm text-text-quaternary mt-1">{t('noUsers')}</p>
@@ -398,19 +446,20 @@ export default function AdminUsersPage() {
       <Modal
         isOpen={!!editingUser}
         onClose={() => setEditingUser(null)}
-        title={`${t('editUser')} - ${editingUser?.username}`}
+        title={editingUser?.username || t('editUser')}
+        maxWidth="max-w-lg mx-4"
         footer={
           <div className="flex justify-end gap-3 p-4 border-t border-border">
             <button
               onClick={() => setEditingUser(null)}
-              className="px-4 py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
+              className="flex-1 md:flex-none px-4 py-2.5 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
             >
               {t('cancel')}
             </button>
             <button
               onClick={handleSaveUser}
               disabled={saving}
-              className="px-4 py-2 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="flex-1 md:flex-none px-4 py-2.5 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {saving && <Spinner className="h-4 w-4" />}
               {saving ? t('saving') : t('save')}
@@ -418,7 +467,7 @@ export default function AdminUsersPage() {
           </div>
         }
       >
-        <div className="space-y-5 p-4">
+        <div className="space-y-5">
           {/* Avatar */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
@@ -437,7 +486,7 @@ export default function AdminUsersPage() {
               >
                 {({ isUploading, preview, triggerUpload, handleDelete }) => (
                   <div className="flex items-center gap-4">
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
                         {(preview || editingAvatar) ? (
                           <Image src={preview || editingAvatar!} alt="" fill className="object-cover" unoptimized />
@@ -457,7 +506,7 @@ export default function AdminUsersPage() {
                       )}
                     </div>
                     <div className="flex-1 space-y-2">
-                      <div>
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={triggerUpload}
@@ -471,7 +520,7 @@ export default function AdminUsersPage() {
                             type="button"
                             onClick={handleDelete}
                             disabled={isUploading}
-                            className="ml-2 px-4 py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {t('delete')}
                           </button>
@@ -497,7 +546,7 @@ export default function AdminUsersPage() {
               onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
               onFocus={() => setFocused('username')}
               onBlur={() => setFocused(null)}
-              className="w-full px-4 py-2.5 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+              className="w-full px-4 py-3 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
               style={inputStyle('username')}
               placeholder={t('username')}
             />
@@ -515,7 +564,7 @@ export default function AdminUsersPage() {
               onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })}
               onFocus={() => setFocused('nickname')}
               onBlur={() => setFocused(null)}
-              className="w-full px-4 py-2.5 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+              className="w-full px-4 py-3 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
               style={inputStyle('nickname')}
               placeholder={t('nickname')}
             />
@@ -533,7 +582,7 @@ export default function AdminUsersPage() {
               onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
               onFocus={() => setFocused('email')}
               onBlur={() => setFocused(null)}
-              className="w-full px-4 py-2.5 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+              className="w-full px-4 py-3 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
               style={inputStyle('email')}
               placeholder={t('email')}
             />
@@ -549,7 +598,7 @@ export default function AdminUsersPage() {
               <select
                 value={editForm.role}
                 onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                className="w-full px-4 py-2.5 bg-background border border-border-input rounded-xl text-sm text-foreground outline-none transition-all duration-200 focus:border-accent-button focus:ring-2 focus:ring-accent-button/20"
+                className="w-full px-4 py-3 bg-background border border-border-input rounded-xl text-sm text-foreground outline-none transition-all duration-200 focus:border-accent-button focus:ring-2 focus:ring-accent-button/20"
               >
                 <option value="user">{t('roleUser')}</option>
                 <option value="developer">{t('roleDeveloper')}</option>
@@ -557,6 +606,33 @@ export default function AdminUsersPage() {
               </select>
             </div>
           )}
+
+          {/* Email Verified Toggle */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+              <Mail className="w-3.5 h-3.5" />
+              {t('status')}
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={editForm.emailVerified}
+                onClick={() => setEditForm({ ...editForm, emailVerified: !editForm.emailVerified })}
+                className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent-button/20 ${editForm.emailVerified ? '' : 'bg-muted border border-border'}`}
+                style={editForm.emailVerified ? { backgroundColor: 'rgb(48, 164, 108)' } : undefined}
+              >
+                <span
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                    editForm.emailVerified ? 'left-[22px]' : 'left-0.5'
+                  }`}
+                />
+              </button>
+              <span className={`text-sm font-medium ${editForm.emailVerified ? 'text-[rgb(48,164,108)]' : 'text-text-tertiary'}`}>
+                {editForm.emailVerified ? t('verified') : t('unverified')}
+              </span>
+            </label>
+          </div>
 
           {/* Password */}
           <div>
@@ -570,7 +646,7 @@ export default function AdminUsersPage() {
               onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
               onFocus={() => setFocused('newPassword')}
               onBlur={() => setFocused(null)}
-              className="w-full px-4 py-2.5 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+              className="w-full px-4 py-3 bg-background border rounded-xl text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
               style={inputStyle('newPassword')}
               placeholder={t('leaveEmptyForNoChange')}
             />
@@ -601,7 +677,7 @@ export default function AdminUsersPage() {
                     </div>
                     <button
                       onClick={() => handleDeletePasskey(String(editingUser!.id), cred.id)}
-                      className="p-1.5 text-text-quaternary hover:text-destructive hover:bg-error rounded-lg transition-colors shrink-0 ml-2"
+                      className="p-2 text-text-quaternary hover:text-destructive hover:bg-error/10 rounded-xl transition-colors shrink-0 ml-2"
                       title={t('delete')}
                     >
                       <Trash2 className="w-4 h-4" />

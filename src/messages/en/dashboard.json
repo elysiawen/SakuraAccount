@@ -361,7 +361,7 @@
       "scopeProfileInfo": "Get profile information such as nickname and avatar",
       "scopeEmailInfo": "Get the user's email address",
       "copySuccess": "Copied",
-      "copyEndpoint": "Copy endpoint",
+      "copyEndpoint": "Copy",
       "note": "Note",
       "notePkce": "PKCE (S256) is mandatory—do not omit code_challenge and code_challenge_method from your requests",
       "noteRedirectUri": "redirect_uri must exactly match the callback URL configured in your app settings",

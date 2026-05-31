@@ -101,7 +101,7 @@ export async function PUT(request: NextRequest) {
     const { user: admin } = result;
 
     const body = await request.json();
-    const { id, username, nickname, email, newPassword, role } = body;
+    const { id, username, nickname, email, newPassword, role, email_verified } = body;
 
     if (!id) {
       return adminUserIdRequired();
@@ -124,7 +124,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    await updateUser(id, { username, nickname: nickname?.trim(), email });
+    await updateUser(id, { username, nickname: nickname?.trim(), email, ...(email_verified !== undefined && { email_verified }) });
 
     if (newPassword) {
       const passwordError = validatePassword(newPassword);
