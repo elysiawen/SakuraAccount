@@ -201,7 +201,7 @@ function ConsentContent() {
                   (user.nickname || user.username || '').charAt(0).toUpperCase()
                 )}
               </div>
-              <div>
+              <div className="hidden sm:block">
                 <p className="text-sm font-medium text-foreground">{user.nickname || user.username}</p>
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
