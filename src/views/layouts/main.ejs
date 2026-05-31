@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | Sakura Network账号中心</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <!-- 自定义样式 -->
+  <link href="/public/css/style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- 导航栏 -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="/">Sakura Network</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/">首页</a>
+          </li>
+          <% if (locals.user) { %>
+            <% if (locals.user.role === 'admin') { %>
+              <li class="nav-item">
+                <a class="nav-link" href="/admin/dashboard">管理控制台</a>
+              </li>
+            <% } else { %>
+              <li class="nav-item">
+                <a class="nav-link" href="/user/dashboard">个人中心</a>
+              </li>
+            <% } %>
+          <% } %>
+        </ul>
+        <ul class="navbar-nav">
+          <% if (locals.user) { %>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                <img src="<%= locals.user.avatarUrl %>" alt="头像" class="avatar-sm rounded-circle me-1">
+                <%= locals.user.nickname %>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/user/profile">个人资料</a></li>
+                <li><a class="dropdown-item" href="/user/avatar">更换头像</a></li>
+                <li><a class="dropdown-item" href="/user/change-password">修改密码</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/auth/logout">退出登录</a></li>
+              </ul>
+            </li>
+          <% } else { %>
+            <li class="nav-item">
+              <a class="nav-link" href="/auth/login">登录</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/auth/register">注册</a>
+            </li>
+          <% } %>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 消息提示 -->
+  <div class="container mt-3">
+    <% if (locals.success_msg && locals.success_msg.length > 0) { %>
+      <div class="alert alert-success alert-dismissible fade show">
+        <%= locals.success_msg %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    <% } %>
+    <% if (locals.error_msg && locals.error_msg.length > 0) { %>
+      <div class="alert alert-danger alert-dismissible fade show">
+        <%= locals.error_msg %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- 主要内容 -->
+  <main class="container my-4">
+    <%- body %>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-light py-4 mt-5">
+    <div class="container text-center">
+      <p class="mb-0">© <%= new Date().getFullYear() %> Sakura Network账号中心. 保留所有权利.</p>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- 自定义脚本 -->
+  <script src="/public/js/main.js"></script>
+</body>
+</html>

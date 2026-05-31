@@ -1,0 +1,185 @@
+<%- include('../layouts/header', {title: title}) %>
+
+<div class="container py-4">
+  <div class="row">
+    <!-- 侧边栏 -->
+    <%- include('../layouts/admin-sidebar', {user: locals.user, activePage: 'users'}) %>
+    
+    <!-- 主要内容 -->
+    <div class="col-md-9">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">用户管理</h5>
+          <span class="badge bg-primary">总用户数: <%= totalUsers %></span>
+        </div>
+        <div class="card-body">
+          <!-- 搜索和筛选 -->
+          <form action="/admin/users" method="GET" class="mb-4">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="input-group">
+                  <input type="text" name="search" class="form-control" placeholder="搜索用户名/昵称/邮箱" value="<%= search %>">
+                  <button class="btn btn-outline-secondary" type="submit">
+                    <i class="fas fa-search"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <select name="status" class="form-select">
+                  <option value="" <%= !status ? 'selected' : '' %>>所有状态</option>
+                  <option value="active" <%= status === 'active' ? 'selected' : '' %>>活跃</option>
+                  <option value="inactive" <%= status === 'inactive' ? 'selected' : '' %>>未激活</option>
+                  <option value="banned" <%= status === 'banned' ? 'selected' : '' %>>已禁用</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select name="role" class="form-select">
+                  <option value="" <%= !role ? 'selected' : '' %>>所有角色</option>
+                  <option value="admin" <%= role === 'admin' ? 'selected' : '' %>>管理员</option>
+                  <option value="user" <%= role === 'user' ? 'selected' : '' %>>普通用户</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <select name="limit" class="form-select">
+                  <option value="10" <%= limit === 10 ? 'selected' : '' %>>10条/页</option>
+                  <option value="20" <%= limit === 20 ? 'selected' : '' %>>20条/页</option>
+                  <option value="50" <%= limit === 50 ? 'selected' : '' %>>50条/页</option>
+                </select>
+              </div>
+            </div>
+          </form>
+          
+          <!-- 用户列表 -->
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col" style="width: 60px;">#</th>
+                  <th scope="col">用户信息</th>
+                  <th scope="col">角色</th>
+                  <th scope="col">状态</th>
+                  <th scope="col">注册时间</th>
+                  <th scope="col">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if(users && users.length > 0) { %>
+                  <% users.forEach(function(user, index) { %>
+                    <tr>
+                      <td>
+                        <img src="<%= user.avatarUrl %>" alt="<%= user.nickname %>" class="rounded-circle" width="40" height="40">
+                      </td>
+                      <td>
+                        <h6 class="mb-0"><%= user.nickname %></h6>
+                        <small class="text-muted">@<%= user.username %></small>
+                        <small class="d-block text-muted"><%= user.email %></small>
+                      </td>
+                      <td>
+                        <% if(user.role === 'admin') { %>
+                          <span class="badge bg-danger">管理员</span>
+                        <% } else { %>
+                          <span class="badge bg-secondary">用户</span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <% if(user.status === 'active') { %>
+                          <span class="badge bg-success">活跃</span>
+                        <% } else if(user.status === 'inactive') { %>
+                          <span class="badge bg-warning text-dark">未激活</span>
+                        <% } else if(user.status === 'banned') { %>
+                          <span class="badge bg-danger">已禁用</span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <small><%= new Date(user.createdAt).toLocaleString() %></small>
+                      </td>
+                      <td>
+                        <div class="btn-group btn-group-sm">
+                          <a href="/admin/users/<%= user.userId %>" class="btn btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                          </a>
+                          <a href="/admin/users/<%= user.userId %>/edit" class="btn btn-outline-secondary">
+                            <i class="fas fa-edit"></i>
+                          </a>
+                          <% if(user.userId !== locals.user.userId) { %>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<%= user.userId %>">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          <% } %>
+                        </div>
+                        
+                        <!-- 删除确认模态框 -->
+                        <div class="modal fade" id="deleteModal<%= user.userId %>" tabindex="-1" aria-hidden="true">
+                          <div class="modal-dialog">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h5 class="modal-title">确认删除</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body">
+                                <p>您确定要删除用户 <strong><%= user.nickname %> (@<%= user.username %>)</strong> 吗？</p>
+                                <p class="text-danger">此操作不可逆，用户的所有数据将被永久删除。</p>
+                              </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                <form action="/admin/users/<%= user.userId %>/delete" method="POST" class="d-inline">
+                                  <button type="submit" class="btn btn-danger">确认删除</button>
+                                </form>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="6" class="text-center py-4">
+                      <div class="text-muted">
+                        <i class="fas fa-search fa-2x mb-3"></i>
+                        <p>没有找到符合条件的用户</p>
+                      </div>
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- 分页 -->
+          <% if (totalPages > 1) { %>
+            <nav aria-label="Page navigation" class="mt-4">
+              <ul class="pagination justify-content-center">
+                <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                  <a class="page-link" href="/admin/users?page=<%= currentPage - 1 %>&search=<%= search %>&status=<%= status %>&role=<%= role %>&limit=<%= limit %>">
+                    <i class="fas fa-chevron-left"></i>
+                  </a>
+                </li>
+                
+                <% for(let i = 1; i <= totalPages; i++) { %>
+                  <% if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) { %>
+                    <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+                      <a class="page-link" href="/admin/users?page=<%= i %>&search=<%= search %>&status=<%= status %>&role=<%= role %>&limit=<%= limit %>"><%= i %></a>
+                    </li>
+                  <% } else if (i === currentPage - 3 || i === currentPage + 3) { %>
+                    <li class="page-item disabled">
+                      <span class="page-link">...</span>
+                    </li>
+                  <% } %>
+                <% } %>
+                
+                <li class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                  <a class="page-link" href="/admin/users?page=<%= currentPage + 1 %>&search=<%= search %>&status=<%= status %>&role=<%= role %>&limit=<%= limit %>">
+                    <i class="fas fa-chevron-right"></i>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <%- include('../layouts/header', { title: 'API文档 - Sakura Network' }) %>
+  <style>
+    .api-section { margin-bottom: 3rem; }
+    .endpoint { background-color: #f8f9fa; padding: 1rem; border-radius: 0.25rem; margin: 1rem 0; }
+    .http-method { font-weight: bold; color: #0d6efd; }
+    .endpoint-url { font-family: monospace; }
+    .parameter-table { font-size: 0.9rem; }
+    .response-example { background-color: #272822; color: #f8f8f2; padding: 1rem; border-radius: 0.25rem; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+  <div class="container py-4">
+    <div class="row">
+      <!-- 左侧导航 -->
+      <div class="col-12 col-md-3 mb-4">
+        <div class="list-group sticky-top" style="top: 2rem;">
+          <a href="#overview" class="list-group-item list-group-item-action">概述</a>
+          <a href="#oauth2" class="list-group-item list-group-item-action">OAuth 2.0</a>
+          <a href="#openid-connect" class="list-group-item list-group-item-action">OpenID Connect</a>
+          <a href="#endpoints" class="list-group-item list-group-item-action">API端点</a>
+          <a href="#errors" class="list-group-item list-group-item-action">错误处理</a>
+          <a href="#security" class="list-group-item list-group-item-action">安全建议</a>
+        </div>
+      </div>
+
+      <!-- 右侧内容 -->
+      <div class="col-12 col-md-9">
+        <!-- 概述 -->
+        <section id="overview" class="api-section">
+          <h2>概述</h2>
+          <p>Sakura Network提供基于OAuth 2.0和OpenID Connect的身份认证和授权服务。通过我们的API，您可以：</p>
+          <ul>
+            <li>实现第三方应用授权登录</li>
+            <li>获取用户基本信息</li>
+            <li>实现单点登录(SSO)</li>
+          </ul>
+          <p>所有API请求都应使用HTTPS协议，API的基础URL为：<code><%= baseUrl %></code></p>
+        </section>
+
+        <!-- OAuth 2.0 -->
+        <section id="oauth2" class="api-section">
+          <h2>OAuth 2.0</h2>
+          <p>我们支持以下OAuth 2.0授权流程：</p>
+          <ul>
+            <li><strong>授权码模式</strong> - 用于服务器端应用</li>
+            <li><strong>刷新令牌</strong> - 用于获取新的访问令牌</li>
+          </ul>
+
+          <h4 class="mt-4">授权流程</h4>
+          <ol>
+            <li>将用户重定向到授权端点</li>
+            <li>用户同意授权后，返回授权码</li>
+            <li>使用授权码获取访问令牌</li>
+            <li>使用访问令牌调用API</li>
+          </ol>
+        </section>
+
+        <!-- OpenID Connect -->
+        <section id="openid-connect" class="api-section">
+          <h2>OpenID Connect</h2>
+          <p>OpenID Connect在OAuth 2.0的基础上提供了身份验证层。通过请求<code>openid</code>作用域，您可以：</p>
+          <ul>
+            <li>获取经过签名的ID令牌（JWT格式）</li>
+            <li>访问标准化的用户信息端点</li>
+            <li>验证用户身份</li>
+          </ul>
+        </section>
+
+        <!-- API端点 -->
+        <section id="endpoints" class="api-section">
+          <h2>API端点</h2>
+
+          <!-- 授权端点 -->
+          <div class="endpoint">
+            <h4>授权端点</h4>
+            <p><span class="http-method">GET</span> <span class="endpoint-url"><%= baseUrl %>/oauth/authorize</span></p>
+            
+            <h5>请求参数：</h5>
+            <table class="table parameter-table">
+              <thead>
+                <tr>
+                  <th>参数名</th>
+                  <th>类型</th>
+                  <th>必填</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>client_id</td>
+                  <td>string</td>
+                  <td>是</td>
+                  <td>应用的客户端ID</td>
+                </tr>
+                <tr>
+                  <td>redirect_uri</td>
+                  <td>string</td>
+                  <td>是</td>
+                  <td>授权成功后的重定向地址</td>
+                </tr>
+                <tr>
+                  <td>response_type</td>
+                  <td>string</td>
+                  <td>是</td>
+                  <td>必须为"code"</td>
+                </tr>
+                <tr>
+                  <td>scope</td>
+                  <td>string</td>
+                  <td>否</td>
+                  <td>请求的权限范围，多个scope用空格分隔</td>
+                </tr>
+                <tr>
+                  <td>state</td>
+                  <td>string</td>
+                  <td>建议</td>
+                  <td>用于防止CSRF攻击的随机字符串</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 令牌端点 -->
+          <div class="endpoint">
+            <h4>令牌端点</h4>
+            <p><span class="http-method">POST</span> <span class="endpoint-url"><%= baseUrl %>/oauth/token</span></p>
+            
+            <h5>请求参数：</h5>
+            <table class="table parameter-table">
+              <thead>
+                <tr>
+                  <th>参数名</th>
+                  <th>类型</th>
+                  <th>必填</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>grant_type</td>
+                  <td>string</td>
+                  <td>是</td>
+                  <td>授权类型，"authorization_code"或"refresh_token"</td>
+                </tr>
+                <tr>
+                  <td>code</td>
+                  <td>string</td>
+                  <td>条件</td>
+                  <td>授权码（grant_type为authorization_code时必填）</td>
+                </tr>
+                <tr>
+                  <td>refresh_token</td>
+                  <td>string</td>
+                  <td>条件</td>
+                  <td>刷新令牌（grant_type为refresh_token时必填）</td>
+                </tr>
+                <tr>
+                  <td>client_id</td>
+                  <td>string</td>
+                  <td>是</td>
+                  <td>应用的客户端ID</td>
+                </tr>
+                <tr>
+                  <td>client_secret</td>
+                  <td>string</td>
+                  <td>条件</td>
+                  <td>应用的客户端密钥（机密客户端必填）</td>
+                </tr>
+                <tr>
+                  <td>redirect_uri</td>
+                  <td>string</td>
+                  <td>条件</td>
+                  <td>授权码获取时使用的重定向地址</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h5>响应示例：</h5>
+            <pre class="response-example">{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 7200,
+  "refresh_token": "def502...",
+  "scope": "profile email"
+}</pre>
+          </div>
+
+          <!-- 用户信息端点 -->
+          <div class="endpoint">
+            <h4>用户信息端点</h4>
+            <p><span class="http-method">GET</span> <span class="endpoint-url"><%= baseUrl %>/oauth/userinfo</span></p>
+            
+            <h5>请求头：</h5>
+            <pre class="response-example">Authorization: Bearer {access_token}</pre>
+
+            <h5>响应示例：</h5>
+            <pre class="response-example">{
+  "sub": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "张三",
+  "preferred_username": "zhangsan",
+  "email": "zhangsan@example.com",
+  "email_verified": true
+}</pre>
+          </div>
+
+          <!-- JWKS 公钥 -->
+          <div class="endpoint">
+            <h4>JWKS 公钥</h4>
+            <p><span class="http-method">GET</span> <span class="endpoint-url"><%= baseUrl %>/oauth/.well-known/jwks.json</span></p>
+            <p>当使用RS256签名ID Token时，客户端应从此端点获取公钥（包含kid）以验证令牌签名。</p>
+            <h5>响应示例：</h5>
+            <pre class="response-example">{"keys":[{"kty":"RSA","e":"AQAB","n":"...","kid":"xxxxxxxxxxxxxxxx","alg":"RS256","use":"sig"}]}</pre>
+          </div>
+        </section>
+
+        <!-- 错误处理 -->
+        <section id="errors" class="api-section">
+          <h2>错误处理</h2>
+          <p>当API请求失败时，将返回相应的HTTP状态码和错误信息：</p>
+          
+          <table class="table parameter-table">
+            <thead>
+              <tr>
+                <th>错误码</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>invalid_request</td>
+                <td>请求缺少必需参数或参数值无效</td>
+              </tr>
+              <tr>
+                <td>invalid_client</td>
+                <td>客户端认证失败</td>
+              </tr>
+              <tr>
+                <td>invalid_grant</td>
+                <td>授权码或刷新令牌无效</td>
+              </tr>
+              <tr>
+                <td>unauthorized_client</td>
+                <td>客户端未被授权使用此授权类型</td>
+              </tr>
+              <tr>
+                <td>invalid_scope</td>
+                <td>请求的作用域无效或超出允许范围</td>
+              </tr>
+              <tr>
+                <td>server_error</td>
+                <td>服务器内部错误</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h5>错误响应示例：</h5>
+          <pre class="response-example">{
+  "error": "invalid_request",
+  "error_description": "缺少必需的client_id参数"
+}</pre>
+        </section>
+
+        <!-- 安全建议 -->
+        <section id="security" class="api-section">
+          <h2>安全建议</h2>
+          <ul>
+            <li>始终使用HTTPS进行API调用</li>
+            <li>保护好客户端密钥，不要泄露或硬编码在客户端代码中</li>
+            <li>使用state参数防止CSRF攻击</li>
+            <li>验证重定向URI，防止重定向攻击</li>
+            <li>及时刷新过期的访问令牌</li>
+            <li>在服务器端验证ID令牌的签名和声明</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <%- include('../layouts/footer') %>
+  <script>
+    // 平滑滚动到锚点
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+          behavior: 'smooth'
+        });
+      });
+    });
+  </script>
+</body>
+</html>

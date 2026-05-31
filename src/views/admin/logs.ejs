@@ -1,0 +1,140 @@
+<%- include('../layouts/header', {title: title}) %>
+
+<div class="container py-4">
+  <div class="row">
+    <!-- 侧边栏 -->
+    <%- include('../layouts/admin-sidebar', {user: locals.user, activePage: 'logs'}) %>
+    
+    <!-- 主要内容 -->
+    <div class="col-md-9">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">系统登录日志</h5>
+          <span class="badge bg-primary">总记录数: <%= totalLogs %></span>
+        </div>
+        <div class="card-body">
+          <!-- 搜索和筛选 -->
+          <form action="/admin/logs" method="GET" class="mb-4">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="input-group">
+                  <input type="text" name="username" class="form-control" placeholder="搜索用户名" value="<%= username %>">
+                  <button class="btn btn-outline-secondary" type="submit">
+                    <i class="fas fa-search"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <select name="status" class="form-select">
+                  <option value="" <%= !status ? 'selected' : '' %>>所有状态</option>
+                  <option value="success" <%= status === 'success' ? 'selected' : '' %>>成功</option>
+                  <option value="failed" <%= status === 'failed' ? 'selected' : '' %>>失败</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <input type="date" name="startDate" class="form-control" placeholder="开始日期" value="<%= startDate %>">
+              </div>
+              <div class="col-md-3">
+                <input type="date" name="endDate" class="form-control" placeholder="结束日期" value="<%= endDate %>">
+              </div>
+              <div class="col-md-1">
+                <select name="limit" class="form-select">
+                  <option value="20" <%= limit === 20 ? 'selected' : '' %>>20条</option>
+                  <option value="50" <%= limit === 50 ? 'selected' : '' %>>50条</option>
+                  <option value="100" <%= limit === 100 ? 'selected' : '' %>>100条</option>
+                </select>
+              </div>
+            </div>
+          </form>
+          
+          <!-- 日志列表 -->
+          <div class="table-responsive">
+            <table class="table table-hover table-striped">
+              <thead class="table-light">
+                <tr>
+                  <th>用户</th>
+                  <th>时间</th>
+                  <th>IP地址</th>
+                  <th>状态</th>
+                  <th>设备信息</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if(logs && logs.length > 0) { %>
+                  <% logs.forEach(function(log) { %>
+                    <tr>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <% if (log.user) { %>
+                            <a href="/admin/users/<%= log.userId %>" class="text-decoration-none">
+                              <span class="fw-bold"><%= log.user.username %></span>
+                              <% if (log.user.role === 'admin') { %>
+                                <span class="badge bg-danger ms-1">管理员</span>
+                              <% } %>
+                            </a>
+                          <% } else { %>
+                            <span class="text-muted">未知用户</span>
+                          <% } %>
+                        </div>
+                      </td>
+                      <td><%= new Date(log.loginAt).toLocaleString() %></td>
+                      <td><%= log.ipAddress || '-' %></td>
+                      <td>
+                        <% if (log.status === 'success') { %>
+                          <span class="badge bg-success">成功</span>
+                        <% } else { %>
+                          <span class="badge bg-danger">失败</span>
+                          <small class="text-muted d-block"><%= log.failReason %></small>
+                        <% } %>
+                      </td>
+                      <td>
+                        <small class="text-truncate d-inline-block" style="max-width: 250px;" title="<%= log.userAgent %>"><%= log.userAgent || '-' %></small>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="5" class="text-center py-4">
+                      <div class="alert alert-info mb-0">暂无登录记录</div>
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- 分页 -->
+          <% if (totalPages > 1) { %>
+            <nav aria-label="Page navigation" class="mt-4">
+              <ul class="pagination justify-content-center">
+                <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                  <a class="page-link" href="/admin/logs?page=<%= currentPage - 1 %>&username=<%= username %>&status=<%= status %>&startDate=<%= startDate %>&endDate=<%= endDate %>&limit=<%= limit %>" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                  </a>
+                </li>
+                
+                <% for(let i = 1; i <= totalPages; i++) { %>
+                  <% if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) { %>
+                    <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+                      <a class="page-link" href="/admin/logs?page=<%= i %>&username=<%= username %>&status=<%= status %>&startDate=<%= startDate %>&endDate=<%= endDate %>&limit=<%= limit %>"><%= i %></a>
+                    </li>
+                  <% } else if (i === currentPage - 3 || i === currentPage + 3) { %>
+                    <li class="page-item disabled"><a class="page-link">...</a></li>
+                  <% } %>
+                <% } %>
+                
+                <li class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                  <a class="page-link" href="/admin/logs?page=<%= currentPage + 1 %>&username=<%= username %>&status=<%= status %>&startDate=<%= startDate %>&endDate=<%= endDate %>&limit=<%= limit %>" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

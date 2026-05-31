@@ -1,0 +1,137 @@
+<%- include('../layouts/header', {title: title}) %>
+
+<div class="container py-4">
+  <div class="row">
+    <!-- 侧边栏 -->
+    <%- include('../layouts/admin-sidebar', {user: locals.user, activePage: 'dashboard'}) %>
+    
+    <!-- 主要内容 -->
+    <div class="col-md-9">
+      <!-- 统计卡片 -->
+      <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+          <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="card-title">总用户数</h6>
+                  <h2 class="mb-0"><%= stats.userCount %></h2>
+                </div>
+                <i class="fas fa-users fa-2x opacity-50"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div class="card bg-success text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="card-title">活跃用户</h6>
+                  <h2 class="mb-0"><%= stats.activeUserCount %></h2>
+                </div>
+                <i class="fas fa-user-check fa-2x opacity-50"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div class="card bg-danger text-white h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="card-title">禁用账号</h6>
+                  <h2 class="mb-0"><%= stats.bannedUserCount %></h2>
+                </div>
+                <i class="fas fa-user-slash fa-2x opacity-50"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <!-- 最近注册用户 -->
+        <div class="col-md-6 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+              <h5 class="card-title mb-0">最近注册用户</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush">
+                <% if(recentUsers && recentUsers.length > 0) { %>
+                  <% recentUsers.forEach(function(user) { %>
+                    <div class="list-group-item">
+                      <div class="d-flex align-items-center">
+                        <img src="<%= user.avatarUrl %>" alt="<%= user.nickname %>" class="rounded-circle me-3" width="40" height="40">
+                        <div>
+                          <h6 class="mb-0"><%= user.nickname %></h6>
+                          <small class="text-muted">@<%= user.username %></small>
+                          <small class="d-block text-muted">注册于 <%= new Date(user.createdAt).toLocaleString() %></small>
+                        </div>
+                        <div class="ms-auto">
+                          <% if(user.status === 'active') { %>
+                            <span class="badge bg-success">正常</span>
+                          <% } else if(user.status === 'inactive') { %>
+                            <span class="badge bg-warning">未激活</span>
+                          <% } else if(user.status === 'banned') { %>
+                            <span class="badge bg-danger">已禁用</span>
+                          <% } %>
+                        </div>
+                      </div>
+                    </div>
+                  <% }); %>
+                <% } else { %>
+                  <div class="list-group-item text-center py-3">暂无注册用户</div>
+                <% } %>
+              </div>
+            </div>
+            <div class="card-footer bg-white text-end">
+              <a href="/admin/users" class="btn btn-sm btn-outline-primary">查看所有用户</a>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 最近登录记录 -->
+        <div class="col-md-6 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+              <h5 class="card-title mb-0">最近登录记录</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush">
+                <% if(recentLogins && recentLogins.length > 0) { %>
+                  <% recentLogins.forEach(function(log) { %>
+                    <div class="list-group-item">
+                      <div class="d-flex align-items-center">
+                        <div>
+                          <h6 class="mb-0"><%= log.user ? log.user.nickname : '未知用户' %></h6>
+                          <small class="text-muted"><%= log.ipAddress || '未知IP' %></small>
+                          <small class="d-block text-muted"><%= new Date(log.loginAt).toLocaleString() %></small>
+                        </div>
+                        <div class="ms-auto">
+                          <% if(log.status === 'success') { %>
+                            <span class="badge bg-success">成功</span>
+                          <% } else { %>
+                            <span class="badge bg-danger">失败</span>
+                          <% } %>
+                        </div>
+                      </div>
+                    </div>
+                  <% }); %>
+                <% } else { %>
+                  <div class="list-group-item text-center py-3">暂无登录记录</div>
+                <% } %>
+              </div>
+            </div>
+            <div class="card-footer bg-white text-end">
+              <a href="/admin/logs" class="btn btn-sm btn-outline-primary">查看所有记录</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

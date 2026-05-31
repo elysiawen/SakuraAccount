@@ -1,0 +1,225 @@
+<%- include('../layouts/header', {title: title}) %>
+
+<div class="container py-4">
+  <div class="row">
+    <!-- 侧边栏 -->
+    <%- include('../layouts/user-sidebar', {user: user, activePage: 'applications'}) %>
+    
+    <!-- 主要内容 -->
+    <div class="col-md-9">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">我的应用</h5>
+          <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createAppModal">
+            <i class="fas fa-plus me-1"></i> 创建新应用
+          </button>
+        </div>
+        <div class="card-body">
+          <% if (errors && errors.length > 0) { %>
+            <div class="alert alert-danger">
+              <ul class="mb-0">
+                <% errors.forEach(function(error) { %>
+                  <li><%= error.msg %></li>
+                <% }); %>
+              </ul>
+            </div>
+          <% } %>
+          
+          <% if (success_msg) { %>
+            <div class="alert alert-success">
+              成功！<%= success_msg %>
+            </div>
+          <% } %>
+          
+          <% if (applications && applications.length > 0) { %>
+            <div class="row">
+              <% applications.forEach(function(app) { %>
+                <div class="col-md-6 mb-4">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <div class="d-flex align-items-center mb-3">
+                        <% if (app.logoUrl) { %>
+                          <img src="<%= app.logoUrl %>" alt="<%= app.name %>" class="me-3" style="width: 48px; height: 48px; object-fit: cover;">
+                        <% } else { %>
+                          <div class="me-3 bg-light rounded d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-cube text-primary"></i>
+                          </div>
+                        <% } %>
+                        <div>
+                          <h5 class="card-title mb-0"><%= app.name %></h5>
+                          <span class="badge <%= app.status === 'active' ? 'bg-success' : 'bg-secondary' %> mt-1">
+                            <%= app.status === 'active' ? '活跃' : '禁用' %>
+                          </span>
+                        </div>
+                      </div>
+                      <p class="card-text text-muted small mb-3"><%= app.description || '无描述' %></p>
+                      <div class="d-flex justify-content-between">
+                        <small class="text-muted">创建于: <%= new Date(app.createdAt).toLocaleDateString() %></small>
+                        <a href="/user/applications/<%= app.clientId %>" class="btn btn-sm btn-outline-primary">
+                          <i class="fas fa-cog me-1"></i> 管理
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+          <% } else { %>
+            <div class="text-center py-5">
+              <i class="fas fa-cube fa-3x text-muted mb-3"></i>
+              <h5>您还没有创建任何应用</h5>
+              <p class="text-muted">创建一个应用以接入Sakura Network账号系统</p>
+              <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAppModal">
+                <i class="fas fa-plus me-1"></i> 创建新应用
+              </button>
+            </div>
+          <% } %>
+        </div>
+      </div>
+      
+      <!-- 应用说明 -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <h5 class="card-title mb-0">接入说明</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-4">
+            <h6><i class="fas fa-info-circle me-2 text-primary"></i> 什么是应用接入？</h6>
+            <p>通过创建应用，您可以让您的网站或应用使用Sakura Network账号系统进行用户认证，无需自己开发和维护用户系统。</p>
+          </div>
+          
+          <div class="mb-4">
+            <h6><i class="fas fa-shield-alt me-2 text-primary"></i> 支持的认证方式</h6>
+            <ul>
+              <li><strong>OAuth 2.0</strong> - 标准的授权框架，用于授权第三方应用访问用户资源</li>
+              <li><strong>OpenID Connect</strong> - 基于OAuth 2.0的身份认证层，提供用户身份验证</li>
+              <li><strong>单点登录(SSO)</strong> - 让用户一次登录，访问多个系统</li>
+            </ul>
+          </div>
+          
+          <div>
+            <h6><i class="fas fa-code me-2 text-primary"></i> 开发资源</h6>
+            <p>查看我们的<a href="/docs/api" target="_blank">API文档</a>，了解如何在您的应用中集成Sakura Network账号系统。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 创建应用模态框 -->
+<div class="modal fade" id="createAppModal" tabindex="-1" aria-labelledby="createAppModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createAppModalLabel">创建新应用</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/user/applications/create" method="POST">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="appName" class="form-label">应用名称 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="appName" name="name" required>
+            <small class="text-muted">给您的应用起一个易于识别的名称</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="appDescription" class="form-label">应用描述</label>
+            <textarea class="form-control" id="appDescription" name="description" rows="3"></textarea>
+            <small class="text-muted">简要描述您的应用功能和用途</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="appWebsiteUrl" class="form-label">应用网站 <span class="text-danger">*</span></label>
+            <input type="url" class="form-control" id="appWebsiteUrl" name="websiteUrl" required>
+            <small class="text-muted">您应用的主页URL</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="appRedirectUris" class="form-label">重定向URI <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="appRedirectUris" name="redirectUris" rows="2" required></textarea>
+            <small class="text-muted">授权后重定向的URL，多个URL请用换行分隔</small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">应用类型 <span class="text-danger">*</span></label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="isConfidential" id="confidentialApp" value="true" checked>
+              <label class="form-check-label" for="confidentialApp">
+                <strong>机密客户端</strong> - 服务器端应用，可以安全存储客户端密钥
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="isConfidential" id="publicApp" value="false">
+              <label class="form-check-label" for="publicApp">
+                <strong>公开客户端</strong> - 浏览器端或移动应用，无法安全存储密钥
+              </label>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">授权类型</label>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="grantTypes" id="authorizationCode" value="authorization_code" checked>
+              <label class="form-check-label" for="authorizationCode">
+                授权码（推荐）
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="grantTypes" id="implicit" value="implicit">
+              <label class="form-check-label" for="implicit">
+                隐式授权
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="grantTypes" id="clientCredentials" value="client_credentials">
+              <label class="form-check-label" for="clientCredentials">
+                客户端凭证
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="grantTypes" id="password" value="password">
+              <label class="form-check-label" for="password">
+                密码凭证
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="grantTypes" id="refresh_token" value="refresh_token">
+              <label class="form-check-label" for="refresh_token">
+                refresh_token
+              </label>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">请求权限</label>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="scopes" id="scopeProfile" value="profile" checked>
+              <label class="form-check-label" for="scopeProfile">
+                个人资料
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="scopes" id="scopeEmail" value="email" checked>
+              <label class="form-check-label" for="scopeEmail">
+                电子邮箱
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="scopes" id="scopeOpenid" value="openid">
+              <label class="form-check-label" for="scopeOpenid">
+                OpenID Connect身份验证
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-primary">创建应用</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

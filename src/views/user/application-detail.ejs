@@ -1,0 +1,629 @@
+<%- include('../layouts/header', {title: title}) %>
+
+<div class="container py-4">
+  <div class="row">
+    <!-- 侧边栏 -->
+    <%- include('../layouts/user-sidebar', {user: user, activePage: 'applications'}) %>
+    
+    <!-- 主要内容 -->
+    <div class="col-md-9">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">应用详情</h5>
+          <div>
+            <a href="/user/applications" class="btn btn-sm btn-outline-secondary me-2">
+              <i class="fas fa-arrow-left me-1"></i> 返回列表
+            </a>
+            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAppModal">
+              <i class="fas fa-trash-alt me-1"></i> 删除应用
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <% if (errors && errors.length > 0) { %>
+            <div class="alert alert-danger">
+              <ul class="mb-0">
+                <% errors.forEach(function(error) { %>
+                  <li><%= error.msg %></li>
+                <% }); %>
+              </ul>
+            </div>
+          <% } %>
+          
+          <% if (success_msg) { %>
+            <div class="alert alert-success">
+              成功！<%= success_msg %>
+            </div>
+          <% } %>
+          
+          <!-- 应用基本信息 -->
+          <div class="d-flex align-items-center mb-4">
+            <% if (application.logoUrl) { %>
+              <img src="<%= application.logoUrl %>" alt="<%= application.name %>" class="me-3 rounded" style="width: 80px; height: 80px; object-fit: cover;">
+            <% } else { %>
+              <div class="me-3 bg-light rounded d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                <i class="fas fa-cube fa-2x text-primary"></i>
+              </div>
+            <% } %>
+            <div>
+              <h4 class="mb-1"><%= application.name %></h4>
+              <p class="text-muted mb-1"><%= application.description || '无描述' %></p>
+              <div>
+                <span class="badge <%= application.status === 'active' ? 'bg-success' : 'bg-secondary' %>">
+                  <%= application.status === 'active' ? '活跃' : '禁用' %>
+                </span>
+                <span class="badge bg-info ms-1">
+                  <%= application.isConfidential ? '机密客户端' : '公开客户端' %>
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 应用详细信息 -->
+          <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body">
+                  <h6 class="card-subtitle mb-2 text-muted">客户端ID</h6>
+                  <div class="input-group">
+                    <input type="text" class="form-control" value="<%= application.clientId %>" readonly>
+                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this)" data-copy="<%= application.clientId %>">
+                      <i class="fas fa-copy"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <% if (application.isConfidential) { %>
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body">
+                  <h6 class="card-subtitle mb-2 text-muted">客户端密钥</h6>
+                  <div class="input-group">
+                    <input type="text" class="form-control" value="<%= application.clientSecret %>" readonly>
+                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this)" data-copy="<%= application.clientSecret %>">
+                      <i class="fas fa-copy"></i>
+                    </button>
+                  </div>
+                  <small class="text-danger">请妥善保管，不要泄露给他人</small>
+                </div>
+              </div>
+            </div>
+            <% } %>
+            
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body">
+                  <h6 class="card-subtitle mb-2 text-muted">应用网站</h6>
+                  <p class="card-text">
+                    <a href="<%= application.websiteUrl %>" target="_blank">
+                      <%= application.websiteUrl %>
+                    </a>
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body">
+                  <h6 class="card-subtitle mb-2 text-muted">创建时间</h6>
+                  <p class="card-text"><%= new Date(application.createdAt).toLocaleString() %></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 重定向URI -->
+          <div class="mb-4">
+            <h5 class="mb-3">重定向URI</h5>
+            <ul class="list-group">
+              <% application.redirectUris.forEach(function(uri) { %>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <%= uri %>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" onclick="copyToClipboard(this)" data-copy="<%= uri %>">
+                    <i class="fas fa-copy"></i>
+                  </button>
+                </li>
+              <% }); %>
+            </ul>
+          </div>
+          
+          <!-- 授权信息 -->
+          <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+              <h5 class="mb-3">授权类型</h5>
+              <ul class="list-group">
+                <% application.allowedGrantTypes.forEach(function(type) { %>
+                  <li class="list-group-item">
+                    <% if (type === 'authorization_code') { %>
+                      <i class="fas fa-key me-2 text-primary"></i> 授权码
+                    <% } else if (type === 'implicit') { %>
+                      <i class="fas fa-bolt me-2 text-primary"></i> 隐式授权
+                    <% } else if (type === 'client_credentials') { %>
+                      <i class="fas fa-lock me-2 text-primary"></i> 客户端凭证
+                    <% } else if (type === 'password') { %>
+                      <i class="fas fa-user-lock me-2 text-primary"></i> 密码授权
+                      <% } else if (type === 'refresh_token') { %>
+                        <i class="fas fa-rotate-right me-2 text-primary"></i> refresh_token
+                    <% } else { %>
+                      <i class="fas fa-certificate me-2 text-primary"></i> <%= type %>
+                    <% } %>
+                  </li>
+                <% }); %>
+              </ul>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+              <h5 class="mb-3">请求权限</h5>
+              <ul class="list-group">
+                <% application.allowedScopes.forEach(function(scope) { %>
+                  <li class="list-group-item">
+                    <% if (scope === 'profile') { %>
+                      <i class="fas fa-user me-2 text-primary"></i> 个人资料
+                    <% } else if (scope === 'email') { %>
+                      <i class="fas fa-envelope me-2 text-primary"></i> 电子邮箱
+                    <% } else if (scope === 'openid') { %>
+                      <i class="fas fa-id-card me-2 text-primary"></i> OpenID Connect身份验证
+                    <% } else { %>
+                      <i class="fas fa-tag me-2 text-primary"></i> <%= scope %>
+                    <% } %>
+                  </li>
+                <% }); %>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 编辑应用按钮 -->
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editAppModal">
+              <i class="fas fa-edit me-1"></i> 编辑应用信息
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- OAuth端点信息 -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <h5 class="card-title mb-0">OAuth端点</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <h6 class="mb-2">授权端点</h6>
+            <div class="input-group">
+              <input type="text" class="form-control" value="<%= baseUrl %>/oauth/authorize" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this)" data-copy="<%= baseUrl %>/oauth/authorize">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <h6 class="mb-2">令牌端点</h6>
+            <div class="input-group">
+              <input type="text" class="form-control" value="<%= baseUrl %>/oauth/token" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this)" data-copy="<%= baseUrl %>/oauth/token">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <h6 class="mb-2">用户信息端点</h6>
+            <div class="input-group">
+              <input type="text" class="form-control" value="<%= baseUrl %>/oauth/userinfo" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this)" data-copy="<%= baseUrl %>/oauth/userinfo">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <h6 class="mb-2">OpenID Connect发现文档</h6>
+            <div class="input-group">
+              <input type="text" class="form-control" value="<%= baseUrl %>/oauth/.well-known/openid-configuration" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this)" data-copy="<%= baseUrl %>/oauth/.well-known/openid-configuration">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <h6 class="mb-2">JWKS公钥</h6>
+            <div class="input-group">
+              <input type="text" class="form-control" value="<%= baseUrl %>/oauth/.well-known/jwks.json" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this)" data-copy="<%= baseUrl %>/oauth/.well-known/jwks.json">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+            <small class="text-muted">当启用RS256时，客户端应通过该地址获取公钥（JWKS）以验证ID Token的签名。</small>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 集成示例 -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <h5 class="card-title mb-0">集成示例</h5>
+        </div>
+        <div class="card-body">
+          <ul class="nav nav-tabs" id="integrationTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="js-tab" data-bs-toggle="tab" data-bs-target="#js" type="button" role="tab" aria-controls="js" aria-selected="true">JavaScript</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="php-tab" data-bs-toggle="tab" data-bs-target="#php" type="button" role="tab" aria-controls="php" aria-selected="false">PHP</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="python-tab" data-bs-toggle="tab" data-bs-target="#python" type="button" role="tab" aria-controls="python" aria-selected="false">Python</button>
+            </li>
+          </ul>
+          <div class="tab-content p-3 border border-top-0 rounded-bottom" id="integrationTabsContent">
+            <div class="tab-pane fade show active" id="js" role="tabpanel" aria-labelledby="js-tab">
+              <pre class="bg-light p-3 rounded"><code>// 使用授权码流程进行OAuth认证
+const clientId = '<%= application.clientId %>';
+const redirectUri = '<%= application.redirectUris[0] %>';
+
+// 重定向用户到授权页面
+function authorize() {
+  const authUrl = '<%= baseUrl %>/oauth/authorize';
+  const url = `${authUrl}?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=profile email`;
+  window.location.href = url;
+}
+
+// 在回调页面处理授权码
+async function handleCallback() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  
+  if (code) {
+    // 使用授权码获取访问令牌
+    const tokenUrl = '<%= baseUrl %>/oauth/token';
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: '<%= application.isConfidential ? application.clientSecret : "" %>',
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: redirectUri
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.access_token) {
+      // 存储访问令牌
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      
+      // 获取用户信息
+      const userInfo = await fetchUserInfo(data.access_token);
+      console.log('用户信息:', userInfo);
+    }
+  }
+}
+
+// 获取用户信息
+async function fetchUserInfo(accessToken) {
+  const userInfoUrl = '<%= baseUrl %>/oauth/userinfo';
+  const response = await fetch(userInfoUrl, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`
+    }
+  });
+  
+  return await response.json();
+}</code></pre>
+            </div>
+            <div class="tab-pane fade" id="php" role="tabpanel" aria-labelledby="php-tab">
+              <pre class="bg-light p-3 rounded"><code>// 使用授权码流程进行OAuth认证
+$clientId = '<%= application.clientId %>';
+$clientSecret = '<%= application.isConfidential ? application.clientSecret : "" %>';
+$redirectUri = '<%= application.redirectUris[0] %>';
+
+// 重定向用户到授权页面
+function redirectToAuth() {
+    $authUrl = '<%= baseUrl %>/oauth/authorize';
+    $url = $authUrl . '?client_id=' . $clientId . '&redirect_uri=' . urlencode($redirectUri) . '&response_type=code&scope=profile email';
+    header('Location: ' . $url);
+    exit;
+}
+
+// 处理授权回调
+function handleCallback() {
+    if (isset($_GET['code'])) {
+        $code = $_GET['code'];
+        
+        // 使用授权码获取访问令牌
+        $tokenUrl = '<%= baseUrl %>/oauth/token';
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $tokenUrl);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
+            'grant_type' => 'authorization_code',
+            'code' => $code,
+            'redirect_uri' => $redirectUri
+        ]));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        $data = json_decode($response, true);
+        
+        if (isset($data['access_token'])) {
+            // 存储访问令牌
+            $_SESSION['access_token'] = $data['access_token'];
+            $_SESSION['refresh_token'] = $data['refresh_token'];
+            
+            // 获取用户信息
+            $userInfo = getUserInfo($data['access_token']);
+            print_r($userInfo);
+        }
+    }
+}
+
+// 获取用户信息
+function getUserInfo($accessToken) {
+    $userInfoUrl = '<%= baseUrl %>/oauth/userinfo';
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $userInfoUrl);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $accessToken
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    return json_decode($response, true);
+}</code></pre>
+            </div>
+            <div class="tab-pane fade" id="python" role="tabpanel" aria-labelledby="python-tab">
+              <pre class="bg-light p-3 rounded"><code>import requests
+from flask import Flask, request, redirect, session
+import os
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+
+# OAuth配置
+client_id = '<%= application.clientId %>'
+client_secret = '<%= application.isConfidential ? application.clientSecret : "" %>'
+redirect_uri = '<%= application.redirectUris[0] %>'
+auth_url = '<%= baseUrl %>/oauth/authorize'
+token_url = '<%= baseUrl %>/oauth/token'
+userinfo_url = '<%= baseUrl %>/oauth/userinfo'
+
+@app.route('/login')
+def login():
+    # 重定向用户到授权页面
+    auth_params = {
+        'client_id': client_id,
+        'redirect_uri': redirect_uri,
+        'response_type': 'code',
+        'scope': 'profile email'
+    }
+    auth_redirect = f"{auth_url}?{'&'.join(f'{k}={v}' for k, v in auth_params.items())}"
+    return redirect(auth_redirect)
+
+@app.route('/callback')
+def callback():
+    # 处理授权回调
+    code = request.args.get('code')
+    
+    if code:
+        # 使用授权码获取访问令牌
+        token_data = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'grant_type': 'authorization_code',
+            'code': code,
+            'redirect_uri': redirect_uri
+        }
+        
+        token_response = requests.post(token_url, data=token_data)
+        token_json = token_response.json()
+        
+        if 'access_token' in token_json:
+            # 存储访问令牌
+            session['access_token'] = token_json['access_token']
+            session['refresh_token'] = token_json['refresh_token']
+            
+            # 获取用户信息
+            user_info = get_user_info(token_json['access_token'])
+            return f"{user_info}"
+    
+    return "授权失败"
+
+def get_user_info(access_token):
+    # 获取用户信息
+    headers = {'Authorization': f'Bearer {access_token}'}
+    response = requests.get(userinfo_url, headers=headers)
+    return response.json()
+
+if __name__ == '__main__':
+    app.run(debug=True)</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑应用模态框 -->
+<div class="modal fade" id="editAppModal" tabindex="-1" aria-labelledby="editAppModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editAppModalLabel">编辑应用</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="/user/applications/<%= application.clientId %>/update" method="POST" enctype="multipart/form-data">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="appName" class="form-label">应用名称 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="appName" name="name" value="<%= application.name %>" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="appLogo" class="form-label">应用图标</label>
+            <div class="d-flex align-items-center mb-2">
+              <% if (application.logoUrl) { %>
+                <img src="<%= application.logoUrl %>" alt="当前图标" class="me-3 rounded" style="width: 64px; height: 64px; object-fit: cover;">
+              <% } else { %>
+                <div class="me-3 bg-light rounded d-flex align-items-center justify-content-center" style="width: 64px; height: 64px;">
+                  <i class="fas fa-cube text-primary"></i>
+                </div>
+              <% } %>
+              <div>
+                <% if (application.logoUrl) { %>
+                  <p class="mb-0 small">当前图标</p>
+                <% } else { %>
+                  <p class="mb-0 small">无图标</p>
+                <% } %>
+              </div>
+            </div>
+            <input type="file" class="form-control" id="appLogo" name="logo" accept="image/png,image/jpeg,image/gif">
+            <small class="text-muted">推荐尺寸：128x128像素，支持PNG、JPEG、GIF格式</small>
+          </div>
+          
+          <div class="mb-3">
+            <label for="appDescription" class="form-label">应用描述</label>
+            <textarea class="form-control" id="appDescription" name="description" rows="3"><%= application.description || '' %></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label for="appWebsiteUrl" class="form-label">应用网站 <span class="text-danger">*</span></label>
+            <input type="url" class="form-control" id="appWebsiteUrl" name="websiteUrl" value="<%= application.websiteUrl %>" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="appRedirectUris" class="form-label">重定向URI <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="appRedirectUris" name="redirectUris" rows="2" required><%= application.redirectUris.join('\n') %></textarea>
+            <small class="text-muted">多个URL请用换行分隔</small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">应用状态</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="status" id="statusActive" value="active" <%= application.status === 'active' ? 'checked' : '' %>>
+              <label class="form-check-label" for="statusActive">
+                活跃 - 应用可以正常使用
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="status" id="statusDisabled" value="disabled" <%= application.status === 'disabled' ? 'checked' : '' %>>
+              <label class="form-check-label" for="statusDisabled">
+                禁用 - 暂时停用应用
+              </label>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">授权类型</label>
+            <% ['authorization_code', 'implicit', 'client_credentials', 'password', 'refresh_token'].forEach(function(type) { %>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="grantTypes" id="<%= type %>" value="<%= type %>" <%= application.allowedGrantTypes.includes(type) ? 'checked' : '' %>>
+                <label class="form-check-label" for="<%= type %>">
+                  <% if (type === 'authorization_code') { %>
+                    授权码（推荐）
+                  <% } else if (type === 'implicit') { %>
+                    隐式授权
+                  <% } else if (type === 'client_credentials') { %>
+                    客户端凭证
+                  <% } else if (type === 'password') { %>
+                    密码授权
+                  <% } else if (type === 'refresh_token') { %>
+                    refresh_token
+                  <% } %>
+                </label>
+              </div>
+            <% }); %>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">请求权限</label>
+            <% ['profile', 'email', 'openid'].forEach(function(scope) { %>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="scopes" id="scope<%= scope %>" value="<%= scope %>" <%= application.allowedScopes.includes(scope) ? 'checked' : '' %>>
+                <label class="form-check-label" for="scope<%= scope %>">
+                  <% if (scope === 'profile') { %>
+                    个人资料
+                  <% } else if (scope === 'email') { %>
+                    电子邮箱
+                  <% } else if (scope === 'openid') { %>
+                    OpenID Connect身份验证
+                  <% } %>
+                </label>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-primary">保存更改</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 删除应用模态框 -->
+<div class="modal fade" id="deleteAppModal" tabindex="-1" aria-labelledby="deleteAppModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteAppModalLabel">删除应用</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>您确定要删除应用 <strong><%= application.name %></strong> 吗？</p>
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i> 警告：此操作不可逆，将删除所有相关的授权和令牌。
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <form action="/user/applications/<%= application.clientId %>/delete" method="POST">
+          <button type="submit" class="btn btn-danger">确认删除</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 复制到剪贴板函数
+function copyToClipboard(button) {
+  const textToCopy = button.getAttribute('data-copy');
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    // 临时改变按钮样式表示复制成功
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-check"></i>';
+    button.classList.add('btn-success');
+    button.classList.remove('btn-outline-secondary');
+    
+    setTimeout(() => {
+      button.innerHTML = originalHTML;
+      button.classList.remove('btn-success');
+      button.classList.add('btn-outline-secondary');
+    }, 1000);
+  }).catch(err => {
+    console.error('复制失败:', err);
+  });
+}
+</script>
+
+<%- include('../layouts/footer') %>

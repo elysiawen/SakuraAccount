@@ -1,0 +1,108 @@
+<%- include('../layouts/header', {title: title}) %>
+
+<div class="container py-4">
+  <div class="row">
+    <!-- 侧边栏 -->
+    <%- include('../layouts/user-sidebar', {user: user, activePage: 'dashboard'}) %>
+    
+    <!-- 主要内容 -->
+    <div class="col-md-9">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <h5 class="card-title mb-0">账号信息</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body">
+                  <h6 class="card-subtitle mb-2 text-muted">用户名</h6>
+                  <p class="card-text"><%= user.username %></p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body">
+                  <h6 class="card-subtitle mb-2 text-muted">电子邮箱</h6>
+                  <p class="card-text"><%= user.email %></p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body">
+                  <h6 class="card-subtitle mb-2 text-muted">账号状态</h6>
+                  <p class="card-text">
+                    <% if(user.status === 'active') { %>
+                      <span class="badge bg-success">正常</span>
+                    <% } else if(user.status === 'inactive') { %>
+                      <span class="badge bg-warning">未激活</span>
+                    <% } else if(user.status === 'banned') { %>
+                      <span class="badge bg-danger">已禁用</span>
+                    <% } %>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body">
+                  <h6 class="card-subtitle mb-2 text-muted">注册时间</h6>
+                  <p class="card-text"><%= new Date(user.createdAt).toLocaleString() %></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">最近登录记录</h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>登录时间</th>
+                  <th>IP地址</th>
+                  <th>设备信息</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if(loginHistory && loginHistory.length > 0) { %>
+                  <% loginHistory.forEach(function(log) { %>
+                    <tr>
+                      <td><%= new Date(log.loginAt).toLocaleString() %></td>
+                      <td><%= log.ipAddress || '未知' %></td>
+                      <td>
+                        <small class="text-muted"><%= log.userAgent ? (log.userAgent.length > 50 ? log.userAgent.substring(0, 50) + '...' : log.userAgent) : '未知' %></small>
+                      </td>
+                      <td>
+                        <% if(log.status === 'success') { %>
+                          <span class="badge bg-success">成功</span>
+                        <% } else { %>
+                          <span class="badge bg-danger">失败</span>
+                          <small class="text-danger"><%= log.failReason %></small>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="4" class="text-center py-3">暂无登录记录</td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

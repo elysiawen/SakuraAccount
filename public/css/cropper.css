@@ -1,0 +1,45 @@
+/* 头像裁剪样式 */
+.avatar-editor {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.avatar-editor img {
+  max-width: 100%;
+  display: block;
+}
+
+.cropper-container {
+  margin-bottom: 1rem;
+}
+
+.cropper-preview {
+  overflow: hidden;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 2px solid #ced4da;
+  margin: 0 auto;
+}
+
+.avatar-controls {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.avatar-controls button {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.avatar-editor-container {
+  display: none;
+}
+
+.avatar-editor-container.active {
+  display: block;
+}

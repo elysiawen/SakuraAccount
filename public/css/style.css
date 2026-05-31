@@ -1,0 +1,81 @@
+/* 自定义样式 */
+
+/* 头像样式 */
+.avatar-sm {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+}
+
+/* 应用图标样式 */
+.app-logo {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #e9ecef;
+}
+
+/* 卡片阴影效果 */
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* 导航栏活跃项样式 */
+.navbar .nav-link.active {
+  font-weight: bold;
+}
+
+/* 表单样式增强 */
+.form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* 按钮悬停效果 */
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+/* 页面背景 */
+body {
+  background-color: #f8f9fa;
+}
+
+/* 列表组项目悬停效果 */
+.list-group-item-action:hover {
+  background-color: #f8f9fa;
+}
+
+/* 活动状态的列表项悬停效果 - 保持原样不变色 */
+.list-group-item-action.active:hover {
+  background-color: #0d6efd;
+  color: white;
+}
+
+/* 自定义徽章样式 */
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
+/* 页脚样式 */
+footer {
+  border-top: 1px solid #e9ecef;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}

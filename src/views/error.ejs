@@ -1,0 +1,18 @@
+<%- include('layouts/header', {title: title}) %>
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+      <div class="card shadow">
+        <div class="card-body p-5">
+          <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
+          <h1 class="display-4 mb-4"><%= title %></h1>
+          <p class="lead mb-4"><%= message %></p>
+          <a href="/" class="btn btn-primary btn-lg">返回首页</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('layouts/footer') %>

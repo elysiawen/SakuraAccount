@@ -1,0 +1,27 @@
+<!-- 管理员侧边栏 -->
+<div class="col-md-3 mb-4">
+  <div class="card shadow-sm">
+    <div class="card-body text-center">
+      <img src="<%= locals.user.avatarUrl %>" alt="<%= locals.user.nickname %>" class="rounded-circle img-thumbnail mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+      <h5 class="card-title"><%= locals.user.nickname %></h5>
+      <p class="text-muted">@<%= locals.user.username %></p>
+      <div class="d-grid">
+        <span class="badge bg-danger mb-2">管理员</span>
+      </div>
+    </div>
+    <div class="list-group list-group-flush">
+      <a href="/admin/dashboard" class="list-group-item list-group-item-action <%= activePage === 'dashboard' ? 'active' : '' %>">
+        <i class="fas fa-tachometer-alt me-2"></i> 控制台
+      </a>
+      <a href="/admin/users" class="list-group-item list-group-item-action <%= activePage === 'users' ? 'active' : '' %>">
+        <i class="fas fa-users me-2"></i> 用户管理
+      </a>
+      <a href="/admin/logs" class="list-group-item list-group-item-action <%= activePage === 'logs' ? 'active' : '' %>">
+        <i class="fas fa-history me-2"></i> 登录日志
+      </a>
+      <a href="/auth/logout" class="list-group-item list-group-item-action text-danger">
+        <i class="fas fa-sign-out-alt me-2"></i> 退出登录
+      </a>
+    </div>
+  </div>
+</div>

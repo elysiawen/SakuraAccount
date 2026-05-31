@@ -1,0 +1,7 @@
+node_modules/
+data/database.sqlite
+.env
+public/uploads/avatar/*
+public/uploads/app-logos/*
+!public/uploads/avatar/.gitkeep
+!public/uploads/app-logos/.gitkeep

@@ -1,0 +1,143 @@
+<%- include('../layouts/header', {title: '更换头像'}) %>
+
+<div class="container py-4">
+  <div class="row">
+    <!-- 侧边栏 -->
+    <%- include('../layouts/user-sidebar', {user: user, activePage: 'avatar'}) %>
+    
+    <!-- 主要内容 -->
+    <div class="col-md-9">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <h5 class="card-title mb-0">更换头像</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <!-- 当前头像预览 -->
+            <div class="col-md-4 text-center mb-4 mb-md-0">
+              <div class="avatar-preview mb-3">
+                <img id="currentAvatar" src="<%= user.avatarUrl || '/images/default-avatar.png' %>" alt="当前头像" class="img-thumbnail rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+              </div>
+              <p class="text-muted">当前头像</p>
+            </div>
+            <div class="col-md-8">
+              <% if (errors && errors.length > 0) { %>
+                <div class="alert alert-danger">
+                  <ul class="mb-0">
+                    <% errors.forEach(function(error) { %>
+                      <li><%= error.msg %></li>
+                    <% }); %>
+                  </ul>
+                </div>
+              <% } %>
+              
+              <form id="avatarForm" action="/user/avatar" method="POST" enctype="multipart/form-data">
+                <div class="mb-4">
+                  <label for="avatar" class="form-label">选择新头像</label>
+                  <input class="form-control" type="file" id="avatar" name="avatar" accept="image/*" required>
+                  <small class="text-muted">支持JPG、PNG格式，文件大小不超过5MB</small>
+                </div>
+                <!-- 显示裁剪区域 -->
+                <div id="cropContainer" style="display:none;">
+                  <img id="cropImage" style="max-width:100%;" src="">
+                </div>
+                <!-- 裁剪工具：旋转按钮 -->
+                <div id="cropControls" style="display:none;" class="my-3">
+                  <button type="button" id="rotateLeft" class="btn btn-secondary">向左旋转</button>
+                  <button type="button" id="rotateRight" class="btn btn-secondary">向右旋转</button>
+                </div>
+                <!-- 保持原有按钮样式 -->
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary">上传新头像</button>
+                </div>
+              </form>
+              
+              <hr class="my-4">
+              
+              <div class="alert alert-info alert-permanent">
+                <h6 class="alert-heading">头像上传提示：</h6>
+                <ul class="mb-0">
+                  <li>请选择清晰的正面照片</li>
+                  <li>建议使用正方形图片以获得最佳效果</li>
+                  <li>上传的图片将自动调整为合适的尺寸</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>
+
+<!-- 引入 Cropper.js CSS 和 JS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+
+<script>
+  // 当用户选择文件时，读取并显示图片，初始化 Cropper
+  document.getElementById('avatar').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const imageURL = event.target.result;
+      const cropImage = document.getElementById('cropImage');
+      cropImage.src = imageURL;
+      
+      // 显示裁剪区域和操作按钮
+      document.getElementById('cropContainer').style.display = 'block';
+      document.getElementById('cropControls').style.display = 'block';
+      
+      // 初始化或重置 Cropper 实例
+      if (window.cropper) {
+        window.cropper.destroy();
+      }
+      window.cropper = new Cropper(cropImage, {
+        aspectRatio: 1, // 保持正方形
+        viewMode: 1,
+        autoCropArea: 1
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // 旋转操作
+  document.getElementById('rotateLeft').addEventListener('click', function() {
+    if (window.cropper) {
+      window.cropper.rotate(-90);
+    }
+  });
+  document.getElementById('rotateRight').addEventListener('click', function() {
+    if (window.cropper) {
+      window.cropper.rotate(90);
+    }
+  });
+
+  // 拦截表单提交，在提交前将裁剪后的图片转换成 File 对象替换原始文件后再提交
+  document.getElementById('avatarForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // 若用户使用 Cropper 调整过图片，则获取裁剪后的图像
+    if (window.cropper) {
+      window.cropper.getCroppedCanvas({
+        width: 300,
+        height: 300
+      }).toBlob(function(blob) {
+        // 生成新的 File 对象
+        const file = new File([blob], "avatar.png", { type: "image/png" });
+        // 利用 DataTransfer 对象替换 file input 的文件列表
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        document.getElementById('avatar').files = dataTransfer.files;
+        // 直接提交表单，服务器接收裁剪后的文件
+        e.target.submit();
+      });
+    } else {
+      // 如果未进行裁剪操作，则直接提交
+      e.target.submit();
+    }
+  });
+</script>
