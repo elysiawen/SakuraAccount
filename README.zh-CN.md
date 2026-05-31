@@ -73,10 +73,12 @@ npm run dev
 | `DB_TYPE` | 数据库类型：`postgres` 或 `mysql` | `postgres` |
 | `POSTGRES_*` | PostgreSQL 连接配置 | — |
 | `MYSQL_*` | MySQL 连接配置 | — |
-| `APP_URL` | 应用基础 URL | `http://localhost:3000` |
+| `NEXT_PUBLIC_URL` | 应用基础 URL（客户端和服务端通用） | `http://localhost:3000` |
 | `APP_SECRET` | 会话加密密钥 | — |
 | `WEBAUTHN_RP_NAME` | WebAuthn 依赖方名称 | `Sakura Account` |
 | `WEBAUTHN_RP_ID` | WebAuthn 依赖方 ID | `localhost` |
+| `UMAMI_SCRIPT_URL` | Umami 统计脚本 URL（可选） | — |
+| `UMAMI_WEBSITE_ID` | Umami 统计网站 ID（可选） | — |
 
 ## API 参考
 
@@ -118,7 +120,7 @@ npm run dev
 - **XSS 防护** — HTML 输出进行转义处理；配置 CSP 响应头
 - **CSRF 防护** — 通过 Origin/Referer 头校验状态变更请求
 - **密码哈希** — 使用 bcrypt，代价因子 12
-- **会话安全** — Cookie 设置 HttpOnly、Secure、SameSite=Strict
+- **会话安全** — Cookie 设置 HttpOnly、Secure、SameSite=Lax（Lax 允许 OAuth 跨站跳转携带 Cookie，同时阻止 CSRF）
 - **OAuth2 时序安全** — Client Secret 比较使用 `timingSafeEqual`
 - **SSRF 防护** — Favicon 代理通过 DNS 解析校验私有 IP 范围
 - **路径遍历防护** — 本地存储删除时校验解析路径不逃逸出存储目录

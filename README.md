@@ -73,10 +73,12 @@ npm run dev
 | `DB_TYPE` | Database type: `postgres` or `mysql` | `postgres` |
 | `POSTGRES_*` | PostgreSQL connection config | — |
 | `MYSQL_*` | MySQL connection config | — |
-| `APP_URL` | Application base URL | `http://localhost:3000` |
+| `NEXT_PUBLIC_URL` | Application base URL (client & server) | `http://localhost:3000` |
 | `APP_SECRET` | Session encryption key | — |
 | `WEBAUTHN_RP_NAME` | WebAuthn relying party name | `Sakura Account` |
 | `WEBAUTHN_RP_ID` | WebAuthn relying party ID | `localhost` |
+| `UMAMI_SCRIPT_URL` | Umami analytics script URL (optional) | — |
+| `UMAMI_WEBSITE_ID` | Umami analytics website ID (optional) | — |
 
 ## API Reference
 
@@ -118,7 +120,7 @@ npm run dev
 - **XSS Protection** — HTML output is escaped; CSP headers configured
 - **CSRF Protection** — Origin/Referer header validation on state-changing requests
 - **Password Hashing** — bcrypt with cost factor 12
-- **Session Security** — HttpOnly, Secure, SameSite=Strict cookies
+- **Session Security** — HttpOnly, Secure, SameSite=Lax cookies (Lax allows OAuth cross-site redirects while blocking CSRF)
 - **OAuth2 Timing Safety** — Client secret comparison uses `timingSafeEqual`
 - **SSRF Prevention** — Favicon proxy validates DNS resolution against private IP ranges
 - **Path Traversal Prevention** — Local storage delete verifies resolved paths stay within storage directory
