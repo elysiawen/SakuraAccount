@@ -26,7 +26,7 @@ export default async function UserApplicationDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  const appUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
   return (
     <ApplicationDetail
       client={client}

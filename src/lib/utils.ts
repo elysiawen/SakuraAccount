@@ -9,10 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return process.env.APP_URL || DEFAULT_BASE_URL;
+  return process.env.NEXT_PUBLIC_URL || DEFAULT_BASE_URL;
 }
 
 export function formatDate(date: Date | string | number, locale: string = 'zh-CN'): string {
