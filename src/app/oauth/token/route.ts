@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
       }
 
       const scope = params.get('scope');
-      const scopes = scope ? scope.split(' ') : client.scopes;
+      const scopes = scope ? scope.split(/[,\s]+/) : client.scopes;
 
       const token = await generateAccessToken(clientId, null, scopes);
 

@@ -58,7 +58,7 @@ function ConsentContent() {
   const state = searchParams.get('state');
   const nonce = searchParams.get('nonce');
 
-  const scopes = scope ? scope.split(' ') : ['openid', 'profile'];
+  const scopes = scope ? scope.split(/[,\s]+/) : ['openid', 'profile'];
 
   useEffect(() => {
     requestAnimationFrame(() => {

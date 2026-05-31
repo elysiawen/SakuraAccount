@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies();
     const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-    const requestedScopes = scope ? scope.split(' ') : ['openid', 'profile'];
+    const requestedScopes = scope ? scope.split(/[,\s]+/) : ['openid', 'profile'];
 
     // Helper: check if prior consent covers the requested scopes
     async function hasConsent(userId: string): Promise<boolean> {
