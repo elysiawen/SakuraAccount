@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getClient, getConsentedScopes, generateAuthorizationCode } from '@/lib/oauth2';
+import { getClient, getConsentedScopes, generateAuthorizationCode, ISSUER } from '@/lib/oauth2';
 import { cookies } from 'next/headers';
 import { SESSION_COOKIE_NAME, LOGIN_PATH } from '@/lib/constants';
 
@@ -130,10 +130,14 @@ export async function GET(request: NextRequest) {
       return issueCodeAndRedirect(user.id);
     }
 
+    // Build the current authorize URL using ISSUER as base (not request.url,
+    // which may be localhost:3000 when running behind a reverse proxy).
+    const currentUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, ISSUER);
+
     // Not logged in — redirect to login
     if (!sessionId) {
-      const loginUrl = new URL(LOGIN_PATH, request.url);
-      loginUrl.searchParams.set('callbackUrl', request.url);
+      const loginUrl = new URL(LOGIN_PATH, ISSUER);
+      loginUrl.searchParams.set('callbackUrl', currentUrl.toString());
       return NextResponse.redirect(loginUrl, { headers: NO_STORE_HEADERS });
     }
 
@@ -141,18 +145,18 @@ export async function GET(request: NextRequest) {
     const user = await getSession(sessionId, ip);
 
     if (!user) {
-      const loginUrl = new URL(LOGIN_PATH, request.url);
-      loginUrl.searchParams.set('callbackUrl', request.url);
+      const loginUrl = new URL(LOGIN_PATH, ISSUER);
+      loginUrl.searchParams.set('callbackUrl', currentUrl.toString());
       return NextResponse.redirect(loginUrl, { headers: NO_STORE_HEADERS });
     }
 
     // prompt=login: force re-authentication, clear existing session first
     if (prompt === 'login') {
       // Build callback URL WITHOUT prompt=login to avoid infinite loop
-      const callbackUrl = new URL(request.url);
+      const callbackUrl = new URL(currentUrl.toString());
       callbackUrl.searchParams.delete('prompt');
 
-      const loginUrl = new URL(LOGIN_PATH, request.url);
+      const loginUrl = new URL(LOGIN_PATH, ISSUER);
       loginUrl.searchParams.set('callbackUrl', callbackUrl.toString());
       loginUrl.searchParams.set('reauth', '1');
       const response = NextResponse.redirect(loginUrl, { headers: NO_STORE_HEADERS });
@@ -166,7 +170,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Redirect to consent page
-    const consentUrl = new URL('/oauth/consent', request.url);
+    const consentUrl = new URL('/oauth/consent', ISSUER);
     consentUrl.searchParams.set('client_id', clientId);
     consentUrl.searchParams.set('redirect_uri', redirectUri);
     if (scope) consentUrl.searchParams.set('scope', scope);
