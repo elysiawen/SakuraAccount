@@ -75,6 +75,7 @@
   "authorizedApps": {
     "title": "已授权应用",
     "subtitle": "管理已授权访问您账户的第三方应用",
+    "searchPlaceholder": "搜索应用名称...",
     "active": "活跃",
     "thirdPartyApp": "第三方应用",
     "authorizedAt": "授权于 {date}",

@@ -3,6 +3,21 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
+function getCspScriptSrc(): string {
+  const sources = ["'self'", "'unsafe-inline'", "'unsafe-eval'"];
+  if (process.env.UMAMI_SCRIPT_URL) sources.push(new URL(process.env.UMAMI_SCRIPT_URL).origin);
+  if (process.env.GOOGLE_ANALYTICS_ID) sources.push('https://www.googletagmanager.com');
+  if (process.env.CLARITY_ID) sources.push('https://www.clarity.ms');
+  return `script-src ${sources.join(' ')}`;
+}
+
+function getCspConnectSrc(): string {
+  const sources = ["'self'"];
+  if (process.env.UMAMI_SCRIPT_URL) sources.push(new URL(process.env.UMAMI_SCRIPT_URL).origin);
+  if (process.env.GOOGLE_ANALYTICS_ID) sources.push('https://www.google-analytics.com');
+  return `connect-src ${sources.join(' ')}`;
+}
+
 const securityHeaders = [
   {
     key: 'X-Content-Type-Options',
@@ -32,11 +47,11 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      getCspScriptSrc(),
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      getCspConnectSrc(),
       "frame-ancestors 'none'",
     ].join('; '),
   },

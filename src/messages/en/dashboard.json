@@ -75,6 +75,7 @@
   "authorizedApps": {
     "title": "Authorized Apps",
     "subtitle": "Manage third-party apps authorized to access your account",
+    "searchPlaceholder": "Search app name...",
     "active": "Active",
     "thirdPartyApp": "Third-party App",
     "authorizedAt": "Authorized on {date}",
