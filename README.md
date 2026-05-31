@@ -25,6 +25,18 @@
 
 ---
 
+> **⚠️ Breaking Change**
+>
+> If you are updating from commit [`9071c7b`](https://github.com/elysiawen/SakuraAccount/commit/9071c7ba5f6d79cf1f20e6fe7d9c0ae2f6258134) to [`baabaf7`](https://github.com/elysiawen/SakuraAccount/commit/baabaf77edee719bd433ffbd2c7b633941d234b4) or later, you **must** run the database migration script before starting the application:
+>
+> ```bash
+> node scripts/migrate-client-id.js
+> ```
+>
+> This migration renames `oauth2_clients.id` to `client_id` and makes `nano_id` the primary key. Without running this script, the application will fail to start.
+
+---
+
 ## Features
 
 - 🔐 **Multiple Auth Methods** — Email/Password, Passkey/WebAuthn, OAuth 2.0, OIDC

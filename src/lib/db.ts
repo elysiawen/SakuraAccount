@@ -206,8 +206,8 @@ class Database {
     // Schema: nano_id is PK (stable, never changes), client_id is UNIQUE (user-customizable OAuth2 identifier)
     await this.execute(`
       CREATE TABLE IF NOT EXISTS oauth2_clients (
-        id ${varcharType(255)} PRIMARY KEY,
-        nano_id ${varcharType(32)} UNIQUE NOT NULL,
+        nano_id ${varcharType(32)} PRIMARY KEY,
+        client_id ${varcharType(255)} UNIQUE NOT NULL,
         secret ${varcharType(255)} NOT NULL,
         name ${varcharType(255)} NOT NULL,
         description ${textType},
@@ -235,7 +235,7 @@ class Database {
         nonce ${textType},
         expires_at ${timestampType} NOT NULL,
         created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (client_id) REFERENCES oauth2_clients(id) ON DELETE CASCADE,
+        FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -252,7 +252,7 @@ class Database {
         scopes ${jsonType} NOT NULL,
         expires_at ${timestampType} NOT NULL,
         created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (client_id) REFERENCES oauth2_clients(id) ON DELETE CASCADE,
+        FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
@@ -268,81 +268,9 @@ class Database {
         updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (user_id, client_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (client_id) REFERENCES oauth2_clients(id) ON DELETE CASCADE
+        FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE
       )
     `);
-
-    // Migrate oauth2_clients: nano_id → PK, id → client_id (rename)
-    // This migration is idempotent: if old 'id' column doesn't exist, migration was already done.
-    if (isPostgres) {
-      const oldCol = await this.getOne(
-        "SELECT 1 FROM information_schema.columns WHERE table_name = 'oauth2_clients' AND column_name = 'id'"
-      );
-      if (oldCol) {
-        // 1. Drop FK constraints FIRST (before updating data, otherwise FK violation)
-        await this.execute('ALTER TABLE oauth2_authorization_codes DROP CONSTRAINT IF EXISTS oauth2_authorization_codes_client_id_fkey');
-        await this.execute('ALTER TABLE oauth2_tokens DROP CONSTRAINT IF EXISTS oauth2_tokens_client_id_fkey');
-        await this.execute('ALTER TABLE oauth2_consents DROP CONSTRAINT IF EXISTS oauth2_consents_client_id_fkey');
-        // 2. Update child table values: client_id = id → client_id = nano_id
-        await this.execute(
-          `UPDATE oauth2_authorization_codes c SET client_id = p.nano_id FROM oauth2_clients p WHERE c.client_id = p.id AND p.nano_id != p.id`
-        );
-        await this.execute(
-          `UPDATE oauth2_tokens t SET client_id = p.nano_id FROM oauth2_clients p WHERE t.client_id = p.id AND p.nano_id != p.id`
-        );
-        await this.execute(
-          `UPDATE oauth2_consents c SET client_id = p.nano_id FROM oauth2_clients p WHERE c.client_id = p.id AND p.nano_id != p.id`
-        );
-        // 3. Rename id → client_id, swap PK
-        await this.execute('ALTER TABLE oauth2_clients RENAME COLUMN id TO client_id');
-        await this.execute('ALTER TABLE oauth2_clients DROP CONSTRAINT oauth2_clients_pkey');
-        await this.execute('ALTER TABLE oauth2_clients ADD PRIMARY KEY (nano_id)');
-        await this.execute('ALTER TABLE oauth2_clients ADD CONSTRAINT oauth2_clients_client_id_unique UNIQUE (client_id)');
-        // 4. Add new FK constraints → nano_id
-        await this.execute('ALTER TABLE oauth2_authorization_codes ADD FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE');
-        await this.execute('ALTER TABLE oauth2_tokens ADD FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE');
-        await this.execute('ALTER TABLE oauth2_consents ADD FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE');
-        // 5. Update indexes
-        await this.execute('DROP INDEX IF EXISTS idx_oauth2_clients_nano_id');
-      }
-    } else {
-      // MySQL migration
-      const oldCol = await this.getOne(
-        "SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'oauth2_clients' AND column_name = 'id'"
-      );
-      if (oldCol) {
-        // 1. Drop old FKs FIRST
-        await this.execute('ALTER TABLE oauth2_authorization_codes DROP FOREIGN KEY oauth2_authorization_codes_ibfk_1');
-        await this.execute('ALTER TABLE oauth2_tokens DROP FOREIGN KEY oauth2_tokens_ibfk_1');
-        await this.execute('ALTER TABLE oauth2_consents DROP FOREIGN KEY oauth2_consents_ibfk_2');
-        // 2. Add client_id column
-        await this.execute('ALTER TABLE oauth2_clients ADD COLUMN client_id VARCHAR(255)');
-        // 3. Copy data: client_id = id, and update child tables
-        await this.execute('UPDATE oauth2_clients SET client_id = id');
-        await this.execute(
-          'UPDATE oauth2_authorization_codes c JOIN oauth2_clients p ON c.client_id = p.id SET c.client_id = p.nano_id WHERE p.nano_id != p.id'
-        );
-        await this.execute(
-          'UPDATE oauth2_tokens t JOIN oauth2_clients p ON t.client_id = p.id SET t.client_id = p.nano_id WHERE p.nano_id != p.id'
-        );
-        await this.execute(
-          'UPDATE oauth2_consents c JOIN oauth2_clients p ON c.client_id = p.id SET c.client_id = p.nano_id WHERE p.nano_id != p.id'
-        );
-        // 4. Make client_id NOT NULL + UNIQUE
-        await this.execute('ALTER TABLE oauth2_clients MODIFY client_id VARCHAR(255) NOT NULL');
-        await this.execute('ALTER TABLE oauth2_clients ADD CONSTRAINT oauth2_clients_client_id_unique UNIQUE (client_id)');
-        // 5. Drop old id column (PK drops automatically)
-        await this.execute('ALTER TABLE oauth2_clients DROP COLUMN id');
-        // 6. nano_id → PK
-        await this.execute('ALTER TABLE oauth2_clients ADD PRIMARY KEY (nano_id)');
-        // 7. Add new FKs → nano_id
-        await this.execute('ALTER TABLE oauth2_authorization_codes ADD FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE');
-        await this.execute('ALTER TABLE oauth2_tokens ADD FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE');
-        await this.execute('ALTER TABLE oauth2_consents ADD FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE');
-        // 8. Update indexes
-        await this.execute('DROP INDEX idx_oauth2_clients_nano_id ON oauth2_clients');
-      }
-    }
 
     // Audit logs table
     await this.execute(`

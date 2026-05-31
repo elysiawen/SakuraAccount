@@ -25,6 +25,18 @@
 
 ---
 
+> **⚠️ 破坏性更新**
+>
+> 如果你从 commit [`9071c7b`](https://github.com/elysiawen/SakuraAccount/commit/9071c7ba5f6d79cf1f20e6fe7d9c0ae2f6258134) 更新到 [`baabaf7`](https://github.com/elysiawen/SakuraAccount/commit/baabaf77edee719bd433ffbd2c7b633941d234b4) 或之后的版本，**必须**在启动应用前运行数据库迁移脚本：
+>
+> ```bash
+> node scripts/migrate-client-id.js
+> ```
+>
+> 此迁移将 `oauth2_clients.id` 重命名为 `client_id`，并将 `nano_id` 设为主键。不运行此脚本应用将无法启动。
+
+---
+
 ## 功能特性
 
 - 🔐 **多种认证方式** — 邮箱密码、Passkey/WebAuthn、OAuth 2.0、OIDC
