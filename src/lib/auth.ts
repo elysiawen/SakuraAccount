@@ -14,6 +14,9 @@ if (!APP_SECRET) {
 const SECRET = new TextEncoder().encode(APP_SECRET);
 const SESSION_EXPIRY = parseInt(process.env.SESSION_EXPIRY || '604800');
 
+// Cache to avoid updating session IP/location on every request (5 min TTL per session+IP)
+const _ipUpdateCache = new Map<string, number>();
+
 import type { User } from '@/types';
 export type { User };
 
@@ -184,17 +187,23 @@ export async function getSession(sessionId: string, ip?: string): Promise<User |
 
   if (!session) return null;
 
-  // Update IP and location if changed
+  // Update IP and location if changed (throttled: max once per 5 min per session+IP)
   if (ip && session.ip !== ip) {
-    try {
-      const locInfo = await getLocation(ip);
-      await db.execute(
-        'UPDATE sessions SET ip = ?, ip_location = ?, isp = ? WHERE id = ?',
-        [ip, locInfo.location || '', locInfo.isp || '', sessionId]
-      );
-    } catch {
-      // If location lookup fails, just update IP
-      await db.execute('UPDATE sessions SET ip = ? WHERE id = ?', [ip, sessionId]);
+    const cacheKey = `${sessionId}:${ip}`;
+    const now = Date.now();
+    const lastUpdate = _ipUpdateCache.get(cacheKey);
+    if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
+      _ipUpdateCache.set(cacheKey, now);
+      try {
+        const locInfo = await getLocation(ip);
+        await db.execute(
+          'UPDATE sessions SET ip = ?, ip_location = ?, isp = ? WHERE id = ?',
+          [ip, locInfo.location || '', locInfo.isp || '', sessionId]
+        );
+      } catch {
+        // If location lookup fails, just update IP
+        await db.execute('UPDATE sessions SET ip = ? WHERE id = ?', [ip, sessionId]);
+      }
     }
   }
 

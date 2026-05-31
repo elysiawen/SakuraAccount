@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/require-session';
 import { db } from '@/lib/db';
-import { logAudit } from '@/lib/auth';
+import { logAudit, getRequestMetadata } from '@/lib/auth';
 import { paramInvalid, internalError } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
 
@@ -32,7 +32,8 @@ export async function PUT(request: NextRequest) {
         }
 
         await db.setGlobalConfig(key, value);
-        await logAudit(admin.id, 'admin_update_setting', { key, value }, 'admin', 'admin', 'operation');
+        const { ip, userAgent } = getRequestMetadata(request);
+        await logAudit(admin.id, 'admin_update_setting', { key, value }, ip, userAgent, 'operation');
 
         return NextResponse.json({ success: true });
     } catch (error) {
@@ -55,7 +56,8 @@ export async function POST(request: NextRequest) {
         }
 
         await db.setGlobalConfigBatch(config);
-        await logAudit(admin.id, 'admin_update_settings', { keys: Object.keys(config) }, 'admin', 'admin', 'operation');
+        const { ip, userAgent } = getRequestMetadata(request);
+        await logAudit(admin.id, 'admin_update_settings', { keys: Object.keys(config) }, ip, userAgent, 'operation');
 
         return NextResponse.json({ success: true });
     } catch (error) {

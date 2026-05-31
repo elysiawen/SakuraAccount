@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, getUserByUsername, logAudit } from '@/lib/auth';
+import { getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, getUserByUsername, logAudit, getRequestMetadata } from '@/lib/auth';
 import { requireAdmin } from '@/lib/require-session';
 import { isValidEmail, validatePassword, validateNickname, VALIDATION_KEY_MAP } from '@/lib/utils';
 import {
@@ -52,7 +52,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     await deleteUser(userId);
-    await logAudit(admin.id, 'admin_delete_user', { targetUserId: userId }, 'admin', 'admin', 'operation');
+    const { ip, userAgent } = getRequestMetadata(request);
+    await logAudit(admin.id, 'admin_delete_user', { targetUserId: userId }, ip, userAgent, 'operation');
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -83,7 +84,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     await updateUserRole(id, role);
-    await logAudit(admin.id, 'admin_update_user_role', { targetUserId: id, newRole: role }, 'admin', 'admin', 'operation');
+    const { ip, userAgent } = getRequestMetadata(request);
+    await logAudit(admin.id, 'admin_update_user_role', { targetUserId: id, newRole: role }, ip, userAgent, 'operation');
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -140,7 +142,8 @@ export async function PUT(request: NextRequest) {
       await updateUserRole(id, role);
     }
 
-    await logAudit(admin.id, 'admin_update_user', { targetUserId: id, nickname, email, roleChanged: !!role, passwordChanged: !!newPassword }, 'admin', 'admin', 'operation');
+    const { ip, userAgent } = getRequestMetadata(request);
+    await logAudit(admin.id, 'admin_update_user', { targetUserId: id, nickname, email, roleChanged: !!role, passwordChanged: !!newPassword }, ip, userAgent, 'operation');
 
     return NextResponse.json({ success: true });
   } catch (error) {

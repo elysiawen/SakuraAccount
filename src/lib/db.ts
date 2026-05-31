@@ -396,9 +396,27 @@ class Database {
   }
 
   async setGlobalConfigBatch(config: Record<string, unknown>): Promise<void> {
-    for (const [key, value] of Object.entries(config)) {
-      await this.setGlobalConfig(key, value);
+    const entries = Object.entries(config);
+    if (entries.length === 0) return;
+
+    const isPostgres = this.config.type === 'postgres';
+    const placeholders: string[] = [];
+    const params: (string | null)[] = [];
+
+    for (const [key, value] of entries) {
+      const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+      placeholders.push('(?, ?, NOW())');
+      params.push(key, stringValue);
     }
+
+    const onConflict = isPostgres
+      ? 'ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()'
+      : 'ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = NOW()';
+
+    await this.execute(
+      `INSERT INTO global_config (key, value, updated_at) VALUES ${placeholders.join(', ')} ${onConflict}`,
+      params
+    );
   }
 }
 

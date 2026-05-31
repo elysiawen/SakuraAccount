@@ -124,19 +124,33 @@ function mapClient(client: OAuth2ClientRow): OAuth2Client {
   };
 }
 
-async function ensureNanoId(client: OAuth2ClientRow): Promise<OAuth2Client> {
+async function ensureNanoId(client: OAuth2ClientRow): Promise<OAuth2ClientRow> {
   if (!client.nano_id) {
     const newNanoId = nanoid(32);
     await db.execute('UPDATE oauth2_clients SET nano_id = ? WHERE id = ?', [newNanoId, client.id]);
     client.nano_id = newNanoId;
   }
-  return mapClient(client);
+  return client;
+}
+
+async function ensureNanoIds(clients: OAuth2ClientRow[]): Promise<OAuth2ClientRow[]> {
+  const missing = clients.filter(c => !c.nano_id);
+  if (missing.length === 0) return clients;
+  // Batch generate nano_ids and update in a single query
+  for (const client of missing) {
+    const newNanoId = nanoid(32);
+    await db.execute('UPDATE oauth2_clients SET nano_id = ? WHERE id = ?', [newNanoId, client.id]);
+    client.nano_id = newNanoId;
+  }
+  // TODO: replace with true batch UPDATE when DB supports it (e.g. CASE WHEN)
+  return clients;
 }
 
 export async function getClient(clientId: string): Promise<OAuth2Client | null> {
   const client = await db.getOne<OAuth2ClientRow>('SELECT * FROM oauth2_clients WHERE id = ?', [clientId]);
   if (!client) return null;
-  return ensureNanoId(client);
+  const ensured = await ensureNanoId(client);
+  return mapClient(ensured);
 }
 
 export async function getClientByNanoId(nanoId: string): Promise<OAuth2Client | null> {
@@ -327,16 +341,17 @@ function safeJsonParse(val: unknown): string[] {
 
 export async function getAllClients(): Promise<OAuth2Client[]> {
   const clients = await db.query<OAuth2ClientRow>('SELECT * FROM oauth2_clients ORDER BY created_at DESC');
-
-  return Promise.all(clients.map(client => ensureNanoId(client)));
+  const ensured = await ensureNanoIds(clients);
+  return ensured.map(mapClient);
 }
 
 export async function getAllClientsSummary(): Promise<(Pick<OAuth2Client, 'nanoId' | 'name' | 'description' | 'icon' | 'status' | 'userId' | 'createdAt'> & { username?: string })[]> {
   let clients: ClientSummaryRow[];
   try {
     clients = await db.query<ClientSummaryRow>('SELECT c.nano_id, c.name, c.description, c.icon, c.status, c.user_id, c.created_at, u.username FROM oauth2_clients c LEFT JOIN users u ON c.user_id = u.id ORDER BY c.created_at DESC');
-  } catch {
+  } catch (err) {
     // Fallback if status/icon columns don't exist yet
+    console.warn('getAllClientsSummary full query failed, trying fallback:', err);
     clients = await db.query<ClientSummaryRow>('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients ORDER BY created_at DESC');
   }
 
@@ -356,7 +371,8 @@ export async function getUserClientsSummary(userId: string): Promise<Pick<OAuth2
   let clients: ClientSummaryRow[];
   try {
     clients = await db.query<ClientSummaryRow>('SELECT nano_id, name, description, icon, status, user_id, created_at FROM oauth2_clients WHERE user_id = ? ORDER BY created_at DESC', [userId]);
-  } catch {
+  } catch (err) {
+    console.warn('getUserClientsSummary full query failed, trying fallback:', err);
     clients = await db.query<ClientSummaryRow>('SELECT nano_id, name, description, user_id, created_at FROM oauth2_clients WHERE user_id = ? ORDER BY created_at DESC', [userId]);
   }
 
@@ -375,8 +391,12 @@ export async function deleteClient(nanoId: string): Promise<boolean> {
   // Delete tokens first (cascade may not work if table was created before FK)
   const client = await db.getOne<{ id: string }>('SELECT id FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
   if (client) {
-    await db.execute('DELETE FROM oauth2_tokens WHERE client_id = ?', [client.id]);
-    await db.execute('DELETE FROM oauth2_authorization_codes WHERE client_id = ?', [client.id]);
+    try {
+      await db.execute('DELETE FROM oauth2_tokens WHERE client_id = ?', [client.id]);
+      await db.execute('DELETE FROM oauth2_authorization_codes WHERE client_id = ?', [client.id]);
+    } catch (err) {
+      console.warn('Manual cleanup before client delete failed:', err);
+    }
   }
   const result = await db.execute('DELETE FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
   return (isExecuteWithAffectedRows(result) && result.affectedRows > 0)

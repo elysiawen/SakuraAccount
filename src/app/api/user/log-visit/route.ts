@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
     await logAudit(user.id, 'page_visit', { path }, ip, userAgent, 'access');
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error('Log visit error:', error);
     return NextResponse.json({ ok: true });
   }
 }

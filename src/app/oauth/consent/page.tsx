@@ -68,7 +68,7 @@ function ConsentContent() {
     });
     fetch('/api/auth/session').then(res => res.json()).then(data => {
       if (data.user) setUser(data.user);
-    }).catch(() => {});
+    }).catch((err) => { console.error('Failed to fetch session:', err); });
   }, []);
 
   useEffect(() => {
