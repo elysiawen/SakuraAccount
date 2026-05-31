@@ -61,16 +61,25 @@ const ENDPOINTS = [
   { path: '/oauth/revoke', key: 'epRevoke', desc: 'epRevokeDesc' },
 ] as const;
 
+type RequiredStatus = 'required' | 'recommended' | 'conditional' | 'optional';
+
 const AUTH_PARAMS = [
-  { param: 'response_type', type: 'string', required: true, desc: 'responseTypeDesc' },
-  { param: 'client_id', type: 'string', required: true, desc: 'clientIdDesc' },
-  { param: 'redirect_uri', type: 'string', required: true, desc: 'redirectUriDesc' },
-  { param: 'scope', type: 'string', required: true, desc: 'scopeDesc' },
-  { param: 'state', type: 'string', required: true, desc: 'stateDesc' },
-  { param: 'code_challenge', type: 'string', required: true, desc: 'codeChallengeDesc' },
-  { param: 'code_challenge_method', type: 'string', required: true, desc: 'codeChallengeMethodDesc' },
-  { param: 'prompt', type: 'string', required: false, desc: 'promptDesc' },
+  { param: 'response_type', type: 'string', required: 'required' as const, desc: 'responseTypeDesc' },
+  { param: 'client_id', type: 'string', required: 'required' as const, desc: 'clientIdDesc' },
+  { param: 'redirect_uri', type: 'string', required: 'required' as const, desc: 'redirectUriDesc' },
+  { param: 'state', type: 'string', required: 'required' as const, desc: 'stateDesc' },
+  { param: 'code_challenge', type: 'string', required: 'required' as const, desc: 'codeChallengeDesc' },
+  { param: 'code_challenge_method', type: 'string', required: 'conditional' as const, desc: 'codeChallengeMethodDesc' },
+  { param: 'scope', type: 'string', required: 'optional' as const, desc: 'scopeDesc' },
+  { param: 'prompt', type: 'string', required: 'optional' as const, desc: 'promptDesc' },
 ];
+
+const REQUIRED_STATUS_MAP: Record<RequiredStatus, { color: string; dot: string; key: string }> = {
+  required:  { color: 'text-rose-600 dark:text-rose-400', dot: 'bg-rose-500', key: 'required' },
+  recommended: { color: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500', key: 'recommended' },
+  conditional: { color: 'text-blue-600 dark:text-blue-400', dot: 'bg-blue-500', key: 'conditional' },
+  optional:   { color: 'text-text-tertiary', dot: 'bg-slate-400', key: 'optional' },
+};
 
 type CodeTab = 'nextjs' | 'nodejs' | 'python' | 'go';
 
@@ -107,7 +116,6 @@ const params = new URLSearchParams({
   state,
   code_challenge: codeChallenge,
   code_challenge_method: 'S256',
-  prompt: 'consent',
 });
 
 const authUrl = \`https://account.example.com/oauth/authorize?\${params}\`;
@@ -181,7 +189,6 @@ app.get('/auth/login', (req, res) => {
     state,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
-    prompt: 'consent',
   });
 
   res.redirect(\`https://account.example.com/oauth/authorize?\${params}\`);
@@ -266,7 +273,6 @@ async def login():
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
-        "prompt": "consent",
     }
 
     return RedirectResponse(f"{SAKURA_BASE}/oauth/authorize?{urlencode(params)}")
@@ -357,7 +363,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		"state":                 {state},
 		"code_challenge":        {generateCodeChallenge(verifier)},
 		"code_challenge_method": {"S256"},
-		"prompt":                {"consent"},
 	}
 
 	redirectURL := fmt.Sprintf("%s/oauth/authorize?%s",
@@ -753,7 +758,9 @@ export default function DocsPage() {
 
           {/* Mobile: card layout */}
           <div className="sm:hidden divide-y divide-border">
-            {AUTH_PARAMS.map((p) => (
+            {AUTH_PARAMS.map((p) => {
+              const req = REQUIRED_STATUS_MAP[p.required];
+              return (
               <div key={p.param} className="p-4 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <code className="text-xs font-mono text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-500/10 px-1.5 py-0.5 rounded">
@@ -761,15 +768,15 @@ export default function DocsPage() {
                   </code>
                   <div className="flex items-center gap-3 text-xs text-text-tertiary">
                     <span className="font-mono">{p.type}</span>
-                    <span className="inline-flex items-center gap-1 font-medium text-rose-600 dark:text-rose-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                      {t('required')}
+                    <span className={`inline-flex items-center gap-1 font-medium ${req.color}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${req.dot}`} />
+                      {t(req.key)}
                     </span>
                   </div>
                 </div>
                 <p className="text-xs text-text-secondary leading-relaxed">{t(p.desc)}</p>
               </div>
-            ))}
+            )})}
           </div>
 
           {/* Desktop: table layout */}
@@ -784,21 +791,23 @@ export default function DocsPage() {
                 </tr>
               </thead>
               <tbody>
-                {AUTH_PARAMS.map((p) => (
+                {AUTH_PARAMS.map((p) => {
+                  const req = REQUIRED_STATUS_MAP[p.required];
+                  return (
                   <tr key={p.param} className="border-b border-border/50 hover:bg-muted transition-colors">
                     <td className="px-6 py-3">
                       <code className="text-xs font-mono text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-500/10 px-1.5 py-0.5 rounded">{p.param}</code>
                     </td>
                     <td className="px-4 py-3 text-text-tertiary text-xs font-mono">{p.type}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                        {t('required')}
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium ${req.color}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${req.dot}`} />
+                        {t(req.key)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-text-secondary text-xs leading-relaxed">{t(p.desc)}</td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>

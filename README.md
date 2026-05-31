@@ -126,6 +126,19 @@ npm run dev
 | GET | `/oauth/.well-known/openid-configuration` | OIDC discovery |
 | GET | `/oauth/.well-known/jwks.json` | JWKS |
 
+#### Authorization Parameters (`GET /oauth/authorize`)
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `response_type` | string | Required | Fixed value: `code` |
+| `client_id` | string | Required | The Client ID obtained when registering your app |
+| `redirect_uri` | string | Required | Callback URL. Must exactly match the registered redirect URI |
+| `state` | string | Required | Random string to prevent CSRF attacks |
+| `code_challenge` | string | Required | S256 hash for PKCE to prevent authorization code interception |
+| `code_challenge_method` | string | Conditional | PKCE challenge method. Optional — defaults to `S256`. Only `S256` accepted |
+| `scope` | string | Optional | Permission scopes (e.g. `openid profile email`). Defaults to the app's base scopes |
+| `prompt` | string | Optional | Controls consent behavior. Auto-skip when already authorized. Pass `consent` to force re-confirmation |
+
 ## Security
 
 - **SQL Injection** — All database queries use parameterized statements

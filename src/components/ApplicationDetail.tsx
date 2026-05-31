@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -21,11 +21,13 @@ import {
   Lock,
   RefreshCw,
   User,
+  Users,
   Mail,
   Fingerprint,
   ExternalLink,
   Clock,
   Shield,
+  Calendar,
 } from 'lucide-react';
 
 import type { OAuth2Client } from '@/types';
@@ -113,6 +115,93 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
   const [showChangeSecretModal, setShowChangeSecretModal] = useState(false);
   const [newSecret, setNewSecret] = useState('');
   const [changingSecret, setChangingSecret] = useState(false);
+
+  // View toggle: details vs authorized users
+  const [activeView, setActiveView] = useState<'details' | 'users'>('details');
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+  const [authorizedUsers, setAuthorizedUsers] = useState<Array<{
+    userId: string;
+    username: string;
+    nickname: string;
+    avatar: string | null;
+    scopes: string[];
+    consentedAt: string;
+  }>>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersLoaded, setUsersLoaded] = useState(false);
+
+  const fetchAuthorizedUsers = useCallback(async () => {
+    if (usersLoaded) return;
+    setLoadingUsers(true);
+    try {
+      const res = await fetch(`${apiPrefix}/${client.nanoId}/consents`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setAuthorizedUsers(data.users || []);
+        setUsersLoaded(true);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, [apiPrefix, client.nanoId, usersLoaded]);
+
+  useEffect(() => {
+    if (activeView === 'users') {
+      fetchAuthorizedUsers();
+    }
+  }, [activeView, fetchAuthorizedUsers]);
+
+  const handleRevokeUser = (userId: string, nickname: string) => {
+    confirm(t('revokeAccessConfirm'), {
+      confirmText: t('revokeAccess'),
+      confirmColor: 'red',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${apiPrefix}/${client.nanoId}/consents?userId=${userId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+          if (res.ok) {
+            setAuthorizedUsers((prev) => prev.filter((u) => u.userId !== userId));
+            success(t('revokeAccessSuccess'));
+          } else {
+            error(t('revokeAccessFailed'));
+          }
+        } catch {
+          error(t('revokeAccessFailed'));
+        }
+      },
+    });
+  };
+
+  const handleRevokeAll = () => {
+    confirm(t('revokeAllConfirm'), {
+      confirmText: t('revokeAll'),
+      confirmColor: 'red',
+      onConfirm: async () => {
+        try {
+          const results = await Promise.all(
+            authorizedUsers.map((u) =>
+              fetch(`${apiPrefix}/${client.nanoId}/consents?userId=${u.userId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+              })
+            )
+          );
+          if (results.every((r) => r.ok)) {
+            setAuthorizedUsers([]);
+            success(t('revokeAllSuccess'));
+          } else {
+            error(t('revokeAllFailed'));
+          }
+        } catch {
+          error(t('revokeAllFailed'));
+        }
+      },
+    });
+  };
 
   const handleDelete = () => {
     confirm(t('deleteConfirm', { name: client.name }), {
@@ -440,9 +529,36 @@ if __name__ == '__main__':
 
   return (
     <div className="space-y-6">
-      {/* Title */}
-      <h1 className="text-2xl font-bold text-text-primary">{t('appDetail')}</h1>
+      {/* Title with view toggle */}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-text-primary">{t('appDetail')}</h1>
+        <div className="flex gap-1 p-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-xl overflow-x-auto shrink-0">
+          {([
+            { key: 'details' as const, label: t('details') },
+            { key: 'users' as const, label: t('authorizedUsers') },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setSlideDirection(tab.key === 'users' ? 'right' : 'left');
+                setActiveView(tab.key);
+              }}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+                activeView === tab.key
+                  ? 'bg-card text-text-primary shadow-sm'
+                  : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
+      {/* Views Container */}
+      <div className="relative overflow-hidden">
+      {/* Details View */}
+      <div className={`space-y-6 transition-all duration-300 ease-out ${activeView === 'details' ? 'opacity-100 translate-x-0' : slideDirection === 'left' ? 'opacity-0 -translate-x-6 absolute inset-0 pointer-events-none' : 'opacity-0 translate-x-6 absolute inset-0 pointer-events-none'}`}>
       {/* Header */}
       <div className="bg-card rounded-xl shadow-sm border border-border">
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border">
@@ -722,6 +838,119 @@ if __name__ == '__main__':
             </>
           </div>
         </div>
+      </div>
+      </div>
+
+      {/* Authorized Users View */}
+      <div className={`transition-all duration-300 ease-out ${activeView === 'users' ? 'opacity-100 translate-x-0' : slideDirection === 'right' ? 'opacity-0 translate-x-6 absolute inset-0 pointer-events-none' : 'opacity-0 -translate-x-6 absolute inset-0 pointer-events-none'}`}>
+        <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border">
+            <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary bg-muted rounded-lg">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {loadingUsers ? '...' : t('authorizedUserCount', { count: authorizedUsers.length })}
+              </span>
+            </div>
+            {!loadingUsers && authorizedUsers.length > 0 && (
+              <button
+                onClick={handleRevokeAll}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-destructive rounded-lg hover:opacity-90 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('revokeAll')}</span>
+              </button>
+            )}
+          </div>
+
+          <div className="p-4 sm:p-6">
+            {loadingUsers ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse flex items-center gap-4 p-4 rounded-xl">
+                    <div className="w-10 h-10 bg-muted rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-muted rounded w-1/3" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : authorizedUsers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Users className="w-8 h-8 text-text-quaternary" />
+                </div>
+                <p className="text-sm font-medium text-text-tertiary">{t('noAuthorizedUsers')}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {authorizedUsers.map((u) => (
+                  <div
+                    key={u.userId}
+                    className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl hover:bg-muted/50 transition-colors"
+                  >
+                    {/* Avatar */}
+                    {u.avatar ? (
+                      <Image
+                        src={u.avatar}
+                        alt={u.nickname}
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-background"
+                      />
+                    ) : (
+                      <div
+                        className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarColor(u.username)} flex items-center justify-center text-white text-sm font-bold shadow-md shadow-black/10 shrink-0 ring-2 ring-background`}
+                      >
+                        {u.nickname.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+
+                    {/* User Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-text-primary truncate">{u.nickname}</span>
+                        <span className="text-xs text-text-quaternary font-mono">@{u.username}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {u.scopes.map((scope) => (
+                          <span
+                            key={scope}
+                            className="text-xs px-2 py-0.5 bg-muted text-text-secondary rounded-md font-medium"
+                          >
+                            {scope}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-text-quaternary">
+                        <Calendar className="w-3 h-3" />
+                        <span className="text-xs">
+                          {new Date(u.consentedAt).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Revoke */}
+                    <button
+                      onClick={() => handleRevokeUser(u.userId, u.nickname)}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-destructive hover:bg-destructive/10 rounded-lg transition-colors shrink-0"
+                      title={t('revokeAccess')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{t('revokeAccess')}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       </div>
 
       {/* Edit Modal */}

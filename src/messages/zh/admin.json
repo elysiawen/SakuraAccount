@@ -198,7 +198,21 @@
     "secretChanged": "密钥修改成功",
     "secretChangeFailed": "修改密钥失败",
     "secretInvalid": "密钥长度为 16-128 个字符",
-    "secretSameAsCurrent": "新密钥与当前相同"
+    "secretSameAsCurrent": "新密钥与当前相同",
+    "details": "详情",
+    "authorizedUsers": "已授权用户",
+    "noAuthorizedUsers": "暂无用户授权此应用",
+    "consentedAt": "授权时间",
+    "consentedScopes": "授权范围",
+    "authorizedUserCount": "{count} 个用户已授权",
+    "revokeAccess": "撤销",
+    "revokeAccessConfirm": "确定要撤销该用户的授权吗？撤销后该用户需要重新授权才能访问此应用。",
+    "revokeAccessSuccess": "已撤销授权",
+    "revokeAccessFailed": "撤销授权失败",
+    "revokeAll": "撤销所有授权",
+    "revokeAllConfirm": "确定要撤销所有用户的授权吗？所有用户将需要重新授权才能访问此应用。",
+    "revokeAllSuccess": "已撤销所有授权",
+    "revokeAllFailed": "撤销所有授权失败"
   },
   "auditLogs": {
     "title": "审计日志",

@@ -198,7 +198,21 @@
     "secretChanged": "Secret changed successfully",
     "secretChangeFailed": "Failed to change secret",
     "secretInvalid": "Secret must be 16-128 characters",
-    "secretSameAsCurrent": "New secret is the same as current"
+    "secretSameAsCurrent": "New secret is the same as current",
+    "details": "Details",
+    "authorizedUsers": "Authorized Users",
+    "noAuthorizedUsers": "No users have authorized this application",
+    "consentedAt": "Authorized At",
+    "consentedScopes": "Authorized Scopes",
+    "authorizedUserCount": "{count} users authorized",
+    "revokeAccess": "Revoke",
+    "revokeAccessConfirm": "Are you sure you want to revoke this user's authorization? They will need to re-authorize to access this application.",
+    "revokeAccessSuccess": "Authorization revoked",
+    "revokeAccessFailed": "Failed to revoke authorization",
+    "revokeAll": "Revoke All",
+    "revokeAllConfirm": "Are you sure you want to revoke all users' authorizations? All users will need to re-authorize to access this application.",
+    "revokeAllSuccess": "All authorizations revoked",
+    "revokeAllFailed": "Failed to revoke all authorizations"
   },
   "auditLogs": {
     "title": "Audit Logs",

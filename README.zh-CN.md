@@ -126,6 +126,19 @@ npm run dev
 | GET | `/oauth/.well-known/openid-configuration` | OIDC 发现 |
 | GET | `/oauth/.well-known/jwks.json` | JWKS |
 
+#### 授权参数 (`GET /oauth/authorize`)
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `response_type` | string | 必填 | 固定值：`code` |
+| `client_id` | string | 必填 | 应用注册时获得的 Client ID |
+| `redirect_uri` | string | 必填 | 回调地址，必须与注册的地址精确匹配 |
+| `state` | string | 必填 | 随机字符串，用于防止 CSRF 攻击 |
+| `code_challenge` | string | 必填 | PKCE 的 S256 哈希值，用于防止授权码拦截攻击 |
+| `code_challenge_method` | string | 条件必填 | PKCE 挑战方法。可选，默认 `S256`，仅接受 `S256` |
+| `scope` | string | 可选 | 权限范围（如 `openid profile email`）。不传时使用应用注册的基础权限集 |
+| `prompt` | string | 可选 | 控制授权页面行为。不传时系统自动判断，已授权则静默跳过。传 `consent` 强制重新确认 |
+
 ## 安全特性
 
 - **SQL 注入防护** — 所有数据库查询使用参数化语句
