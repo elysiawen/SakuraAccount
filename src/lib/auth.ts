@@ -172,7 +172,7 @@ export async function setSessionCookie(sessionId: string): Promise<void> {
   cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: SESSION_EXPIRY,
     path: '/',
   });
