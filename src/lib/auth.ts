@@ -63,6 +63,22 @@ export interface UserSessionRecord extends Record<string, unknown> {
   expires_at: string;
 }
 
+export interface AllSessionRecord extends Record<string, unknown> {
+  id: string;
+  user_id: string;
+  username: string;
+  email: string;
+  nickname?: string | null;
+  avatar?: string | null;
+  role: string;
+  ip?: string | null;
+  user_agent?: string | null;
+  ip_location?: string | null;
+  isp?: string | null;
+  created_at: string;
+  expires_at: string;
+}
+
 export interface AuditLogRecord extends Record<string, unknown> {
   id: number;
   user_id?: string | null;
@@ -240,6 +256,45 @@ export async function getUserSessions(userId: string): Promise<UserSessionRecord
     'SELECT id, ip, user_agent, ip_location, isp, created_at, expires_at FROM sessions WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   );
+}
+
+export async function getAllSessions(page: number = 1, limit: number = DEFAULT_PAGE_SIZE, search?: string): Promise<{ sessions: AllSessionRecord[]; total: number }> {
+  const offset = (page - 1) * limit;
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  // Only show non-expired sessions
+  conditions.push('s.expires_at > NOW()');
+
+  if (search) {
+    conditions.push('(u.username LIKE ? OR u.email LIKE ? OR s.ip LIKE ? OR s.user_agent LIKE ?)');
+    const q = `%${search}%`;
+    params.push(q, q, q, q);
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+  const [sessions, countResult] = await Promise.all([
+    db.query<AllSessionRecord>(
+      `SELECT s.id, s.user_id, u.username, u.email, u.nickname, u.avatar, u.role,
+              s.ip, s.user_agent, s.ip_location, s.isp, s.created_at, s.expires_at
+       FROM sessions s
+       JOIN users u ON s.user_id = u.id
+       ${whereClause}
+       ORDER BY s.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    ),
+    db.getOne<CountRow>(
+      `SELECT COUNT(*) as total FROM sessions s JOIN users u ON s.user_id = u.id ${whereClause}`,
+      params
+    )
+  ]);
+
+  return {
+    sessions,
+    total: countResult?.total || 0,
+  };
 }
 
 export async function logAudit(userId: string | null, action: string, details?: unknown, ip?: string, userAgent?: string, category: string = 'operation'): Promise<void> {

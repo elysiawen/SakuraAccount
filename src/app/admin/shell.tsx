@@ -13,6 +13,7 @@ import {
   Link2,
   FileText,
   Settings,
+  Monitor,
   ArrowLeft,
   type LucideIcon,
 } from 'lucide-react';
@@ -47,9 +48,10 @@ function AdminNav() {
         <p className="px-4 mb-1 text-[11px] font-medium text-text-quaternary uppercase tracking-wider">{t('sectionManagement')}</p>
         <NavLink href="/admin/users" icon={Users} label={t('users')} />
         <NavLink href="/admin/applications" icon={Link2} label={t('applications')} />
-        <NavLink href="/admin/audit-logs" icon={FileText} label={t('auditLogs')} />
+        <NavLink href="/admin/sessions" icon={Monitor} label={t('sessions')} />
       </div>
-      <div className="pt-3 border-t border-border">
+      <div className="space-y-1 pt-3 border-t border-border">
+        <NavLink href="/admin/audit-logs" icon={FileText} label={t('auditLogs')} />
         <NavLink href="/admin/settings" icon={Settings} label={t('settings')} />
       </div>
     </>

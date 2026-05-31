@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -30,6 +30,17 @@ export default function AuthorizedAppsPage() {
   const { confirm } = useConfirm();
   const [apps, setApps] = useState<AuthorizedApp[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredApps = useMemo(() => {
+    if (!searchQuery.trim()) return apps;
+    const q = searchQuery.toLowerCase();
+    return apps.filter(
+      (app) =>
+        app.name.toLowerCase().includes(q) ||
+        (app.description && app.description.toLowerCase().includes(q))
+    );
+  }, [apps, searchQuery]);
 
   const fetchApps = useCallback(async () => {
     try {
@@ -89,6 +100,27 @@ export default function AuthorizedAppsPage() {
         <p className="text-sm text-text-tertiary mt-1">{t('subtitle')}</p>
       </div>
 
+      {!loading && (
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('searchPlaceholder')}
+            className="w-full h-10 pl-10 pr-4 rounded-xl border border-border bg-background text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:ring-2 focus:ring-accent-foreground/20 focus:border-accent-foreground/40 transition-all"
+          />
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-quaternary"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -97,9 +129,9 @@ export default function AuthorizedAppsPage() {
             </div>
           ))}
         </div>
-      ) : apps.length > 0 ? (
+      ) : filteredApps.length > 0 ? (
         <div className="space-y-3">
-          {apps.map((app) => (
+          {filteredApps.map((app) => (
             <div
               key={app.clientId}
               className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-accent-foreground/20 transition-colors bg-card"
@@ -140,11 +172,17 @@ export default function AuthorizedAppsPage() {
             </div>
           ))}
         </div>
-      ) : (
+      ) : apps.length === 0 ? (
         <div className="text-center py-16">
           <span className="text-4xl mb-4 block">🔗</span>
           <p className="text-text-tertiary">{t('noApps')}</p>
           <p className="text-sm text-text-quaternary mt-1">{t('noAppsDesc')}</p>
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <span className="text-4xl mb-4 block">🔍</span>
+          <p className="text-text-tertiary">{t('noResults')}</p>
+          <p className="text-sm text-text-quaternary mt-1">{t('noResultsDesc')}</p>
         </div>
       )}
     </div>
