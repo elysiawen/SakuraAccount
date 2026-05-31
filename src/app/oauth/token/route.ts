@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
         return jsonError(400, 'invalid_grant', 'Authorization code is invalid or has expired.');
       }
 
-      if (authCode.clientId !== clientId) {
+      // authCode.clientId stores nanoId (FK value), compare with client.nanoId
+      if (authCode.clientId !== client.nanoId) {
         return jsonError(400, 'invalid_grant', 'Authorization code was not issued to this client.');
       }
 
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify consent still exists (user may have revoked between authorize and token exchange)
-      const consentedScopes = await getConsentedScopes(authCode.userId, clientId);
+      const consentedScopes = await getConsentedScopes(authCode.userId, client.nanoId);
       if (!consentedScopes || !authCode.scopes.every(s => consentedScopes.includes(s))) {
         return jsonError(400, 'invalid_grant', 'Consent has been revoked.');
       }
@@ -104,8 +105,8 @@ export async function POST(request: NextRequest) {
       // Delete authorization code (one-time use)
       await deleteAuthorizationCode(code);
 
-      // Generate access token
-      const token = await generateAccessToken(clientId, authCode.userId, authCode.scopes);
+      // Generate access token (nanoId for FK storage, clientId for JWT claim)
+      const token = await generateAccessToken(client.nanoId, authCode.userId, authCode.scopes, clientId);
 
       const response: TokenResponseBody = {
         access_token: token.accessToken,
@@ -141,15 +142,16 @@ export async function POST(request: NextRequest) {
         return jsonError(400, 'invalid_grant', 'Refresh token is invalid or has expired.');
       }
 
-      if (token.clientId !== clientId) {
+      // token.clientId stores nanoId (FK value), compare with client.nanoId
+      if (token.clientId !== client.nanoId) {
         return jsonError(400, 'invalid_grant', 'Refresh token was not issued to this client.');
       }
 
       // Revoke old token
       await revokeToken(token.id);
 
-      // Generate new access token
-      const newToken = await generateAccessToken(clientId, token.userId, token.scopes);
+      // Generate new access token (nanoId for FK storage, clientId for JWT claim)
+      const newToken = await generateAccessToken(client.nanoId, token.userId, token.scopes, clientId);
 
       const response: TokenResponseBody = {
         access_token: newToken.accessToken,
@@ -178,7 +180,7 @@ export async function POST(request: NextRequest) {
       const scope = params.get('scope');
       const scopes = scope ? scope.split(/[,\s]+/) : client.scopes;
 
-      const token = await generateAccessToken(clientId, null, scopes);
+      const token = await generateAccessToken(client.nanoId, null, scopes, clientId);
 
       return NextResponse.json({
         access_token: token.accessToken,

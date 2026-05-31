@@ -86,10 +86,10 @@ export async function POST(request: NextRequest) {
 
     const scopes = scope ? scope.split(/[,\s]+/) : ['openid', 'profile'];
 
-    // Save consent so future requests can skip the consent page
-    await saveConsent(result.user.id, clientId, scopes);
+    // Save consent so future requests can skip the consent page (store nanoId as FK)
+    await saveConsent(result.user.id, client.nanoId, scopes);
 
-    const code = await generateAuthorizationCode(clientId, result.user.id, redirectUri, scopes, nonce || undefined);
+    const code = await generateAuthorizationCode(client.nanoId, result.user.id, redirectUri, scopes, nonce || undefined);
 
     // Log authorization event
     const { ip, userAgent } = getRequestMetadata(request);

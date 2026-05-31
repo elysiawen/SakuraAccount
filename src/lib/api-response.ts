@@ -253,6 +253,18 @@ export async function appInvalidClient() {
   return errorResponse('APP_INVALID_CLIENT', await tApi('app.invalidClient'), 400);
 }
 
+export async function appClientIdDuplicate() {
+  return errorResponse('APP_CLIENT_ID_DUPLICATE', await tApi('app.clientIdDuplicate'), 409);
+}
+
+export async function appClientIdInvalid() {
+  return errorResponse('APP_CLIENT_ID_INVALID', await tApi('app.clientIdInvalid'), 400);
+}
+
+export async function appSecretInvalid() {
+  return errorResponse('APP_SECRET_INVALID', await tApi('app.secretInvalid'), 400);
+}
+
 // ===== TOKEN_ 授权令牌错误 =====
 
 export async function tokenAppRequired() {

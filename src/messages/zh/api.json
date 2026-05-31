@@ -80,7 +80,10 @@
     "iconSizeLimit": "文件大小不能超过 2MB",
     "iconTypeInvalid": "只能上传图片文件",
     "iconUploadFailed": "图标上传失败",
-    "iconDeleteFailed": "图标删除失败"
+    "iconDeleteFailed": "图标删除失败",
+    "clientIdDuplicate": "此 Client ID 已被使用",
+    "clientIdInvalid": "Client ID 格式无效",
+    "secretInvalid": "密钥格式无效"
   },
   "storage": {
     "s3ConfigIncomplete": "请填写完整的 S3 配置",

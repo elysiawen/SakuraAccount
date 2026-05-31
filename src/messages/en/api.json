@@ -80,7 +80,10 @@
     "iconSizeLimit": "File size cannot exceed 2MB",
     "iconTypeInvalid": "Only image files are allowed",
     "iconUploadFailed": "Icon upload failed",
-    "iconDeleteFailed": "Icon delete failed"
+    "iconDeleteFailed": "Icon delete failed",
+    "clientIdDuplicate": "This Client ID is already in use",
+    "clientIdInvalid": "Invalid Client ID format",
+    "secretInvalid": "Invalid secret format"
   },
   "storage": {
     "s3ConfigIncomplete": "Please fill in complete S3 configuration",

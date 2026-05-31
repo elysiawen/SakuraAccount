@@ -4,7 +4,7 @@
  */
 
 export interface OAuth2Client {
-  id: string;
+  clientId: string;
   nanoId: string;
   secret: string;
   name: string;

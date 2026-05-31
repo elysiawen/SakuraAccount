@@ -39,7 +39,7 @@ export interface Token {
 }
 
 interface OAuth2ClientRow extends Record<string, unknown> {
-  id: string;
+  client_id: string;
   nano_id: string;
   secret: string;
   name: string;
@@ -87,19 +87,19 @@ interface ClientSummaryRow extends Record<string, unknown> {
   created_at?: string;
 }
 
-export async function createClient(data: Omit<OAuth2Client, 'id' | 'nanoId' | 'secret'>): Promise<OAuth2Client> {
-  const id = nanoid(32);
+export async function createClient(data: Omit<OAuth2Client, 'clientId' | 'nanoId' | 'secret'>): Promise<OAuth2Client> {
+  const clientId = nanoid(32);
   const nanoId = nanoid(32);
   const secret = nanoid(64);
 
   await db.execute(
-    `INSERT INTO oauth2_clients (id, nano_id, secret, name, description, app_url, redirect_uris, grants, scopes, status, user_id)
+    `INSERT INTO oauth2_clients (client_id, nano_id, secret, name, description, app_url, redirect_uris, grants, scopes, status, user_id)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, nanoId, secret, data.name, data.description ?? null, data.appUrl ?? null, JSON.stringify(data.redirectUris), JSON.stringify(data.grants), JSON.stringify(data.scopes), data.status ?? 'active', data.userId ?? null]
+    [clientId, nanoId, secret, data.name, data.description ?? null, data.appUrl ?? null, JSON.stringify(data.redirectUris), JSON.stringify(data.grants), JSON.stringify(data.scopes), data.status ?? 'active', data.userId ?? null]
   );
 
   return {
-    id,
+    clientId,
     nanoId,
     secret,
     ...data,
@@ -108,7 +108,7 @@ export async function createClient(data: Omit<OAuth2Client, 'id' | 'nanoId' | 's
 
 function mapClient(client: OAuth2ClientRow): OAuth2Client {
   return {
-    id: client.id,
+    clientId: client.client_id,
     nanoId: client.nano_id,
     secret: client.secret,
     name: client.name,
@@ -127,7 +127,7 @@ function mapClient(client: OAuth2ClientRow): OAuth2Client {
 async function ensureNanoId(client: OAuth2ClientRow): Promise<OAuth2ClientRow> {
   if (!client.nano_id) {
     const newNanoId = nanoid(32);
-    await db.execute('UPDATE oauth2_clients SET nano_id = ? WHERE id = ?', [newNanoId, client.id]);
+    await db.execute('UPDATE oauth2_clients SET nano_id = ? WHERE client_id = ?', [newNanoId, client.client_id]);
     client.nano_id = newNanoId;
   }
   return client;
@@ -139,7 +139,7 @@ async function ensureNanoIds(clients: OAuth2ClientRow[]): Promise<OAuth2ClientRo
   // Batch generate nano_ids and update in a single query
   for (const client of missing) {
     const newNanoId = nanoid(32);
-    await db.execute('UPDATE oauth2_clients SET nano_id = ? WHERE id = ?', [newNanoId, client.id]);
+    await db.execute('UPDATE oauth2_clients SET nano_id = ? WHERE client_id = ?', [newNanoId, client.client_id]);
     client.nano_id = newNanoId;
   }
   // TODO: replace with true batch UPDATE when DB supports it (e.g. CASE WHEN)
@@ -147,7 +147,7 @@ async function ensureNanoIds(clients: OAuth2ClientRow[]): Promise<OAuth2ClientRo
 }
 
 export async function getClient(clientId: string): Promise<OAuth2Client | null> {
-  const client = await db.getOne<OAuth2ClientRow>('SELECT * FROM oauth2_clients WHERE id = ?', [clientId]);
+  const client = await db.getOne<OAuth2ClientRow>('SELECT * FROM oauth2_clients WHERE client_id = ?', [clientId]);
   if (!client) return null;
   const ensured = await ensureNanoId(client);
   return mapClient(ensured);
@@ -179,7 +179,7 @@ export async function validateClient(clientId: string, clientSecret?: string): P
 }
 
 export async function generateAuthorizationCode(
-  clientId: string,
+  nanoId: string,
   userId: string,
   redirectUri: string,
   scopes: string[],
@@ -190,7 +190,7 @@ export async function generateAuthorizationCode(
 
   await db.execute(
     'INSERT INTO oauth2_authorization_codes (id, client_id, user_id, redirect_uri, scopes, nonce, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [code, clientId, userId, redirectUri, JSON.stringify(scopes), nonce || null, expiresAt]
+    [code, nanoId, userId, redirectUri, JSON.stringify(scopes), nonce || null, expiresAt]
   );
 
   return code;
@@ -220,15 +220,16 @@ export async function deleteAuthorizationCode(code: string): Promise<void> {
 }
 
 export async function generateAccessToken(
-  clientId: string,
+  nanoId: string,
   userId: string | null,
-  scopes: string[]
+  scopes: string[],
+  clientId?: string
 ): Promise<Token> {
   const tokenId = nanoid(32);
 
   const accessToken = await new SignJWT({
-    sub: userId || clientId,
-    client_id: clientId,
+    sub: userId || nanoId,
+    client_id: clientId || nanoId,
     scope: scopes.join(' '),
     iss: ISSUER,
   })
@@ -245,13 +246,13 @@ export async function generateAccessToken(
   await db.execute(
     `INSERT INTO oauth2_tokens (id, client_id, user_id, access_token, refresh_token, scopes, expires_at, refresh_expires_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [tokenId, clientId, userId, accessToken, refreshToken, JSON.stringify(scopes), expiresAt, refreshExpiresAt]
+    [tokenId, nanoId, userId, accessToken, refreshToken, JSON.stringify(scopes), expiresAt, refreshExpiresAt]
   );
 
   return {
     id: tokenId,
-    clientId,
-    userId: userId || clientId,
+    clientId: nanoId,
+    userId: userId || nanoId,
     accessToken,
     refreshToken,
     scopes,
@@ -389,14 +390,11 @@ export async function getUserClientsSummary(userId: string): Promise<Pick<OAuth2
 
 export async function deleteClient(nanoId: string): Promise<boolean> {
   // Delete tokens first (cascade may not work if table was created before FK)
-  const client = await db.getOne<{ id: string }>('SELECT id FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
-  if (client) {
-    try {
-      await db.execute('DELETE FROM oauth2_tokens WHERE client_id = ?', [client.id]);
-      await db.execute('DELETE FROM oauth2_authorization_codes WHERE client_id = ?', [client.id]);
-    } catch (err) {
-      console.warn('Manual cleanup before client delete failed:', err);
-    }
+  try {
+    await db.execute('DELETE FROM oauth2_tokens WHERE client_id = ?', [nanoId]);
+    await db.execute('DELETE FROM oauth2_authorization_codes WHERE client_id = ?', [nanoId]);
+  } catch (err) {
+    console.warn('Manual cleanup before client delete failed:', err);
   }
   const result = await db.execute('DELETE FROM oauth2_clients WHERE nano_id = ?', [nanoId]);
   return (isExecuteWithAffectedRows(result) && result.affectedRows > 0)
@@ -446,30 +444,76 @@ export async function updateClient(nanoId: string, data: Partial<OAuth2Client>):
   await db.execute(`UPDATE oauth2_clients SET ${fields.join(', ')} WHERE nano_id = ?`, values);
 }
 
-export async function getConsentedScopes(userId: string, clientId: string): Promise<string[] | null> {
+export async function getConsentedScopes(userId: string, nanoId: string): Promise<string[] | null> {
   const row = await db.getOne(
     'SELECT scopes FROM oauth2_consents WHERE user_id = ? AND client_id = ?',
-    [userId, clientId]
+    [userId, nanoId]
   );
   if (!row) return null;
   return safeJsonParse(row.scopes);
 }
 
-export async function saveConsent(userId: string, clientId: string, scopes: string[]): Promise<void> {
+export async function saveConsent(userId: string, nanoId: string, scopes: string[]): Promise<void> {
   const scopesJson = JSON.stringify(scopes);
   await db.execute(
     'DELETE FROM oauth2_consents WHERE user_id = ? AND client_id = ?',
-    [userId, clientId]
+    [userId, nanoId]
   );
   await db.execute(
     'INSERT INTO oauth2_consents (user_id, client_id, scopes) VALUES (?, ?, ?)',
-    [userId, clientId, scopesJson]
+    [userId, nanoId, scopesJson]
   );
 }
 
-export async function deleteConsent(userId: string, clientId: string): Promise<void> {
+export async function deleteConsent(userId: string, nanoId: string): Promise<void> {
   await db.execute(
     'DELETE FROM oauth2_consents WHERE user_id = ? AND client_id = ?',
-    [userId, clientId]
+    [userId, nanoId]
   );
+}
+
+const CLIENT_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
+
+export async function changeClientId(nanoId: string, newClientId: string): Promise<{ success: boolean; error?: string }> {
+  if (!newClientId || newClientId.length < 3 || newClientId.length > 255) {
+    return { success: false, error: 'invalid' };
+  }
+  if (!CLIENT_ID_REGEX.test(newClientId)) {
+    return { success: false, error: 'invalid' };
+  }
+
+  const client = await getClientByNanoId(nanoId);
+  if (!client) {
+    return { success: false, error: 'not_found' };
+  }
+
+  if (newClientId === client.clientId) {
+    return { success: true };
+  }
+
+  try {
+    await db.execute('UPDATE oauth2_clients SET client_id = ?, updated_at = NOW() WHERE nano_id = ?', [newClientId, nanoId]);
+    return { success: true };
+  } catch (err: unknown) {
+    // Duplicate key: PG 23505, MySQL 1062
+    const code = (err as { code?: string | number }).code;
+    if (code === '23505' || code === 1062 || code === 'ER_DUP_ENTRY') {
+      return { success: false, error: 'duplicate' };
+    }
+    throw err;
+  }
+}
+
+export async function changeSecret(nanoId: string, newSecret: string): Promise<{ success: boolean; error?: string }> {
+  if (!newSecret || newSecret.length < 16 || newSecret.length > 128) {
+    return { success: false, error: 'invalid' };
+  }
+
+  const client = await getClientByNanoId(nanoId);
+  if (!client) {
+    return { success: false, error: 'not_found' };
+  }
+
+  await db.execute('UPDATE oauth2_clients SET secret = ?, updated_at = NOW() WHERE nano_id = ?', [newSecret, nanoId]);
+  return { success: true };
 }

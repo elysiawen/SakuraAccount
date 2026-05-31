@@ -107,6 +107,12 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
   const [iconUrl, setIconUrl] = useState(client.icon || '');
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [activeTab, setActiveTab] = useState('javascript');
+  const [showChangeIdModal, setShowChangeIdModal] = useState(false);
+  const [newClientId, setNewClientId] = useState('');
+  const [changingId, setChangingId] = useState(false);
+  const [showChangeSecretModal, setShowChangeSecretModal] = useState(false);
+  const [newSecret, setNewSecret] = useState('');
+  const [changingSecret, setChangingSecret] = useState(false);
 
   const handleDelete = () => {
     confirm(t('deleteConfirm', { name: client.name }), {
@@ -175,6 +181,80 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
     }
   };
 
+  const handleChangeClientId = async () => {
+    if (!newClientId || newClientId.length < 3 || newClientId.length > 255) {
+      error(t('clientIdInvalid'));
+      return;
+    }
+    if (!/^[a-zA-Z0-9._-]+$/.test(newClientId)) {
+      error(t('clientIdInvalid'));
+      return;
+    }
+    if (newClientId === client.clientId) {
+      error(t('clientIdSameAsCurrent'));
+      return;
+    }
+
+    setChangingId(true);
+    try {
+      const res = await fetch(`${apiPrefix}/${client.nanoId}/client-id`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ newClientId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setClient(data.client);
+        setShowChangeIdModal(false);
+        success(t('clientIdChanged'));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (data.error === 'APP_CLIENT_ID_DUPLICATE') {
+          error(t('clientIdDuplicate'));
+        } else {
+          error(getErrorMessage(data, t('clientIdChangeFailed')));
+        }
+      }
+    } catch {
+      error(t('clientIdChangeFailed'));
+    } finally {
+      setChangingId(false);
+    }
+  };
+
+  const handleChangeSecret = async () => {
+    if (!newSecret || newSecret.length < 16 || newSecret.length > 128) {
+      error(t('secretInvalid'));
+      return;
+    }
+
+    setChangingSecret(true);
+    try {
+      const res = await fetch(`${apiPrefix}/${client.nanoId}/secret`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ newSecret }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setClient(data.client);
+        setShowChangeSecretModal(false);
+        success(t('secretChanged'));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        error(getErrorMessage(data, t('secretChangeFailed')));
+      }
+    } catch {
+      error(t('secretChangeFailed'));
+    } finally {
+      setChangingSecret(false);
+    }
+  };
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleString('zh-CN');
@@ -184,7 +264,7 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
 
   const integrationExamples = {
     javascript: `// 使用授权码流程进行OAuth认证
-const clientId = '${client.id}';
+const clientId = '${client.clientId}';
 const redirectUri = '${client.redirectUris[0] || 'http://localhost:3000/callback'}';
 
 // 重定向用户到授权页面
@@ -234,7 +314,7 @@ async function fetchUserInfo(accessToken) {
 }`,
     php: `<?php
 // 使用授权码流程进行OAuth认证
-$clientId = '${client.id}';
+$clientId = '${client.clientId}';
 $clientSecret = '${client.secret}';
 $redirectUri = '${client.redirectUris[0] || 'http://localhost:3000/callback'}';
 
@@ -306,7 +386,7 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 # OAuth配置
-client_id = '${client.id}'
+client_id = '${client.clientId}'
 client_secret = '${client.secret}'
 redirect_uri = '${client.redirectUris[0] || 'http://localhost:3000/callback'}'
 auth_url = '${origin}/oauth/authorize'
@@ -412,11 +492,20 @@ if __name__ == '__main__':
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={client.id}
+                  value={client.clientId}
                   readOnly
                   className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-text-primary font-mono"
                 />
-                <CopyButton text={client.id} />
+                <CopyButton text={client.clientId} />
+                {apiPrefix.includes('admin') && (
+                  <button
+                    onClick={() => { setNewClientId(''); setShowChangeIdModal(true); }}
+                    className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
+                    title={t('changeClientId')}
+                  >
+                    <Edit className="w-4 h-4 text-text-tertiary" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -431,6 +520,15 @@ if __name__ == '__main__':
                   className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-text-primary font-mono"
                 />
                 <CopyButton text={client.secret} />
+                {apiPrefix.includes('admin') && (
+                  <button
+                    onClick={() => { setNewSecret(''); setShowChangeSecretModal(true); }}
+                    className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
+                    title={t('changeSecret')}
+                  >
+                    <Edit className="w-4 h-4 text-text-tertiary" />
+                  </button>
+                )}
               </div>
               <p className="text-xs text-destructive mt-1.5">{t('secretWarning')}</p>
             </div>
@@ -887,6 +985,99 @@ if __name__ == '__main__':
                 {editForm.status === 'active' ? t('active') : t('disabled')}
               </span>
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Change Client ID Modal */}
+      <Modal
+        isOpen={showChangeIdModal}
+        onClose={() => setShowChangeIdModal(false)}
+        title={t('changeClientId')}
+        footer={
+          <div className="flex justify-end gap-3 p-4 border-t border-border">
+            <button
+              onClick={() => setShowChangeIdModal(false)}
+              className="px-4 py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={handleChangeClientId}
+              disabled={changingId}
+              className="px-4 py-2 text-sm text-white bg-destructive rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {changingId && <Spinner className="h-4 w-4" />}
+              {changingId ? t('saving') : t('changeClientId')}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4 p-4">
+          <div className="bg-warning/10 border border-warning/30 rounded-xl p-4">
+            <p className="text-sm text-warning-foreground">{t('changeClientIdConfirm')}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('clientId')} (current)</label>
+            <input
+              type="text"
+              value={client.clientId}
+              readOnly
+              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-muted text-text-secondary font-mono text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('newClientId')}</label>
+            <input
+              type="text"
+              value={newClientId}
+              onChange={(e) => setNewClientId(e.target.value)}
+              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary font-mono focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
+              placeholder={t('newClientIdPlaceholder')}
+              autoFocus
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Change Secret Modal */}
+      <Modal
+        isOpen={showChangeSecretModal}
+        onClose={() => setShowChangeSecretModal(false)}
+        title={t('changeSecret')}
+        footer={
+          <div className="flex justify-end gap-3 p-4 border-t border-border">
+            <button
+              onClick={() => setShowChangeSecretModal(false)}
+              className="px-4 py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={handleChangeSecret}
+              disabled={changingSecret}
+              className="px-4 py-2 text-sm text-white bg-destructive rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {changingSecret && <Spinner className="h-4 w-4" />}
+              {changingSecret ? t('saving') : t('changeSecret')}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4 p-4">
+          <div className="bg-warning/10 border border-warning/30 rounded-xl p-4">
+            <p className="text-sm text-warning-foreground">{t('changeSecretConfirm')}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('newSecret')}</label>
+            <input
+              type="text"
+              value={newSecret}
+              onChange={(e) => setNewSecret(e.target.value)}
+              className="w-full px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary font-mono focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors"
+              placeholder={t('newSecretPlaceholder')}
+              autoFocus
+            />
           </div>
         </div>
       </Modal>

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteConsent } from '@/lib/oauth2';
+import { deleteConsent, getClientByNanoId } from '@/lib/oauth2';
 import { requireAuthenticatedUser } from '@/lib/require-session';
 import { db } from '@/lib/db';
-import { tokenListFailed, tokenAppRequired, tokenRevokeFailed } from '@/lib/api-response';
+import { tokenListFailed, tokenAppRequired, tokenRevokeFailed, appNotFound } from '@/lib/api-response';
 
 interface TokenAppRow extends Record<string, unknown> {
   client_id: string;
@@ -43,7 +43,7 @@ export async function GET() {
          COUNT(t.id) as token_count,
          MAX(t.created_at) as latest_token_at
        FROM oauth2_consents con
-       LEFT JOIN oauth2_clients c ON con.client_id = c.id
+       LEFT JOIN oauth2_clients c ON con.client_id = c.nano_id
        LEFT JOIN oauth2_tokens t ON t.client_id = con.client_id AND t.user_id = con.user_id
        WHERE con.user_id = ?
        GROUP BY con.client_id, con.scopes, con.created_at, c.name, c.description, c.icon, c.app_url
@@ -81,12 +81,19 @@ export async function DELETE(request: NextRequest) {
       return tokenAppRequired();
     }
 
+    // clientId from GET response is actually nano_id (FK value stored in child tables)
+    // So use getClientByNanoId to look up the client
+    const client = await getClientByNanoId(clientId);
+    if (!client) {
+      return appNotFound();
+    }
+
     await db.execute(
       'DELETE FROM oauth2_tokens WHERE client_id = ? AND user_id = ?',
-      [clientId, result.user.id]
+      [client.nanoId, result.user.id]
     );
 
-    await deleteConsent(result.user.id, clientId);
+    await deleteConsent(result.user.id, client.nanoId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

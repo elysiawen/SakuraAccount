@@ -95,14 +95,14 @@ export async function GET(request: NextRequest) {
 
     // Helper: check if prior consent covers the requested scopes
     async function hasConsent(userId: string): Promise<boolean> {
-      const consented = await getConsentedScopes(userId, clientId!);
+      const consented = await getConsentedScopes(userId, client!.nanoId);
       if (!consented) return false;
       return requestedScopes.every(s => consented.includes(s));
     }
 
     // Helper: issue authorization code and redirect to client
     async function issueCodeAndRedirect(userId: string): Promise<NextResponse> {
-      const code = await generateAuthorizationCode(clientId!, userId, redirectUri!, requestedScopes, nonce || undefined);
+      const code = await generateAuthorizationCode(client!.nanoId, userId, redirectUri!, requestedScopes, nonce || undefined);
       const callbackUrl = new URL(redirectUri!);
       callbackUrl.searchParams.set('code', code);
       if (state) callbackUrl.searchParams.set('state', state);
