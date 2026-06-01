@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     cookieStore.delete(SESSION_COOKIE_NAME);
 
     const baseUrl = getBaseUrl();
-    const rawCallback = request.nextUrl.searchParams.get('callbackUrl') || '/';
+    const rawCallback = request.nextUrl.searchParams.get('callbackUrl') || '/auth/login';
     // Only allow safe relative paths: starts with /, no protocol scheme, no double-slash prefix
     const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.includes('://')
       ? rawCallback
@@ -45,6 +45,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(callbackUrl, baseUrl));
   } catch (error) {
     console.error('Logout error:', error);
-    return NextResponse.redirect(new URL('/', getBaseUrl()));
+    return NextResponse.redirect(new URL('/auth/login', getBaseUrl()));
   }
 }
