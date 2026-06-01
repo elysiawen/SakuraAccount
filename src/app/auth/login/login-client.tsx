@@ -64,12 +64,12 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
         headers: JSON_HEADERS,
         body: JSON.stringify({ action: 'generate' }),
       });
-      const { options } = await optionsRes.json();
+      const { options, challengeId } = await optionsRes.json();
       const response = await startAuthentication({ optionsJSON: options });
       const verifyRes = await fetch('/api/auth/webauthn/login', {
         method: 'POST',
         headers: JSON_HEADERS,
-        body: JSON.stringify({ action: 'verify', response, challenge: options.challenge }),
+        body: JSON.stringify({ action: 'verify', response, challengeId }),
       });
       const data = await verifyRes.json();
       if (data.verified) {

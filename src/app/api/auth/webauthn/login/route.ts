@@ -6,19 +6,19 @@ import { passkeyInvalidRequest, authPasskeyVerifyFailed, authUserNotFound, passk
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, response, challenge, userId } = body;
+    const { action, response, challengeId, userId } = body;
 
     if (action === 'generate') {
-      const options = await generateAuthentication(userId);
-      return NextResponse.json({ options });
+      const { options, challengeId } = await generateAuthentication(userId);
+      return NextResponse.json({ options, challengeId });
     }
 
     if (action === 'verify') {
-      if (!response || !challenge) {
+      if (!response || !challengeId) {
         return passkeyInvalidRequest();
       }
 
-      const verification = await verifyAuthentication(response, challenge);
+      const verification = await verifyAuthentication(response, challengeId);
 
       if (!verification.verified || !verification.userId) {
         return authPasskeyVerifyFailed();

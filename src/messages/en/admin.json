@@ -205,6 +205,8 @@
     "consentedAt": "Authorized At",
     "consentedScopes": "Authorized Scopes",
     "authorizedUserCount": "{count} users authorized",
+    "searchUsers": "Search users...",
+    "noSearchResults": "No matching users found",
     "revokeAccess": "Revoke",
     "revokeAccessConfirm": "Are you sure you want to revoke this user's authorization? They will need to re-authorize to access this application.",
     "revokeAccessSuccess": "Authorization revoked",

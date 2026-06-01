@@ -47,6 +47,7 @@ class Database {
   private config: DatabaseConfig;
   private pgPool: PgPool | null = null;
   private mysqlPool: mysql.Pool | null = null;
+  private tablesEnsured = false;
 
   constructor() {
     const dbType = (process.env.DB_TYPE || 'postgres') as DbType;
@@ -109,6 +110,7 @@ class Database {
   }
 
   async query<T extends SqlRow = SqlRow>(sql: string, params?: SqlParams): Promise<T[]> {
+    await this.ensureTables();
     if (this.config.type === 'postgres') {
       const pool = this.getPgPool();
       const pgSql = this.convertPlaceholders(sql);
@@ -127,6 +129,7 @@ class Database {
   }
 
   async execute(sql: string, params?: SqlParams): Promise<ExecuteResult> {
+    await this.ensureTables();
     if (this.config.type === 'postgres') {
       const pool = this.getPgPool();
       const pgSql = this.convertPlaceholders(sql);
@@ -136,6 +139,12 @@ class Database {
       const [result] = await pool.execute(sql, params);
       return result as unknown as ExecuteResult;
     }
+  }
+
+  private async ensureTables(): Promise<void> {
+    if (this.tablesEnsured) return;
+    this.tablesEnsured = true;
+    await this.createTables();
   }
 
   async initialize(): Promise<void> {
@@ -311,6 +320,17 @@ class Database {
       )
     `);
 
+    // WebAuthn challenges table
+    await this.execute(`
+      CREATE TABLE IF NOT EXISTS webauthn_challenges (
+        id ${varcharType(64)} PRIMARY KEY,
+        challenge ${textType} NOT NULL,
+        user_id ${varcharType(36)},
+        expires_at ${timestampType} NOT NULL,
+        created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Global config table
     await this.execute(`
       CREATE TABLE IF NOT EXISTS global_config (
@@ -418,6 +438,28 @@ class Database {
       `INSERT INTO global_config (key, value, updated_at) VALUES ${placeholders.join(', ')} ${onConflict}`,
       params
     );
+  }
+
+  // WebAuthn challenge methods
+  async storeWebAuthnChallenge(id: string, challenge: string, userId?: string, ttlSeconds = 300): Promise<void> {
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+    await this.execute(
+      'INSERT INTO webauthn_challenges (id, challenge, user_id, expires_at) VALUES (?, ?, ?, ?)',
+      [id, challenge, userId || null, expiresAt]
+    );
+  }
+
+  async getWebAuthnChallenge(id: string): Promise<{ challenge: string; userId: string | null } | null> {
+    const row = await this.getOne(
+      'SELECT challenge, user_id FROM webauthn_challenges WHERE id = ? AND expires_at > NOW()',
+      [id]
+    );
+    if (!row) return null;
+    return { challenge: String(row.challenge), userId: row.user_id ? String(row.user_id) : null };
+  }
+
+  async deleteWebAuthnChallenge(id: string): Promise<void> {
+    await this.execute('DELETE FROM webauthn_challenges WHERE id = ?', [id]);
   }
 }
 

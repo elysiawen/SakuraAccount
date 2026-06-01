@@ -81,18 +81,28 @@ export async function generateRegistration(userId: string, username: string, dis
     },
   });
 
-  return options;
+  const challengeId = nanoid(32);
+  await db.storeWebAuthnChallenge(challengeId, options.challenge, userId);
+
+  return { options, challengeId };
 }
 
 export async function verifyRegistration(
   userId: string,
   response: RegistrationResponseJSON,
-  expectedChallenge: string,
+  challengeId: string,
   credentialName?: string
 ) {
+  const stored = await db.getWebAuthnChallenge(challengeId);
+  if (!stored) {
+    return { verified: false, registrationInfo: undefined };
+  }
+
+  await db.deleteWebAuthnChallenge(challengeId);
+
   const verification = await verifyRegistrationResponse({
     response,
-    expectedChallenge,
+    expectedChallenge: stored.challenge,
     expectedOrigin: origin,
     expectedRPID: rpID,
   });
@@ -148,13 +158,23 @@ export async function generateAuthentication(userId?: string) {
     })),
   });
 
-  return options;
+  const challengeId = nanoid(32);
+  await db.storeWebAuthnChallenge(challengeId, options.challenge, userId);
+
+  return { options, challengeId };
 }
 
 export async function verifyAuthentication(
   response: AuthenticationResponseJSON,
-  expectedChallenge: string
+  challengeId: string
 ): Promise<{ verified: boolean; userId: string | null }> {
+  const stored = await db.getWebAuthnChallenge(challengeId);
+  if (!stored) {
+    return { verified: false, userId: null };
+  }
+
+  await db.deleteWebAuthnChallenge(challengeId);
+
   const credential = await db.getOne(
     'SELECT * FROM webauthn_credentials WHERE credential_id = ?',
     [Buffer.from(response.id).toString('base64')]
@@ -173,7 +193,7 @@ export async function verifyAuthentication(
 
   const verification = await verifyAuthenticationResponse({
     response,
-    expectedChallenge,
+    expectedChallenge: stored.challenge,
     expectedOrigin: origin,
     expectedRPID: rpID,
     credential: authenticator,

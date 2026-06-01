@@ -28,6 +28,7 @@ import {
   Clock,
   Shield,
   Calendar,
+  Search,
 } from 'lucide-react';
 
 import type { OAuth2Client } from '@/types';
@@ -129,6 +130,7 @@ export default function ApplicationDetail({ client: initialClient, apiPrefix = '
   }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersLoaded, setUsersLoaded] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
   const fetchAuthorizedUsers = useCallback(async () => {
     if (usersLoaded) return;
@@ -527,6 +529,17 @@ if __name__ == '__main__':
     app.run(debug=True)`,
   };
 
+  const filteredUsers = userSearchQuery.trim()
+    ? authorizedUsers.filter((u) => {
+        const q = userSearchQuery.toLowerCase();
+        return (
+          u.nickname.toLowerCase().includes(q) ||
+          u.username.toLowerCase().includes(q) ||
+          u.scopes.some((s) => s.toLowerCase().includes(q))
+        );
+      })
+    : authorizedUsers;
+
   return (
     <div className="space-y-6">
       {/* Title with view toggle */}
@@ -848,7 +861,7 @@ if __name__ == '__main__':
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border">
             <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary bg-muted rounded-lg">
               <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">
+              <span>
                 {loadingUsers ? '...' : t('authorizedUserCount', { count: authorizedUsers.length })}
               </span>
             </div>
@@ -862,6 +875,22 @@ if __name__ == '__main__':
               </button>
             )}
           </div>
+
+          {/* Search bar */}
+          {!loadingUsers && authorizedUsers.length > 0 && (
+            <div className="px-4 sm:px-6 pt-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-quaternary pointer-events-none" />
+                <input
+                  type="text"
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  placeholder={t('searchUsers')}
+                  className="w-full pl-10 pr-3 py-2 text-sm bg-muted border border-border rounded-lg text-text-primary placeholder:text-text-quaternary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="p-4 sm:p-6">
             {loadingUsers ? (
@@ -883,9 +912,16 @@ if __name__ == '__main__':
                 </div>
                 <p className="text-sm font-medium text-text-tertiary">{t('noAuthorizedUsers')}</p>
               </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Search className="w-8 h-8 text-text-quaternary" />
+                </div>
+                <p className="text-sm font-medium text-text-tertiary">{t('noSearchResults')}</p>
+              </div>
             ) : (
               <div className="space-y-2">
-                {authorizedUsers.map((u) => (
+                {filteredUsers.map((u) => (
                   <div
                     key={u.userId}
                     className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl hover:bg-muted/50 transition-colors"

@@ -277,7 +277,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ action: 'generate' }),
       });
 
-      const { options } = await optionsRes.json();
+      const { options, challengeId } = await optionsRes.json();
       const response = await startRegistration({ optionsJSON: options });
 
       const verifyRes = await fetch('/api/auth/webauthn/register', {
@@ -286,7 +286,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           action: 'verify',
           response,
-          challenge: options.challenge,
+          challengeId,
           credentialName: passkeyName,
         }),
       });
