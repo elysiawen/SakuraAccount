@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         if (!codeVerifier) {
           return jsonError(400, 'invalid_grant', 'code_verifier is required for this authorization code.');
         }
-        if (!verifyCodeChallenge(codeVerifier, authCode.codeChallenge, authCode.codeChallengeMethod || 'plain')) {
+        if (!verifyCodeChallenge(codeVerifier, authCode.codeChallenge, authCode.codeChallengeMethod || 'S256')) {
           console.warn(`[Token] PKCE verification failed for code: ${code.substring(0, 8)}...`);
           return jsonError(400, 'invalid_grant', 'code_verifier does not match the expected code_challenge.');
         }

@@ -90,19 +90,24 @@ export async function GET(request: NextRequest) {
     }
 
     // PKCE validation (RFC 7636)
-    // If code_challenge is provided, method must be S256 or plain (defaults to plain per RFC)
+    // If code_challenge is provided, method must be S256 or plain (defaults to S256)
     let validatedCodeChallenge: string | undefined;
     let validatedCodeChallengeMethod: 'S256' | 'plain' | undefined;
     if (codeChallenge) {
       if (codeChallenge.length < 43 || codeChallenge.length > 128) {
         return redirectWithError(redirectUri, 'invalid_request', state, 'code_challenge length must be between 43 and 128 characters.');
       }
+      // RFC 7636 §4.2: code_challenge must be unreserved chars (same as code_verifier)
+      if (!/^[A-Za-z0-9._~-]+$/.test(codeChallenge)) {
+        return redirectWithError(redirectUri, 'invalid_request', state, 'code_challenge contains invalid characters.');
+      }
       if (codeChallengeMethod && codeChallengeMethod !== 'S256' && codeChallengeMethod !== 'plain') {
         return redirectWithError(redirectUri, 'invalid_request', state, 'code_challenge_method must be "S256" or "plain".');
       }
-      // Per RFC 7636 §4.3, if code_challenge is present without method, default to "plain"
+      // Per RFC 7636 §4.3, S256 is Mandatory To Implement (MTI)
+      // Default to S256 when code_challenge_method is not provided
       validatedCodeChallenge = codeChallenge;
-      validatedCodeChallengeMethod = (codeChallengeMethod as 'S256' | 'plain') || 'plain';
+      validatedCodeChallengeMethod = (codeChallengeMethod as 'S256' | 'plain') || 'S256';
     }
 
     // Check if user is authenticated

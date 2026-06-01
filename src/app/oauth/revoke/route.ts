@@ -71,9 +71,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Revoke the token
-    // Only revoke if the token belongs to this client
-    const revoked = await revokeTokenByValue(token, tokenTypeHint || undefined);
+    // Revoke the token — scoped to this client's tokens only (RFC 7009 §2.1)
+    const revoked = await revokeTokenByValue(token, client.nanoId, tokenTypeHint || undefined);
 
     // RFC 7009 §2.2: Always return 200 OK
     console.log(`[Revoke] Token revoked=${revoked} hint=${tokenTypeHint || 'none'}`);

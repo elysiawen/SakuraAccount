@@ -566,13 +566,13 @@ export function verifyCodeChallenge(
  * Revoke a token by its value (access_token or refresh_token).
  * Returns true if a token was found and revoked.
  */
-export async function revokeTokenByValue(tokenValue: string, tokenTypeHint?: 'access_token' | 'refresh_token'): Promise<boolean> {
-  // Try to find and delete by access_token
+export async function revokeTokenByValue(tokenValue: string, clientNanoId: string, tokenTypeHint?: 'access_token' | 'refresh_token'): Promise<boolean> {
+  // RFC 7009 §2.1: Only revoke tokens belonging to the authenticated client
   const result = await db.execute(
-    `DELETE FROM oauth2_tokens WHERE ${tokenTypeHint === 'refresh_token' ? 'refresh_token = ?' : 'access_token = ? OR refresh_token = ?'}`,
+    `DELETE FROM oauth2_tokens WHERE client_id = ? AND (${tokenTypeHint === 'refresh_token' ? 'refresh_token = ?' : 'access_token = ? OR refresh_token = ?'})`,
     tokenTypeHint === 'refresh_token'
-      ? [tokenValue]
-      : [tokenValue, tokenValue]
+      ? [clientNanoId, tokenValue]
+      : [clientNanoId, tokenValue, tokenValue]
   );
 
   const affected = isExecuteWithAffectedRows(result)
