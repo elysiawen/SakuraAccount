@@ -35,6 +35,21 @@
 >
 > This migration renames `oauth2_clients.id` to `client_id` and makes `nano_id` the primary key. Without running this script, the application will fail to start.
 
+> **⚠️ Breaking Change（PKCE + Token Revocation）**
+>
+> This update adds PKCE (RFC 7636) support and a token revocation endpoint (RFC 7009). If you are updating from an earlier version, you **must** run the database migration script:
+>
+> ```bash
+> node scripts/migrate-dbpkce.js
+> ```
+>
+> This migration adds `code_challenge` and `code_challenge_method` columns to the `oauth2_authorization_codes` table.
+>
+> **Key changes:**
+> - **PKCE (Proof Key for Code Exchange)** — The authorization endpoint now accepts and validates `code_challenge` / `code_challenge_method`. The token endpoint validates `code_verifier` for authorization codes that were issued with PKCE.
+> - **Token Revocation** — New `POST /oauth/revoke` endpoint (RFC 7009) for revoking access tokens and refresh tokens.
+> - **OIDC Discovery** — `revocation_endpoint` and `code_challenge_methods_supported` added to `.well-known/openid-configuration`.
+
 ---
 
 ## Features
@@ -122,6 +137,7 @@ npm run dev
 |--------|----------|-------------|
 | GET | `/oauth/authorize` | Authorization endpoint |
 | POST | `/oauth/token` | Token endpoint |
+| POST | `/oauth/revoke` | Token revocation endpoint |
 | GET | `/oauth/userinfo` | UserInfo endpoint |
 | GET | `/oauth/.well-known/openid-configuration` | OIDC discovery |
 | GET | `/oauth/.well-known/jwks.json` | JWKS |

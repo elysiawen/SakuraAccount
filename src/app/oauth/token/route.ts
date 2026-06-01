@@ -7,6 +7,7 @@ import {
   getTokenByRefreshToken,
   revokeToken,
   getConsentedScopes,
+  verifyCodeChallenge,
   ACCESS_TOKEN_EXPIRY,
 } from '@/lib/oauth2';
 import { generateIdToken } from '@/lib/oidc';
@@ -85,6 +86,19 @@ export async function POST(request: NextRequest) {
       if (!authCode) {
         console.warn(`[Token] Code not found or expired: ${code.substring(0, 8)}...`);
         return jsonError(400, 'invalid_grant', 'Authorization code is invalid or has expired.');
+      }
+
+      // PKCE verification (RFC 7636 §4.6)
+      // If code_challenge was provided during authorization, code_verifier MUST be validated
+      if (authCode.codeChallenge) {
+        const codeVerifier = params.get('code_verifier');
+        if (!codeVerifier) {
+          return jsonError(400, 'invalid_grant', 'code_verifier is required for this authorization code.');
+        }
+        if (!verifyCodeChallenge(codeVerifier, authCode.codeChallenge, authCode.codeChallengeMethod || 'plain')) {
+          console.warn(`[Token] PKCE verification failed for code: ${code.substring(0, 8)}...`);
+          return jsonError(400, 'invalid_grant', 'code_verifier does not match the expected code_challenge.');
+        }
       }
 
       // authCode.clientId stores nanoId (FK value), compare with client.nanoId

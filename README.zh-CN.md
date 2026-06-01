@@ -35,6 +35,21 @@
 >
 > 此迁移将 `oauth2_clients.id` 重命名为 `client_id`，并将 `nano_id` 设为主键。不运行此脚本应用将无法启动。
 
+> **⚠️ 破坏性更新（PKCE + Token 撤销）**
+>
+> 本次更新新增 PKCE (RFC 7636) 支持和 Token 撤销端点 (RFC 7009)。如果你从旧版本更新，**必须**运行数据库迁移脚本：
+>
+> ```bash
+> node scripts/migrate-dbpkce.js
+> ```
+>
+> 此迁移为 `oauth2_authorization_codes` 表添加 `code_challenge` 和 `code_challenge_method` 列。
+>
+> **主要变更：**
+> - **PKCE（授权码交换证明密钥）** — 授权端点现在接收并验证 `code_challenge` / `code_challenge_method`。令牌端点对带有 PKCE 的授权码强制校验 `code_verifier`。
+> - **Token 撤销** — 新增 `POST /oauth/revoke` 端点 (RFC 7009)，用于撤销访问令牌和刷新令牌。
+> - **OIDC Discovery** — `.well-known/openid-configuration` 新增 `revocation_endpoint` 和 `code_challenge_methods_supported` 字段。
+
 ---
 
 ## 功能特性
@@ -122,6 +137,7 @@ npm run dev
 |------|------|------|
 | GET | `/oauth/authorize` | 授权端点 |
 | POST | `/oauth/token` | 令牌端点 |
+| POST | `/oauth/revoke` | 令牌撤销端点 |
 | GET | `/oauth/userinfo` | 用户信息端点 |
 | GET | `/oauth/.well-known/openid-configuration` | OIDC 发现 |
 | GET | `/oauth/.well-known/jwks.json` | JWKS |

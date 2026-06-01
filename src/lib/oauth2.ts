@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'crypto';
+import { timingSafeEqual, createHash } from 'crypto';
 import { nanoid } from 'nanoid';
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { db, isExecuteWithAffectedRows, isExecuteWithRowCount } from './db';
@@ -24,6 +24,8 @@ export interface AuthorizationCode {
   redirectUri: string;
   scopes: string[];
   nonce?: string;
+  codeChallenge?: string;
+  codeChallengeMethod?: 'S256' | 'plain';
   expiresAt: Date;
 }
 
@@ -61,6 +63,8 @@ interface AuthorizationCodeRow extends Record<string, unknown> {
   redirect_uri: string;
   scopes: string | string[];
   nonce?: string | null;
+  code_challenge?: string | null;
+  code_challenge_method?: string | null;
   expires_at: Date;
 }
 
@@ -183,14 +187,16 @@ export async function generateAuthorizationCode(
   userId: string,
   redirectUri: string,
   scopes: string[],
-  nonce?: string
+  nonce?: string,
+  codeChallenge?: string,
+  codeChallengeMethod?: 'S256' | 'plain'
 ): Promise<string> {
   const code = nanoid(32);
   const expiresAt = new Date(Date.now() + AUTHORIZATION_CODE_EXPIRY * 1000);
 
   await db.execute(
-    'INSERT INTO oauth2_authorization_codes (id, client_id, user_id, redirect_uri, scopes, nonce, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [code, nanoId, userId, redirectUri, JSON.stringify(scopes), nonce || null, expiresAt]
+    'INSERT INTO oauth2_authorization_codes (id, client_id, user_id, redirect_uri, scopes, nonce, code_challenge, code_challenge_method, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [code, nanoId, userId, redirectUri, JSON.stringify(scopes), nonce || null, codeChallenge || null, codeChallengeMethod || null, expiresAt]
   );
 
   return code;
@@ -211,6 +217,10 @@ export async function getAuthorizationCode(code: string): Promise<AuthorizationC
     redirectUri: authCode.redirect_uri,
     scopes: safeJsonParse(authCode.scopes),
     nonce: authCode.nonce || undefined,
+    codeChallenge: authCode.code_challenge || undefined,
+    codeChallengeMethod: (authCode.code_challenge_method === 'S256' || authCode.code_challenge_method === 'plain')
+      ? authCode.code_challenge_method
+      : undefined,
     expiresAt: authCode.expires_at,
   };
 }
@@ -516,4 +526,58 @@ export async function changeSecret(nanoId: string, newSecret: string): Promise<{
 
   await db.execute('UPDATE oauth2_clients SET secret = ?, updated_at = NOW() WHERE nano_id = ?', [newSecret, nanoId]);
   return { success: true };
+}
+
+// ─── PKCE (RFC 7636) ────────────────────────────────────────────────────────
+
+/**
+ * Verify a PKCE code_verifier against the stored code_challenge.
+ * Returns true if the verifier matches, false otherwise.
+ */
+export function verifyCodeChallenge(
+  codeVerifier: string,
+  codeChallenge: string,
+  codeChallengeMethod: 'S256' | 'plain'
+): boolean {
+  if (!codeVerifier || codeVerifier.length < 43 || codeVerifier.length > 128) {
+    return false;
+  }
+
+  // RFC 7636 Section 4.1: code_verifier = 43-128 unreserved chars
+  if (!/^[A-Za-z0-9._~-]+$/.test(codeVerifier)) {
+    return false;
+  }
+
+  if (codeChallengeMethod === 'plain') {
+    return codeVerifier === codeChallenge;
+  }
+
+  if (codeChallengeMethod === 'S256') {
+    const hash = createHash('sha256').update(codeVerifier).digest('base64url');
+    return hash === codeChallenge;
+  }
+
+  return false;
+}
+
+// ─── Token Revocation (RFC 7009) ─────────────────────────────────────────────
+
+/**
+ * Revoke a token by its value (access_token or refresh_token).
+ * Returns true if a token was found and revoked.
+ */
+export async function revokeTokenByValue(tokenValue: string, tokenTypeHint?: 'access_token' | 'refresh_token'): Promise<boolean> {
+  // Try to find and delete by access_token
+  const result = await db.execute(
+    `DELETE FROM oauth2_tokens WHERE ${tokenTypeHint === 'refresh_token' ? 'refresh_token = ?' : 'access_token = ? OR refresh_token = ?'}`,
+    tokenTypeHint === 'refresh_token'
+      ? [tokenValue]
+      : [tokenValue, tokenValue]
+  );
+
+  const affected = isExecuteWithAffectedRows(result)
+    ? result.affectedRows > 0
+    : (isExecuteWithRowCount(result) && (result.rowCount ?? 0) > 0);
+
+  return affected;
 }

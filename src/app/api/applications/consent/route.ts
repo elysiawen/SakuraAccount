@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
     const scope = params.get('scope');
     const state = params.get('state');
     const nonce = params.get('nonce');
+    const codeChallenge = params.get('code_challenge');
+    const codeChallengeMethod = params.get('code_challenge_method') as 'S256' | 'plain' | null;
     const approved = params.get('approved') === 'true';
 
     // Non-redirectable: missing parameters
@@ -89,7 +91,12 @@ export async function POST(request: NextRequest) {
     // Save consent so future requests can skip the consent page (store nanoId as FK)
     await saveConsent(result.user.id, client.nanoId, scopes);
 
-    const code = await generateAuthorizationCode(client.nanoId, result.user.id, redirectUri, scopes, nonce || undefined);
+    const code = await generateAuthorizationCode(
+      client.nanoId, result.user.id, redirectUri, scopes,
+      nonce || undefined,
+      codeChallenge || undefined,
+      (codeChallengeMethod === 'S256' || codeChallengeMethod === 'plain') ? codeChallengeMethod : undefined
+    );
 
     // Log authorization event
     const { ip, userAgent } = getRequestMetadata(request);

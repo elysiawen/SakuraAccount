@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state');
     const nonce = searchParams.get('nonce');
     const prompt = searchParams.get('prompt');
+    const codeChallenge = searchParams.get('code_challenge');
+    const codeChallengeMethod = searchParams.get('code_challenge_method');
 
     // Non-redirectable errors: missing client_id or redirect_uri
     if (!clientId) {
@@ -87,6 +89,22 @@ export async function GET(request: NextRequest) {
       return redirectWithError(redirectUri, 'unsupported_response_type', state, 'Only response_type=code is supported.');
     }
 
+    // PKCE validation (RFC 7636)
+    // If code_challenge is provided, method must be S256 or plain (defaults to plain per RFC)
+    let validatedCodeChallenge: string | undefined;
+    let validatedCodeChallengeMethod: 'S256' | 'plain' | undefined;
+    if (codeChallenge) {
+      if (codeChallenge.length < 43 || codeChallenge.length > 128) {
+        return redirectWithError(redirectUri, 'invalid_request', state, 'code_challenge length must be between 43 and 128 characters.');
+      }
+      if (codeChallengeMethod && codeChallengeMethod !== 'S256' && codeChallengeMethod !== 'plain') {
+        return redirectWithError(redirectUri, 'invalid_request', state, 'code_challenge_method must be "S256" or "plain".');
+      }
+      // Per RFC 7636 §4.3, if code_challenge is present without method, default to "plain"
+      validatedCodeChallenge = codeChallenge;
+      validatedCodeChallengeMethod = (codeChallengeMethod as 'S256' | 'plain') || 'plain';
+    }
+
     // Check if user is authenticated
     const cookieStore = await cookies();
     const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -102,7 +120,12 @@ export async function GET(request: NextRequest) {
 
     // Helper: issue authorization code and redirect to client
     async function issueCodeAndRedirect(userId: string): Promise<NextResponse> {
-      const code = await generateAuthorizationCode(client!.nanoId, userId, redirectUri!, requestedScopes, nonce || undefined);
+      const code = await generateAuthorizationCode(
+        client!.nanoId, userId, redirectUri!, requestedScopes,
+        nonce || undefined,
+        validatedCodeChallenge,
+        validatedCodeChallengeMethod
+      );
       const callbackUrl = new URL(redirectUri!);
       callbackUrl.searchParams.set('code', code);
       if (state) callbackUrl.searchParams.set('state', state);
@@ -176,6 +199,8 @@ export async function GET(request: NextRequest) {
     if (scope) consentUrl.searchParams.set('scope', scope);
     if (state) consentUrl.searchParams.set('state', state);
     if (nonce) consentUrl.searchParams.set('nonce', nonce);
+    if (validatedCodeChallenge) consentUrl.searchParams.set('code_challenge', validatedCodeChallenge);
+    if (validatedCodeChallengeMethod) consentUrl.searchParams.set('code_challenge_method', validatedCodeChallengeMethod);
 
     return NextResponse.redirect(consentUrl, { headers: NO_STORE_HEADERS });
   } catch (error) {

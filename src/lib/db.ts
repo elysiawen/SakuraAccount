@@ -242,6 +242,8 @@ class Database {
         redirect_uri ${textType} NOT NULL,
         scopes ${jsonType} NOT NULL,
         nonce ${textType},
+        code_challenge ${textType},
+        code_challenge_method ${varcharType(10)},
         expires_at ${timestampType} NOT NULL,
         created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (client_id) REFERENCES oauth2_clients(nano_id) ON DELETE CASCADE,

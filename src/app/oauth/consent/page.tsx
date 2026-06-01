@@ -57,6 +57,8 @@ function ConsentContent() {
   const scope = searchParams.get('scope');
   const state = searchParams.get('state');
   const nonce = searchParams.get('nonce');
+  const codeChallenge = searchParams.get('code_challenge');
+  const codeChallengeMethod = searchParams.get('code_challenge_method');
 
   const scopes = scope ? scope.split(/[,\s]+/) : ['openid', 'profile'];
 
@@ -102,6 +104,8 @@ function ConsentContent() {
       if (scope) params.set('scope', scope);
       if (state) params.set('state', state);
       if (nonce) params.set('nonce', nonce || '');
+      if (codeChallenge) params.set('code_challenge', codeChallenge);
+      if (codeChallengeMethod) params.set('code_challenge_method', codeChallengeMethod);
       params.set('approved', approved.toString());
 
       const res = await fetch('/api/applications/consent', {

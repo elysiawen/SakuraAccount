@@ -7,6 +7,7 @@ export async function GET() {
     authorization_endpoint: `${ISSUER}/oauth/authorize`,
     token_endpoint: `${ISSUER}/oauth/token`,
     userinfo_endpoint: `${ISSUER}/oauth/userinfo`,
+    revocation_endpoint: `${ISSUER}/oauth/revoke`,
     jwks_uri: `${ISSUER}/oauth/.well-known/jwks.json`,
     scopes_supported: ['openid', 'profile', 'email'],
     response_types_supported: ['code'],
@@ -14,6 +15,7 @@ export async function GET() {
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['RS256'],
     token_endpoint_auth_methods_supported: ['client_secret_post', 'client_secret_basic'],
+    code_challenge_methods_supported: ['S256', 'plain'],
     claims_supported: [
       'sub', 'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce',
       'name', 'preferred_username', 'picture',
