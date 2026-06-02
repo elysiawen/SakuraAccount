@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:init": "ts-node --project tsconfig.node.json scripts/init.ts"
+    "db:init": "ts-node --project tsconfig.node.json scripts/init.ts",
+    "test:e2e": "npx tsx scripts/test-e2e.ts",
+    "dev:test": "start-server-and-test \"npm run dev\" http://localhost:3000 \"npm run test:e2e\""
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.969.0",

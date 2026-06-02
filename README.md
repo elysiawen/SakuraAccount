@@ -139,8 +139,12 @@ npm run dev
 | POST | `/oauth/token` | Token endpoint |
 | POST | `/oauth/revoke` | Token revocation endpoint |
 | GET | `/oauth/userinfo` | UserInfo endpoint |
-| GET | `/oauth/.well-known/openid-configuration` | OIDC discovery |
-| GET | `/oauth/.well-known/jwks.json` | JWKS |
+| GET | `/.well-known/openid-configuration` | OIDC discovery (standard path) |
+| GET | `/.well-known/jwks.json` | JWKS (standard path) |
+| GET | `/oauth/.well-known/openid-configuration` | OIDC discovery (alias) |
+| GET | `/oauth/.well-known/jwks.json` | JWKS (alias) |
+
+> **OIDC Client Compatibility**: The root-level `/.well-known/` endpoints follow the [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html) specification, ensuring compatibility with OIDC clients (e.g. AList, Grafana, MinIO) that construct discovery URLs by appending `/.well-known/openid-configuration` to the issuer URL.
 
 #### Authorization Parameters (`GET /oauth/authorize`)
 
@@ -183,6 +187,7 @@ npm run dev
 ```
 src/
 ├── app/
+│   ├── .well-known/   # OIDC discovery & JWKS (root path)
 │   ├── admin/          # Admin panel
 │   ├── api/            # API routes
 │   ├── auth/           # Login/Register

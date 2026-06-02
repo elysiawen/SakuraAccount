@@ -139,8 +139,12 @@ npm run dev
 | POST | `/oauth/token` | 令牌端点 |
 | POST | `/oauth/revoke` | 令牌撤销端点 |
 | GET | `/oauth/userinfo` | 用户信息端点 |
-| GET | `/oauth/.well-known/openid-configuration` | OIDC 发现 |
-| GET | `/oauth/.well-known/jwks.json` | JWKS |
+| GET | `/.well-known/openid-configuration` | OIDC 发现（标准路径） |
+| GET | `/.well-known/jwks.json` | JWKS（标准路径） |
+| GET | `/oauth/.well-known/openid-configuration` | OIDC 发现（别名） |
+| GET | `/oauth/.well-known/jwks.json` | JWKS（别名） |
+
+> **OIDC 客户端兼容性**：根路径的 `/.well-known/` 端点遵循 [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html) 规范，确保与在 issuer URL 后拼接 `/.well-known/openid-configuration` 来发现端点的 OIDC 客户端（如 AList、Grafana、MinIO）兼容。
 
 #### 授权参数 (`GET /oauth/authorize`)
 

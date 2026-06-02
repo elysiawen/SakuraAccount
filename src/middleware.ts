@@ -94,6 +94,7 @@ function getCorsHeaders(request: NextRequest): Record<string, string> | null {
   const { pathname } = request.nextUrl;
   const isOauthPublic =
     pathname.startsWith('/oauth/.well-known/') ||
+    pathname.startsWith('/.well-known/') ||
     pathname === '/oauth/authorize' ||
     pathname === '/oauth/userinfo' ||
     pathname === '/oauth/token';
@@ -114,7 +115,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Handle CORS preflight for OAuth2/OIDC endpoints
-  if (request.method === 'OPTIONS' && pathname.startsWith('/oauth/')) {
+  if (request.method === 'OPTIONS' && (pathname.startsWith('/oauth/') || pathname.startsWith('/.well-known/'))) {
     const corsHeaders = getCorsHeaders(request);
     if (corsHeaders) {
       return new NextResponse(null, { status: 204, headers: corsHeaders });
