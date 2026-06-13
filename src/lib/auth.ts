@@ -251,14 +251,22 @@ export async function deleteUserSessions(userId: string): Promise<void> {
   await db.execute('DELETE FROM sessions WHERE user_id = ?', [userId]);
 }
 
+export async function deleteExpiredSessions(): Promise<void> {
+  await db.execute('DELETE FROM sessions WHERE expires_at <= NOW()');
+}
+
 export async function getUserSessions(userId: string): Promise<UserSessionRecord[]> {
+  // Clean up expired sessions in the background (fire-and-forget)
+  deleteExpiredSessions().catch(() => {});
   return db.query<UserSessionRecord>(
-    'SELECT id, ip, user_agent, ip_location, isp, created_at, expires_at FROM sessions WHERE user_id = ? ORDER BY created_at DESC',
+    'SELECT id, ip, user_agent, ip_location, isp, created_at, expires_at FROM sessions WHERE user_id = ? AND expires_at > NOW() ORDER BY created_at DESC',
     [userId]
   );
 }
 
 export async function getAllSessions(page: number = 1, limit: number = DEFAULT_PAGE_SIZE, search?: string): Promise<{ sessions: AllSessionRecord[]; total: number }> {
+  // Clean up expired sessions in the background (fire-and-forget)
+  deleteExpiredSessions().catch(() => {});
   const offset = (page - 1) * limit;
   const conditions: string[] = [];
   const params: (string | number)[] = [];
