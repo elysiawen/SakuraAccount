@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getRequestMetadata, getSession } from '@/lib/auth';
 import { getClient, getConsentedScopes, generateAuthorizationCode, ISSUER } from '@/lib/oauth2';
 import { cookies } from 'next/headers';
 import { SESSION_COOKIE_NAME, LOGIN_PATH } from '@/lib/constants';
@@ -113,6 +113,7 @@ export async function GET(request: NextRequest) {
     // Check if user is authenticated
     const cookieStore = await cookies();
     const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    const { ip } = getRequestMetadata(request);
 
     const requestedScopes = scope ? scope.split(/[,\s]+/) : ['openid', 'profile'];
 
@@ -143,7 +144,6 @@ export async function GET(request: NextRequest) {
         return redirectWithError(redirectUri, 'login_required', state);
       }
 
-      const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
       const user = await getSession(sessionId, ip);
 
       if (!user) {
@@ -169,7 +169,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(loginUrl, { headers: NO_STORE_HEADERS });
     }
 
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
     const user = await getSession(sessionId, ip);
 
     if (!user) {

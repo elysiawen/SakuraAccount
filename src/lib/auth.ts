@@ -13,6 +13,7 @@ if (!APP_SECRET) {
 }
 const SECRET = new TextEncoder().encode(APP_SECRET);
 const SESSION_EXPIRY = parseInt(process.env.SESSION_EXPIRY || '604800');
+const MAX_IP_LENGTH = 45;
 
 // Cache to avoid updating session IP/location on every request (5 min TTL per session+IP)
 const _ipUpdateCache = new Map<string, number>();
@@ -145,13 +146,14 @@ export async function verifyJWT(token: string): Promise<JWTPayload | null> {
 export async function createSession(userId: string, ip?: string, userAgent?: string): Promise<string> {
   const sessionId = nanoid(32);
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY * 1000);
+  const normalizedIp = normalizeIp(ip);
 
   // Get IP location and ISP info
   let ipLocation = '';
   let isp = '';
-  if (ip) {
+  if (normalizedIp) {
     try {
-      const locInfo = await getLocation(ip);
+      const locInfo = await getLocation(normalizedIp);
       ipLocation = locInfo.location || '';
       isp = locInfo.isp || '';
     } catch {
@@ -161,7 +163,7 @@ export async function createSession(userId: string, ip?: string, userAgent?: str
 
   await db.execute(
     'INSERT INTO sessions (id, user_id, ip, user_agent, ip_location, isp, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [sessionId, userId, ip ?? null, userAgent ?? null, ipLocation, isp, expiresAt]
+    [sessionId, userId, normalizedIp ?? null, userAgent ?? null, ipLocation, isp, expiresAt]
   );
 
   return sessionId;
@@ -178,11 +180,21 @@ export async function setSessionCookie(sessionId: string): Promise<void> {
   });
 }
 
+function normalizeIp(ip?: string | null): string | undefined {
+  if (!ip) return undefined;
+  const normalized = ip.split(',')[0]?.trim();
+  if (!normalized || normalized.toLowerCase() === 'unknown') return undefined;
+  if (normalized.length > MAX_IP_LENGTH) return undefined;
+  return normalized;
+}
+
 export function getRequestMetadata(request: Request): { ip: string; userAgent: string } {
   // 优先级: CF-Connecting-IP (Cloudflare) > X-Forwarded-For > X-Real-IP
-  const ip = request.headers.get('cf-connecting-ip')
-    || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+  const ip = normalizeIp(
+    request.headers.get('cf-connecting-ip')
+    || request.headers.get('x-forwarded-for')
     || request.headers.get('x-real-ip')
+  )
     || 'unknown';
 
   return {
@@ -192,6 +204,7 @@ export function getRequestMetadata(request: Request): { ip: string; userAgent: s
 }
 
 export async function getSession(sessionId: string, ip?: string): Promise<User | null> {
+  const normalizedIp = normalizeIp(ip);
   const session = await db.getOne<SessionWithUserRow>(
     `SELECT s.*, u.id as user_id, u.username, u.email, u.nickname, u.avatar, u.role,
             u.email_verified, u.two_factor_enabled
@@ -204,21 +217,21 @@ export async function getSession(sessionId: string, ip?: string): Promise<User |
   if (!session) return null;
 
   // Update IP and location if changed (throttled: max once per 5 min per session+IP)
-  if (ip && session.ip !== ip) {
-    const cacheKey = `${sessionId}:${ip}`;
+  if (normalizedIp && session.ip !== normalizedIp) {
+    const cacheKey = `${sessionId}:${normalizedIp}`;
     const now = Date.now();
     const lastUpdate = _ipUpdateCache.get(cacheKey);
     if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
       _ipUpdateCache.set(cacheKey, now);
       try {
-        const locInfo = await getLocation(ip);
+        const locInfo = await getLocation(normalizedIp);
         await db.execute(
           'UPDATE sessions SET ip = ?, ip_location = ?, isp = ? WHERE id = ?',
-          [ip, locInfo.location || '', locInfo.isp || '', sessionId]
+          [normalizedIp, locInfo.location || '', locInfo.isp || '', sessionId]
         );
       } catch {
         // If location lookup fails, just update IP
-        await db.execute('UPDATE sessions SET ip = ? WHERE id = ?', [ip, sessionId]);
+        await db.execute('UPDATE sessions SET ip = ? WHERE id = ?', [normalizedIp, sessionId]);
       }
     }
   }

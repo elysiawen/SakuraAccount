@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getRequestMetadata, getSession } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { internalError } from '@/lib/api-response';
 import { SESSION_COOKIE_NAME } from '@/lib/constants';
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ user: null });
     }
 
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
+    const { ip } = getRequestMetadata(request);
     const user = await getSession(sessionId, ip);
 
     if (!user) {
