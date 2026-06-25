@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { PublicNav } from '@/components/PublicNav';
-import { SakuraPetal } from '@/components/SakuraPetal';
+import { SakuraPetals } from '@/components/SakuraPetal';
 import { requireSession } from '@/lib/require-session';
 import { BRAND_NAME } from '@/lib/constants';
 
@@ -40,13 +40,7 @@ export default async function Home() {
           }}
         />
 
-        <SakuraPetal delay={0} left="8%" size={10} duration={14} />
-        <SakuraPetal delay={3} left="20%" size={8} duration={16} />
-        <SakuraPetal delay={6} left="35%" size={12} duration={12} />
-        <SakuraPetal delay={2} left="50%" size={9} duration={15} />
-        <SakuraPetal delay={8} left="65%" size={11} duration={13} />
-        <SakuraPetal delay={4} left="78%" size={7} duration={17} />
-        <SakuraPetal delay={10} left="90%" size={10} duration={14} />
+        <SakuraPetals count={15} />
       </div>
 
       <div className="relative z-10 min-h-screen flex flex-col">
@@ -171,7 +165,7 @@ export default async function Home() {
           <span className="text-xs text-muted-foreground/50">&copy; {new Date().getFullYear()} {BRAND_NAME}</span>
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-1 rounded-full bg-emerald-500/60" />
-            <span className="text-xs text-muted-foreground/50">v0.1.0</span>
+            <span className="text-xs text-muted-foreground/50">{new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span>
           </div>
         </footer>
       </div>
