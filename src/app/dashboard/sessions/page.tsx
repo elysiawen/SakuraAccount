@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import { ShieldCheck, AlertCircle } from 'lucide-react';
-import { SessionCard, SessionsLoading, SessionsEmpty, SessionsSearch, type SessionBase } from '@/components/SessionCard';
+import { ShieldCheck, AlertCircle, Shield, Search } from 'lucide-react';
+import { SessionCard, SessionsLoading, SessionsEmpty, type SessionBase } from '@/components/SessionCard';
 
 export default function SessionsPage() {
   const t = useTranslations('dashboard.sessions');
@@ -89,12 +89,37 @@ export default function SessionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
-        <p className="text-sm text-text-tertiary mt-1">{t('subtitle')}</p>
-      </div>
+      <div className="rounded-2xl border border-border/70 bg-card/80 p-5 shadow-sm backdrop-blur-sm sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
+              {!loading && (
+                <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent-foreground/10 bg-accent-foreground/5 px-2.5 py-1 text-xs text-text-secondary">
+                  <Shield className="h-3.5 w-3.5 text-accent-foreground" />
+                  <span>{t('countBadge', { count: filtered.length })}</span>
+                </div>
+              )}
+            </div>
+            <p className="text-sm leading-6 text-text-tertiary">{t('subtitle')}</p>
+          </div>
 
-      <SessionsSearch value={searchTerm} onChange={setSearchTerm} t={t} />
+          {!loading && <hr className="border-border/50 lg:hidden" />}
+
+          {!loading && (
+            <div className="relative w-full lg:w-[340px] lg:shrink-0">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-quaternary" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={t('searchPlaceholder')}
+                className="h-11 w-full rounded-2xl border border-border bg-background/80 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-quaternary focus:outline-none focus:ring-2 focus:ring-accent-foreground/20 focus:border-accent-foreground/40 transition-all"
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Sessions */}
       {loading ? (
@@ -129,7 +154,7 @@ export default function SessionsPage() {
       )}
 
       {/* Security footer */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-900/20 rounded-2xl">
+      <div className="flex items-start gap-3 rounded-2xl border border-blue-100/60 bg-blue-50/40 p-4 shadow-sm dark:border-blue-900/20 dark:bg-blue-900/10">
         <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="text-sm font-bold text-blue-900 dark:text-blue-300">{t('securityTip')}</p>
