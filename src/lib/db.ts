@@ -48,6 +48,7 @@ class Database {
   private pgPool: PgPool | null = null;
   private mysqlPool: mysql.Pool | null = null;
   private tablesEnsured = false;
+  private tablesEnsuring: Promise<void> | null = null;
 
   constructor() {
     const dbType = (process.env.DB_TYPE || 'postgres') as DbType;
@@ -111,6 +112,10 @@ class Database {
 
   async query<T extends SqlRow = SqlRow>(sql: string, params?: SqlParams): Promise<T[]> {
     await this.ensureTables();
+    return this.queryRaw<T>(sql, params);
+  }
+
+  private async queryRaw<T extends SqlRow = SqlRow>(sql: string, params?: SqlParams): Promise<T[]> {
     if (this.config.type === 'postgres') {
       const pool = this.getPgPool();
       const pgSql = this.convertPlaceholders(sql);
@@ -130,6 +135,10 @@ class Database {
 
   async execute(sql: string, params?: SqlParams): Promise<ExecuteResult> {
     await this.ensureTables();
+    return this.executeRaw(sql, params);
+  }
+
+  private async executeRaw(sql: string, params?: SqlParams): Promise<ExecuteResult> {
     if (this.config.type === 'postgres') {
       const pool = this.getPgPool();
       const pgSql = this.convertPlaceholders(sql);
@@ -143,12 +152,22 @@ class Database {
 
   private async ensureTables(): Promise<void> {
     if (this.tablesEnsured) return;
-    this.tablesEnsured = true;
-    await this.createTables();
+    if (!this.tablesEnsuring) {
+      // Share one initialization pass so concurrent requests wait for tables to exist.
+      this.tablesEnsuring = (async () => {
+        try {
+          await this.createTables();
+          this.tablesEnsured = true;
+        } finally {
+          this.tablesEnsuring = null;
+        }
+      })();
+    }
+    await this.tablesEnsuring;
   }
 
   async initialize(): Promise<void> {
-    await this.createTables();
+    await this.ensureTables();
   }
 
   private async createTables(): Promise<void> {
@@ -159,7 +178,7 @@ class Database {
     const varcharType = (len: number) => `VARCHAR(${len})`;
 
     // Users table - using UUID v7 as primary key
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS users (
         id ${varcharType(36)} PRIMARY KEY,
         username ${varcharType(50)} UNIQUE NOT NULL,
@@ -177,7 +196,7 @@ class Database {
     `);
 
     // Sessions table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS sessions (
         id ${varcharType(255)} PRIMARY KEY,
         user_id ${varcharType(36)} NOT NULL,
@@ -192,7 +211,7 @@ class Database {
     `);
 
     // WebAuthn credentials table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS webauthn_credentials (
         id ${varcharType(255)} PRIMARY KEY,
         user_id ${varcharType(36)} NOT NULL,
@@ -213,7 +232,7 @@ class Database {
 
     // OAuth2 clients table
     // Schema: nano_id is PK (stable, never changes), client_id is UNIQUE (user-customizable OAuth2 identifier)
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS oauth2_clients (
         nano_id ${varcharType(32)} PRIMARY KEY,
         client_id ${varcharType(255)} UNIQUE NOT NULL,
@@ -234,7 +253,7 @@ class Database {
     `);
 
     // OAuth2 authorization codes table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS oauth2_authorization_codes (
         id ${varcharType(255)} PRIMARY KEY,
         client_id ${varcharType(255)} NOT NULL,
@@ -252,7 +271,7 @@ class Database {
     `);
 
     // OAuth2 tokens table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS oauth2_tokens (
         id ${varcharType(255)} PRIMARY KEY,
         client_id ${varcharType(255)} NOT NULL,
@@ -269,7 +288,7 @@ class Database {
     `);
 
     // OAuth2 consents table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS oauth2_consents (
         id SERIAL PRIMARY KEY,
         user_id ${varcharType(36)} NOT NULL,
@@ -284,7 +303,7 @@ class Database {
     `);
 
     // Audit logs table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS audit_logs (
         id SERIAL PRIMARY KEY,
         user_id ${varcharType(36)},
@@ -299,7 +318,7 @@ class Database {
     `);
 
     // Email verification tokens table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS email_verifications (
         id SERIAL PRIMARY KEY,
         user_id ${varcharType(36)} NOT NULL,
@@ -311,7 +330,7 @@ class Database {
     `);
 
     // Password reset tokens table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS password_resets (
         id SERIAL PRIMARY KEY,
         user_id ${varcharType(36)} NOT NULL,
@@ -323,7 +342,7 @@ class Database {
     `);
 
     // WebAuthn challenges table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS webauthn_challenges (
         id ${varcharType(64)} PRIMARY KEY,
         challenge ${textType} NOT NULL,
@@ -334,7 +353,7 @@ class Database {
     `);
 
     // Global config table
-    await this.execute(`
+    await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS global_config (
         key ${varcharType(255)} PRIMARY KEY,
         value ${textType},
@@ -362,7 +381,7 @@ class Database {
     ];
 
     for (const index of indexes) {
-      await this.execute(index);
+      await this.executeRaw(index);
     }
   }
 
