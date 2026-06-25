@@ -12,7 +12,7 @@ import CreateAppModal from '@/components/CreateAppModal';
 import type { OAuth2Client } from '@/types';
 
 export default function UserApplicationsPage() {
-  const t = useTranslations('dashboard.applications');
+  const t = useTranslations('apps');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const [clients, setClients] = useState<OAuth2Client[]>([]);

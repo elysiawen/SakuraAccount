@@ -62,13 +62,13 @@ function getOAuthEndpoints(t: (key: string) => string) {
     { label: t('endpointAuthorize'), path: '/oauth/authorize' },
     { label: t('endpointToken'), path: '/oauth/token' },
     { label: t('endpointUserinfo'), path: '/oauth/userinfo' },
-    { label: t('endpointOpenIdConfig'), path: '/oauth/.well-known/openid-configuration' },
-    { label: t('endpointJwks'), path: '/oauth/.well-known/jwks.json', note: t('endpointJwksNote') },
+    { label: t('endpointOpenIdConfig'), path: '/.well-known/openid-configuration', note: t('endpointOpenIdConfigNote') },
+    { label: t('endpointJwks'), path: '/.well-known/jwks.json', note: t('endpointJwksNote') },
   ];
 }
 
 function CopyButton({ text }: { text: string }) {
-  const t = useTranslations('admin.applications');
+  const t = useTranslations('apps');
   const { success } = useToast();
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -101,7 +101,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ApplicationDetail({ client: initialClient, apiPrefix = '/api/admin/applications', backHref = '/admin/applications', appUrl }: ApplicationDetailProps) {
-  const t = useTranslations('admin.applications');
+  const t = useTranslations('apps');
   const router = useRouter();
   const { success, error } = useToast();
   const { confirm } = useConfirm();

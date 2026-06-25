@@ -61,9 +61,10 @@
 - 🛡️ **Admin Panel** — User management, application management, audit logs
 - 📊 **Audit Logs** — Complete operation tracking with IP and device info
 - 🎨 **Modern UI** — Clean, responsive design with dark mode support
-- 🌍 **i18n** — Built-in Chinese and English support
+- 🌍 **i18n** — Built-in Chinese and English support, modular translation files
 - 🗄️ **Multi-Database** — PostgreSQL and MySQL support
 - 📦 **S3 Storage** — Local and S3-compatible storage for avatars and icons
+- 🧪 **OAuth Simulator** — Interactive demo to experience the full OAuth authorization flow
 
 ## Quick Start
 
@@ -187,7 +188,7 @@ npm run dev
 ```
 src/
 ├── app/
-│   ├── .well-known/   # OIDC discovery & JWKS (root path)
+│   ├── .well-known/   # OIDC discovery & JWKS (standard path)
 │   ├── admin/          # Admin panel
 │   ├── api/            # API routes
 │   ├── auth/           # Login/Register
@@ -197,6 +198,15 @@ src/
 ├── i18n/               # Internationalization
 ├── lib/                # Utilities
 └── messages/           # Translations (en/zh)
+    ├── common.json     # Shared UI (theme, confirm, pagination)
+    ├── auth.json       # Login, register, consent
+    ├── dashboard.json  # Sidebar nav, overview
+    ├── apps.json       # Application management & detail
+    ├── docs.json       # Integration docs & OAuth simulator
+    ├── account.json    # Settings, sessions, authorized apps
+    ├── admin.json      # Admin panel
+    ├── errors.json     # Error messages
+    └── api.json        # API response messages
 ```
 
 ## Deployment

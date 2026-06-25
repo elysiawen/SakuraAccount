@@ -24,7 +24,7 @@ export default function AdminApplicationsPage() {
 }
 
 function AdminApplicationsContent() {
-  const t = useTranslations('admin.applications');
+  const t = useTranslations('apps');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const searchParams = useSearchParams();

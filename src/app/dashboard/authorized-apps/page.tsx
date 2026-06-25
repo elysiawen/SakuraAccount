@@ -26,7 +26,7 @@ const SCOPE_KEYS: Record<string, string> = {
 };
 
 export default function AuthorizedAppsPage() {
-  const t = useTranslations('dashboard.authorizedApps');
+  const t = useTranslations('account.authorizedApps');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const [apps, setApps] = useState<AuthorizedApp[]>([]);

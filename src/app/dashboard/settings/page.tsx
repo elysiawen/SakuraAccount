@@ -33,7 +33,7 @@ interface Credential {
 }
 
 export default function SettingsPage() {
-  const t = useTranslations('dashboard.settings');
+  const t = useTranslations('account.settings');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
 

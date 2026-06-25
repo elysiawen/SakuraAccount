@@ -18,7 +18,7 @@ interface OAuthSimulatorProps {
 }
 
 export function OAuthSimulator({ isOpen, onClose }: OAuthSimulatorProps) {
-  const t = useTranslations('dashboard.applications.docs');
+  const t = useTranslations('docs');
   const { error } = useToast();
   const baseUrl = useMemo(() => getBaseUrl(), []);
   const [step, setStep] = useState<Step>('login');

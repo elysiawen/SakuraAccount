@@ -58,8 +58,8 @@ const ENDPOINTS = [
   { path: '/oauth/authorize', key: 'epAuthorize', desc: 'epAuthorizeDesc' },
   { path: '/oauth/token', key: 'epToken', desc: 'epTokenDesc' },
   { path: '/oauth/userinfo', key: 'epUserInfo', desc: 'epUserInfoDesc' },
-  { path: '/oauth/.well-known/openid-configuration', key: 'epOpenIdConfig', desc: 'epOpenIdConfigDesc' },
-  { path: '/oauth/.well-known/jwks.json', key: 'epJwks', desc: 'epJwksDesc' },
+  { path: '/.well-known/openid-configuration', key: 'epOpenIdConfig', desc: 'epOpenIdConfigDesc', legacyPath: '/oauth/.well-known/openid-configuration' },
+  { path: '/.well-known/jwks.json', key: 'epJwks', desc: 'epJwksDesc', legacyPath: '/oauth/.well-known/jwks.json' },
   { path: '/oauth/revoke', key: 'epRevoke', desc: 'epRevokeDesc' },
 ] as const;
 
@@ -460,7 +460,7 @@ const FAQ_DATA = [
 ];
 
 export default function DocsPage() {
-  const t = useTranslations('dashboard.applications.docs');
+  const t = useTranslations('docs');
   const { success } = useToast();
   const [activeTab, setActiveTab] = useState<CodeTab>('nextjs');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
@@ -736,6 +736,11 @@ export default function DocsPage() {
                   <code className="block sm:inline text-xs sm:text-sm font-mono text-text-secondary bg-muted px-2 py-1.5 rounded-lg break-all">
                     {baseUrl}{ep.path}
                   </code>
+                  {'legacyPath' in ep && ep.legacyPath && (
+                    <p className="text-[11px] text-text-quaternary mt-1.5">
+                      {t('legacyPathLabel')}: <code className="font-mono">{ep.legacyPath}</code>
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => handleCopyEndpoint(ep.path)}

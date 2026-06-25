@@ -8,7 +8,7 @@ import { ShieldCheck, AlertCircle, Shield, Search } from 'lucide-react';
 import { SessionCard, SessionsLoading, SessionsEmpty, type SessionBase } from '@/components/SessionCard';
 
 export default function SessionsPage() {
-  const t = useTranslations('dashboard.sessions');
+  const t = useTranslations('account.sessions');
   const { success, error } = useToast();
   const { confirm } = useConfirm();
   const [sessions, setSessions] = useState<SessionBase[]>([]);

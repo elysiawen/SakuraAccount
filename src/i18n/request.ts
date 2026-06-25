@@ -43,6 +43,9 @@ export default getRequestConfig(async () => {
       admin: (await import(`../messages/${locale}/admin.json`)).default,
       errors: (await import(`../messages/${locale}/errors.json`)).default,
       api: (await import(`../messages/${locale}/api.json`)).default,
+      apps: (await import(`../messages/${locale}/apps.json`)).default,
+      docs: (await import(`../messages/${locale}/docs.json`)).default,
+      account: (await import(`../messages/${locale}/account.json`)).default,
     },
   };
 });
