@@ -24,9 +24,11 @@ import {
   Shield,
   Lock,
   RotateCw,
+  Play,
 } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
 import { getBaseUrl } from '@/lib/utils';
+import { OAuthSimulator } from '@/components/OAuthSimulator';
 
 function useScrollReveal(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
@@ -463,6 +465,7 @@ export default function DocsPage() {
   const [activeTab, setActiveTab] = useState<CodeTab>('nextjs');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
+  const [showSimulator, setShowSimulator] = useState(false);
 
   const baseUrl = useMemo(() => getBaseUrl(), []);
   const codeSamples = useMemo(() => getCodeSamples(baseUrl), [baseUrl]);
@@ -547,6 +550,13 @@ export default function DocsPage() {
                 <FileCode className="w-4 h-4" />
                 {t('codeExamples')}
               </a>
+              <button
+                onClick={() => setShowSimulator(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-text-secondary bg-muted rounded-xl hover:bg-border strong transition-all hover:shadow-md"
+              >
+                <Play className="w-4 h-4" />
+                {t('tryIt')}
+              </button>
             </div>
           </div>
 
@@ -1047,6 +1057,8 @@ export default function DocsPage() {
           </div>
         </div>
       </div>
+
+      <OAuthSimulator isOpen={showSimulator} onClose={() => setShowSimulator(false)} />
     </div>
   );
 }
