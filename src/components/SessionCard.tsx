@@ -1,7 +1,7 @@
 'use client';
 
 import { Globe, Clock, ShieldCheck, XCircle, LayoutPanelLeft, Search } from 'lucide-react';
-import { BrowserIcon } from '@/components/BrowserIcon';
+import { BrowserIcon } from '@/components/primitives';
 import { parseUA } from '@/lib/parse-ua';
 
 export interface SessionBase {

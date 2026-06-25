@@ -84,7 +84,6 @@ export async function POST(request: NextRequest) {
       // Get and validate authorization code
       const authCode = await getAuthorizationCode(code);
       if (!authCode) {
-        console.warn(`[Token] Code not found or expired: ${code.substring(0, 8)}...`);
         return jsonError(400, 'invalid_grant', 'Authorization code is invalid or has expired.');
       }
 
@@ -96,7 +95,6 @@ export async function POST(request: NextRequest) {
           return jsonError(400, 'invalid_grant', 'code_verifier is required for this authorization code.');
         }
         if (!verifyCodeChallenge(codeVerifier, authCode.codeChallenge, authCode.codeChallengeMethod || 'S256')) {
-          console.warn(`[Token] PKCE verification failed for code: ${code.substring(0, 8)}...`);
           return jsonError(400, 'invalid_grant', 'code_verifier does not match the expected code_challenge.');
         }
       }

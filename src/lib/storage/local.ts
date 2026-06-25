@@ -1,4 +1,5 @@
 import { IStorageProvider } from './interface';
+import { getExtension } from './utils';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -22,7 +23,7 @@ export class LocalStorageProvider implements IStorageProvider {
             await fs.mkdir(this.storagePath, { recursive: true });
 
             // Determine file extension based on content type
-            const ext = this.getExtension(contentType);
+            const ext = getExtension(contentType);
             const fullFilename = `${filename}${ext}`;
             const filePath = path.join(this.storagePath, fullFilename);
 
@@ -70,12 +71,4 @@ export class LocalStorageProvider implements IStorageProvider {
         return `${this.publicPath}/${filename}`;
     }
 
-    private getExtension(contentType: string): string {
-        const map: Record<string, string> = {
-            'image/jpeg': '.jpg',
-            'image/png': '.png',
-            'image/webp': '.webp',
-        };
-        return map[contentType] || '.webp';
-    }
 }

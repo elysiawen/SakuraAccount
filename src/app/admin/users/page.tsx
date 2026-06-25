@@ -8,11 +8,12 @@ import { useConfirm } from '@/components/ConfirmProvider';
 import Search from '@/components/Search';
 import Pagination from '@/components/Pagination';
 import Modal from '@/components/Modal';
-import AvatarUpload from '@/components/AvatarUpload';
+import { AvatarUpload } from '@/components/avatar';
 import { Shield, User as UserIcon, Mail, Key, Edit, Trash2, Fingerprint, CalendarClock } from 'lucide-react';
 import { getErrorMessage } from '@/lib/api-error';
 import { getAvatarColor } from '@/components/AppIcon';
-import { Spinner } from '@/components/Spinner';
+import { Spinner } from '@/components/primitives';
+import { useAdminUser } from '@/app/admin/shell';
 import { JSON_HEADERS, DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
 interface User {
@@ -76,6 +77,7 @@ export default function AdminUsersPage() {
   };
   const { success, error } = useToast();
   const { confirm } = useConfirm();
+  const { setAvatar: setAdminAvatar, setNickname: setAdminNickname } = useAdminUser();
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -126,7 +128,8 @@ export default function AdminUsersPage() {
           const res = await fetch(`/api/admin/users?id=${userId}`, { method: 'DELETE' });
           if (res.ok) {
             success(t('userDeleted'));
-            fetchUsers();
+            setUsers(prev => prev.filter(u => u.id !== userId));
+            setTotal(prev => prev - 1);
           } else {
             const data = await res.json();
             error(getErrorMessage(data, t('deleteFailed')));
@@ -205,8 +208,20 @@ export default function AdminUsersPage() {
       });
       if (res.ok) {
         success(t('userUpdated'));
+        // Local update instead of full re-fetch
+        setUsers(prev => prev.map(u => u.id === editingUser.id ? {
+          ...u,
+          username: editForm.username,
+          nickname: editForm.nickname,
+          email: editForm.email,
+          role: isSelf ? u.role : editForm.role,
+          email_verified: editForm.emailVerified,
+        } : u));
+        // Sync sidebar if editing self
+        if (isSelf) {
+          setAdminNickname(editForm.nickname);
+        }
         setEditingUser(null);
-        fetchUsers();
       } else {
         const data = await res.json();
         error(getErrorMessage(data, t('updateFailed')));
@@ -479,7 +494,14 @@ export default function AdminUsersPage() {
                 currentAvatar={editingAvatar}
                 onAvatarChange={(url) => {
                   setEditingAvatar(url);
-                  fetchUsers();
+                  // Local update instead of full re-fetch
+                  if (editingUser) {
+                    setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, avatar: url } : u));
+                    // Sync sidebar avatar if editing self
+                    if (String(editingUser.id) === currentUserId) {
+                      setAdminAvatar(url);
+                    }
+                  }
                 }}
                 uploadUrl={`/api/admin/users/${editingUser.id}/avatar`}
                 deleteUrl={`/api/admin/users/${editingUser.id}/avatar`}

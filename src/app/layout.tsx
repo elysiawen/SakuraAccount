@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import ProgressBar from '@/components/ProgressBar';
-import Analytics from '@/components/Analytics';
+import { Analytics } from '@/components/Analytics';
 import { Providers } from '@/components/Providers';
 import { Suspense } from 'react';
 import { getLocale, getMessages, getTranslations, getTimeZone } from 'next-intl/server';

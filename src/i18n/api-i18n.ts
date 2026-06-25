@@ -1,5 +1,6 @@
 import { headers, cookies } from 'next/headers';
-import { type Locale, DEFAULT_LOCALE, isLocale } from '@/i18n/locales';
+import { type Locale } from '@/i18n/locales';
+import { resolveLocale } from '@/i18n/locale-resolver';
 
 interface MessageDictionary {
   [key: string]: string | MessageDictionary;
@@ -16,20 +17,8 @@ async function loadMessages(locale: Locale) {
 
 export async function getApiLocale(): Promise<Locale> {
   const cookieStore = await cookies();
-  const cookieLocale = cookieStore.get('NEXT_LOCALE')?.value;
-  if (cookieLocale && isLocale(cookieLocale)) {
-    return cookieLocale as Locale;
-  }
-
   const headersList = await headers();
-  const acceptLanguage = headersList.get('accept-language');
-  if (acceptLanguage) {
-    const preferred = acceptLanguage.split(',')[0]?.split('-')[0];
-    if (preferred && isLocale(preferred)) {
-      return preferred as Locale;
-    }
-  }
-  return DEFAULT_LOCALE;
+  return resolveLocale(cookieStore, headersList);
 }
 
 export async function tApi(key: string, locale?: Locale, params?: Record<string, string | number>): Promise<string> {

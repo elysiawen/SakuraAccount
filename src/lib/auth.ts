@@ -6,17 +6,25 @@ import { cookies } from 'next/headers';
 import { db } from './db';
 import { getLocation } from './ip-location';
 import { SESSION_COOKIE_NAME, DEFAULT_PAGE_SIZE } from './constants';
-
-const APP_SECRET = process.env.APP_SECRET;
-if (!APP_SECRET) {
-  throw new Error('FATAL: APP_SECRET environment variable is required. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
-}
-const SECRET = new TextEncoder().encode(APP_SECRET);
+import { SECRET } from './secret';
 const SESSION_EXPIRY = parseInt(process.env.SESSION_EXPIRY || '604800');
 const MAX_IP_LENGTH = 45;
 
 // Cache to avoid updating session IP/location on every request (5 min TTL per session+IP)
 const _ipUpdateCache = new Map<string, number>();
+const _IP_CACHE_TTL = 5 * 60 * 1000;
+let _ipCacheLastCleanup = Date.now();
+
+function cleanupIpCache() {
+  const now = Date.now();
+  if (now - _ipCacheLastCleanup < _IP_CACHE_TTL) return;
+  _ipCacheLastCleanup = now;
+  for (const [key, ts] of _ipUpdateCache) {
+    if (now - ts > _IP_CACHE_TTL) {
+      _ipUpdateCache.delete(key);
+    }
+  }
+}
 
 import type { User } from '@/types';
 export type { User };
@@ -218,6 +226,7 @@ export async function getSession(sessionId: string, ip?: string): Promise<User |
 
   // Update IP and location if changed (throttled: max once per 5 min per session+IP)
   if (normalizedIp && session.ip !== normalizedIp) {
+    cleanupIpCache();
     const cacheKey = `${sessionId}:${normalizedIp}`;
     const now = Date.now();
     const lastUpdate = _ipUpdateCache.get(cacheKey);

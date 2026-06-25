@@ -484,4 +484,8 @@ class Database {
   }
 }
 
-export const db = new Database();
+const globalForDb = globalThis as unknown as { __sakuraDb?: Database };
+export const db = globalForDb.__sakuraDb || new Database();
+if (process.env.NODE_ENV !== 'production') {
+  globalForDb.__sakuraDb = db;
+}

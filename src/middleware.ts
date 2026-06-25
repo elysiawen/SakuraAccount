@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, RATE_LIMITS, getClientIp } from '@/lib/rate-limit';
+import { resolveLocaleFromRequest } from '@/i18n/locale-resolver';
 
-// i18n support for middleware (Edge Runtime compatible)
+// i18n support for middleware (Edge Runtime compatible — no dynamic imports)
 const MESSAGES: Record<string, Record<string, string>> = {
   zh: {
     csrfFailed: 'CSRF 验证失败',
@@ -14,14 +15,8 @@ const MESSAGES: Record<string, Record<string, string>> = {
 };
 
 function getMiddlewareLocale(request: NextRequest): string {
-  const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
-  if (cookieLocale && MESSAGES[cookieLocale]) return cookieLocale;
-  const acceptLanguage = request.headers.get('accept-language');
-  if (acceptLanguage) {
-    const preferred = acceptLanguage.split(',')[0]?.split('-')[0];
-    if (preferred && MESSAGES[preferred]) return preferred;
-  }
-  return 'zh';
+  const locale = resolveLocaleFromRequest(request);
+  return MESSAGES[locale] ? locale : 'zh';
 }
 
 function tMiddleware(request: NextRequest, key: string, params?: Record<string, string | number>): string {
@@ -42,14 +37,6 @@ function errorResponse(code: string, message: string, status: number, headers?: 
     { status, headers }
   );
 }
-
-const SECURITY_HEADERS: Record<string, string> = {
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-};
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
 
@@ -123,10 +110,6 @@ export function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-
-  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
-    response.headers.set(key, value);
-  }
 
   // Add CORS headers for OAuth2/OIDC endpoints
   const corsHeaders = getCorsHeaders(request);

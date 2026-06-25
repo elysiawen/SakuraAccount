@@ -50,3 +50,13 @@ export function buildS3Endpoint(preset: string, accountId?: string, region?: str
       return '';
   }
 }
+
+const EXTENSION_MAP: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+};
+
+export function getExtension(contentType: string): string {
+  return EXTENSION_MAP[contentType] || '.webp';
+}

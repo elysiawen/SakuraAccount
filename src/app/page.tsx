@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 import { PublicNav } from '@/components/PublicNav';
-import { SakuraPetal } from '@/components/SakuraPetal';
+import { SakuraPetals } from '@/components/SakuraPetal';
 import { requireSession } from '@/lib/require-session';
 import { BRAND_NAME } from '@/lib/constants';
 
@@ -40,11 +40,7 @@ export default async function Home() {
           }}
         />
 
-        <SakuraPetal delay={0} left="10%" size={10} duration={14} />
-        <SakuraPetal delay={3} left="25%" size={8} duration={16} />
-        <SakuraPetal delay={6} left="45%" size={12} duration={12} />
-        <SakuraPetal delay={2} left="65%" size={9} duration={15} />
-        <SakuraPetal delay={8} left="85%" size={11} duration={13} />
+        <SakuraPetals count={15} />
       </div>
 
       <div className="relative z-10 min-h-screen flex flex-col">

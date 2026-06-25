@@ -7,8 +7,8 @@ import Image from 'next/image';
 import { Shield, User, Mail, Fingerprint, Check, X } from 'lucide-react';
 import { resolveAppIcon } from '@/lib/app-icon';
 import { useTranslations } from 'next-intl';
-import { Spinner } from '@/components/Spinner';
-import { SakuraPetal } from '@/components/SakuraPetal';
+import { Spinner } from '@/components/primitives';
+import { SakuraPetals } from '@/components/SakuraPetal';
 import { BRAND_NAME } from '@/lib/constants';
 
 interface ConsentUser {
@@ -171,16 +171,7 @@ function ConsentContent() {
             backgroundImage: `linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)`,
             backgroundSize: '60px 60px',
           }} />
-          <SakuraPetal delay={0} left="5%" size={10} duration={14} />
-          <SakuraPetal delay={2} left="15%" size={8} duration={16} />
-          <SakuraPetal delay={5} left="25%" size={12} duration={12} />
-          <SakuraPetal delay={1} left="35%" size={7} duration={15} />
-          <SakuraPetal delay={7} left="45%" size={9} duration={13} />
-          <SakuraPetal delay={3} left="55%" size={11} duration={17} />
-          <SakuraPetal delay={9} left="65%" size={8} duration={14} />
-          <SakuraPetal delay={4} left="75%" size={10} duration={16} />
-          <SakuraPetal delay={6} left="85%" size={7} duration={12} />
-          <SakuraPetal delay={8} left="95%" size={9} duration={15} />
+          <SakuraPetals count={15} />
         </div>
 
         {/* Nav */}

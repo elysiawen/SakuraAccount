@@ -11,7 +11,7 @@ import { AppIcon, getAvatarColor } from '@/components/AppIcon';
 import { JSON_HEADERS } from '@/lib/constants';
 import Modal from '@/components/Modal';
 import { getErrorMessage } from '@/lib/api-error';
-import { Spinner } from '@/components/Spinner';
+import { Spinner } from '@/components/primitives';
 import {
   ArrowLeft,
   Trash2,
@@ -404,8 +404,7 @@ async function handleCallback() {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
 
-      const userInfo = await fetchUserInfo(data.access_token);
-      console.log('用户信息:', userInfo);
+      await fetchUserInfo(data.access_token);
     }
   }
 }

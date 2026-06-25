@@ -163,7 +163,7 @@ npm run dev
 ## 安全特性
 
 - **SQL 注入防护** — 所有数据库查询使用参数化语句
-- **XSS 防护** — HTML 输出进行转义处理；配置 CSP 响应头
+- **XSS 防护** — HTML 输出进行转义处理；配置 CSP 响应头（无 `unsafe-eval`）
 - **CSRF 防护** — 通过 Origin/Referer 头校验状态变更请求
 - **密码哈希** — 使用 bcrypt，代价因子 12
 - **会话安全** — Cookie 设置 HttpOnly、Secure、SameSite=Lax（Lax 允许 OAuth 跨站跳转携带 Cookie，同时阻止 CSRF）
@@ -172,6 +172,7 @@ npm run dev
 - **路径遍历防护** — 本地存储删除时校验解析路径不逃逸出存储目录
 - **开放重定向防护** — 登出回调 URL 校验协议方案
 - **速率限制** — 登录、注册、WebAuthn 端点在生产环境启用速率限制
+- **无敏感日志** — 移除生产环境 debug 日志，授权码和令牌不会出现在日志中
 
 ## 技术栈
 
@@ -195,8 +196,21 @@ src/
 │   ├── dashboard/      # 用户控制台
 │   └── oauth/          # OAuth/OIDC 端点
 ├── components/         # React 组件
+│   ├── theme.tsx       # 主题系统（ThemeProvider + ThemeToggle）
+│   ├── primitives.tsx  # 基础 UI 组件（Spinner、BrowserIcon、NavLink）
+│   ├── avatar.tsx      # 头像裁剪与上传
+│   ├── Analytics.tsx   # 埋点统计 + 页面访问日志
+│   ├── avatar-context.tsx  # 用户状态共享（头像、昵称）
+│   └── ...
+├── hooks/              # 自定义 React Hooks
+│   └── useSessionCheck.ts  # 会话有效性轮询
 ├── i18n/               # 国际化
+│   ├── locale-resolver.ts  # 统一语言检测
+│   └── ...
 ├── lib/                # 工具库
+│   ├── secret.ts       # APP_SECRET 统一初始化
+│   └── storage/
+│       └── utils.ts    # 存储工具函数
 └── messages/           # 翻译文件 (en/zh)
     ├── common.json     # 全局共享（主题、确认框、分页）
     ├── auth.json       # 登录、注册、授权确认

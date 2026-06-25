@@ -3,12 +3,7 @@ import { nanoid } from 'nanoid';
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { db, isExecuteWithAffectedRows, isExecuteWithRowCount } from './db';
 import { DEFAULT_BASE_URL } from './utils';
-
-const APP_SECRET = process.env.APP_SECRET;
-if (!APP_SECRET) {
-  throw new Error('FATAL: APP_SECRET environment variable is required.');
-}
-const SECRET = new TextEncoder().encode(APP_SECRET);
+import { SECRET } from './secret';
 export const ACCESS_TOKEN_EXPIRY = parseInt(process.env.OAUTH2_ACCESS_TOKEN_EXPIRY || '3600');
 const REFRESH_TOKEN_EXPIRY = parseInt(process.env.OAUTH2_REFRESH_TOKEN_EXPIRY || '2592000');
 const AUTHORIZATION_CODE_EXPIRY = parseInt(process.env.OAUTH2_AUTHORIZATION_CODE_EXPIRY || '600');

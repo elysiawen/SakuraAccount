@@ -2,7 +2,7 @@
 
 import { ToastProvider } from './ToastProvider';
 import { ConfirmProvider } from './ConfirmProvider';
-import { ThemeProvider } from './ThemeProvider';
+import { ThemeProvider } from './theme';
 import { ReactNode } from 'react';
 import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl';
 

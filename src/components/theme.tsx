@@ -1,10 +1,11 @@
 'use client';
 
-import { useTheme } from 'next-themes';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
+import { ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Sun, Moon, Clock, Monitor } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+// ── Shared constants ─────────────────────────────────────────────
 const MODE_KEY = 'sakura-theme-mode';
 const MODE_CHANGED_EVENT = 'sakura-theme-mode-change';
 
@@ -13,6 +14,49 @@ function isDarkHour(): boolean {
   return hour >= 19 || hour < 7;
 }
 
+// ── ThemeProvider ────────────────────────────────────────────────
+function AutoThemeEffect() {
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    const mode = localStorage.getItem(MODE_KEY) ?? 'auto';
+    if (!localStorage.getItem(MODE_KEY)) localStorage.setItem(MODE_KEY, 'auto');
+
+    if (mode === 'auto') {
+      setTheme(isDarkHour() ? 'dark' : 'light');
+      const interval = setInterval(() => {
+        if (localStorage.getItem(MODE_KEY) === 'auto') {
+          setTheme(isDarkHour() ? 'dark' : 'light');
+        }
+      }, 60_000);
+      return () => clearInterval(interval);
+    } else if (mode === 'system') {
+      setTheme('system');
+    }
+  }, [setTheme]);
+
+  return null;
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  return (
+    <NextThemesProvider attribute="class" defaultTheme="light" storageKey="theme" enableSystem disableTransitionOnChange>
+      <AutoThemeEffect />
+      {children}
+    </NextThemesProvider>
+  );
+}
+
+export function getThemeMode(): string {
+  if (typeof window === 'undefined') return 'auto';
+  return localStorage.getItem(MODE_KEY) ?? 'auto';
+}
+
+export function setThemeMode(mode: 'light' | 'dark' | 'auto' | 'system') {
+  localStorage.setItem(MODE_KEY, mode);
+}
+
+// ── ThemeToggle ──────────────────────────────────────────────────
 const MODE_KEYS = ['light', 'dark', 'auto', 'system'] as const;
 type ThemeMode = (typeof MODE_KEYS)[number];
 
@@ -29,14 +73,10 @@ function getThemeModeSnapshot(): ThemeMode {
 }
 
 function subscribeThemeMode(onStoreChange: () => void) {
-  if (typeof window === 'undefined') {
-    return () => {};
-  }
-
+  if (typeof window === 'undefined') return () => {};
   const handleChange = () => onStoreChange();
   window.addEventListener('storage', handleChange);
   window.addEventListener(MODE_CHANGED_EVENT, handleChange);
-
   return () => {
     window.removeEventListener('storage', handleChange);
     window.removeEventListener(MODE_CHANGED_EVENT, handleChange);
@@ -57,28 +97,20 @@ export function ThemeToggle({ dropDown }: { dropDown?: boolean }) {
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const currentKey = mode;
-  const Icon = MODE_ICONS[currentKey];
+  const Icon = MODE_ICONS[mode];
 
   const selectMode = (next: ThemeMode) => {
     updateStoredThemeMode(next);
     setOpen(false);
-
-    if (next === 'auto') {
-      setTheme(isDarkHour() ? 'dark' : 'light');
-    } else if (next === 'system') {
-      setTheme('system');
-    } else {
-      setTheme(next);
-    }
+    if (next === 'auto') setTheme(isDarkHour() ? 'dark' : 'light');
+    else if (next === 'system') setTheme('system');
+    else setTheme(next);
   };
 
   return (
@@ -86,7 +118,7 @@ export function ThemeToggle({ dropDown }: { dropDown?: boolean }) {
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-colors"
-        title={t(currentKey)}
+        title={t(mode)}
       >
         <Icon className="w-4 h-4" />
         <svg className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,9 +135,7 @@ export function ThemeToggle({ dropDown }: { dropDown?: boolean }) {
                 key={key}
                 onClick={() => selectMode(key)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                  mode === key
-                    ? 'text-accent-foreground bg-accent font-medium'
-                    : 'text-text-secondary hover:bg-muted'
+                  mode === key ? 'text-accent-foreground bg-accent font-medium' : 'text-text-secondary hover:bg-muted'
                 }`}
               >
                 <ModeIcon className="w-4 h-4" />

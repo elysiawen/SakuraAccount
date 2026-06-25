@@ -5,11 +5,12 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import AvatarCropper from '@/components/AvatarCropper';
+import { AvatarCropper } from '@/components/avatar';
 import Modal from '@/components/Modal';
 import { getErrorMessage } from '@/lib/api-error';
-import { Spinner } from '@/components/Spinner';
+import { Spinner } from '@/components/primitives';
 import { MAX_AVATAR_SIZE, JSON_HEADERS, LOGIN_PATH } from '@/lib/constants';
+import { useDashboardUser } from '@/app/dashboard/layout-client';
 
 interface ProfileUser {
   id: string;
@@ -42,7 +43,9 @@ export default function SettingsPage() {
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatar, setAvatarRaw] = useState<string | null>(null);
+  const { setAvatar: setDashboardAvatar, setNickname: setDashboardNickname } = useDashboardUser();
+  const setAvatar = (url: string | null) => { setAvatarRaw(url); setDashboardAvatar(url); };
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [showCropper, setShowCropper] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -205,7 +208,7 @@ export default function SettingsPage() {
 
       if (res.ok) {
         success(t('profileUpdated'));
-        fetchProfile();
+        setDashboardNickname(nickname);
       } else {
         error(getErrorMessage(data, t('updateFailed')));
       }

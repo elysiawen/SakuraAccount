@@ -18,3 +18,46 @@ export function SakuraPetal({ delay, left, size, duration }: { delay: number; le
     </div>
   );
 }
+
+/**
+ * 生成一组均匀分布的樱花花瓣
+ * @param count 花瓣数量，默认 15
+ */
+export function SakuraPetals({ count = 15 }: { count?: number }) {
+  const petals = Array.from({ length: count }, (_, i) => {
+    const t = count === 1 ? 0.5 : i / (count - 1);
+    return {
+      delay: (i * 1.7) % 11,
+      left: `${3 + t * 92}%`,
+      size: Math.round(7 + Math.sin(i * 1.3) * 4),
+      duration: Math.round(12 + Math.cos(i * 0.9) * 5),
+    };
+  });
+
+  return (
+    <>
+      {petals.map((p, i) => (
+        <SakuraPetal key={i} {...p} />
+      ))}
+    </>
+  );
+}
+
+/**
+ * 带网格背景的樱花花瓣装饰区域，用于页面背景
+ */
+export function SakuraBackground({ count = 15, children }: { count?: number; children?: React.ReactNode }) {
+  return (
+    <div className="absolute inset-0">
+      <div
+        className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
+        style={{
+          backgroundImage: `linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
+      <SakuraPetals count={count} />
+      {children}
+    </div>
+  );
+}

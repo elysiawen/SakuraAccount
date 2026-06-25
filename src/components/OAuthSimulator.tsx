@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { Shield, User, Mail, Fingerprint, Check, X, Play } from 'lucide-react';
-import { Spinner } from '@/components/Spinner';
-import { SakuraPetal } from '@/components/SakuraPetal';
+import { Spinner } from '@/components/primitives';
+import { SakuraPetals } from '@/components/SakuraPetal';
 import { BRAND_NAME } from '@/lib/constants';
 import { useToast } from '@/components/ToastProvider';
 import { getBaseUrl } from '@/lib/utils';
@@ -250,12 +250,7 @@ export function OAuthSimulator({ isOpen, onClose }: OAuthSimulatorProps) {
                     backgroundSize: '60px 60px',
                   }}
                 />
-                <SakuraPetal delay={0} left="10%" size={10} duration={14} />
-                <SakuraPetal delay={3} left="25%" size={8} duration={16} />
-                <SakuraPetal delay={6} left="42%" size={12} duration={13} />
-                <SakuraPetal delay={2} left="60%" size={9} duration={15} />
-                <SakuraPetal delay={8} left="78%" size={11} duration={14} />
-                <SakuraPetal delay={5} left="92%" size={7} duration={17} />
+                <SakuraPetals count={10} />
               </div>
 
               {/* Nav bar */}
@@ -407,11 +402,7 @@ export function OAuthSimulator({ isOpen, onClose }: OAuthSimulatorProps) {
                   backgroundImage: `linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)`,
                   backgroundSize: '60px 60px',
                 }} />
-                <SakuraPetal delay={0} left="8%" size={8} duration={14} />
-                <SakuraPetal delay={2} left="25%" size={6} duration={16} />
-                <SakuraPetal delay={5} left="45%" size={9} duration={12} />
-                <SakuraPetal delay={3} left="65%" size={7} duration={15} />
-                <SakuraPetal delay={7} left="85%" size={5} duration={13} />
+                <SakuraPetals count={10} />
               </div>
 
               {/* Nav */}

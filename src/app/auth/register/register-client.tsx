@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PublicNav } from '@/components/PublicNav';
+import { SakuraBackground } from '@/components/SakuraPetal';
 import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage } from '@/lib/api-error';
-import { Spinner } from '@/components/Spinner';
-import { SakuraPetal } from '@/components/SakuraPetal';
+import { Spinner } from '@/components/primitives';
 import { JSON_HEADERS, LOGIN_PATH } from '@/lib/constants';
 
 export default function RegisterClient() {
@@ -68,41 +68,16 @@ export default function RegisterClient() {
     <main className="min-h-screen relative overflow-hidden flex items-center justify-center bg-background">
       <PublicNav absolute />
 
-      <div className="absolute inset-0">
+      <SakuraBackground count={15}>
         <div
           className="absolute w-[600px] h-[600px] rounded-full blur-[200px] opacity-30 dark:opacity-20"
-          style={{
-            background: 'radial-gradient(circle, #f472b6 0%, transparent 70%)',
-            right: '-10%',
-            top: '-15%',
-            animation: 'float 9s ease-in-out infinite',
-          }}
+          style={{ background: 'radial-gradient(circle, #f472b6 0%, transparent 70%)', right: '-10%', top: '-15%', animation: 'float 9s ease-in-out infinite' }}
         />
         <div
           className="absolute w-[500px] h-[500px] rounded-full blur-[180px] opacity-20 dark:opacity-15"
-          style={{
-            background: 'radial-gradient(circle, var(--accent-button) 0%, transparent 70%)',
-            left: '-5%',
-            bottom: '-10%',
-            animation: 'float 11s ease-in-out 3s infinite',
-          }}
+          style={{ background: 'radial-gradient(circle, var(--accent-button) 0%, transparent 70%)', left: '-5%', bottom: '-10%', animation: 'float 11s ease-in-out 3s infinite' }}
         />
-
-        <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
-          style={{
-            backgroundImage: `linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px',
-          }}
-        />
-
-        <SakuraPetal delay={1} left="12%" size={9} duration={15} />
-        <SakuraPetal delay={4} left="28%" size={11} duration={13} />
-        <SakuraPetal delay={0} left="45%" size={8} duration={16} />
-        <SakuraPetal delay={7} left="62%" size={10} duration={14} />
-        <SakuraPetal delay={3} left="78%" size={12} duration={12} />
-        <SakuraPetal delay={9} left="92%" size={7} duration={17} />
-      </div>
+      </SakuraBackground>
 
       <div className="relative z-10 w-full max-w-[960px] mx-auto px-6 py-12 flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
         <div className="hidden lg:block flex-1 text-center lg:text-left animate-slide-in-up" style={{ animationDelay: '0.1s' }}>

@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { IStorageProvider } from './interface';
+import { getExtension } from './utils';
 
 /**
  * Generic S3-compatible storage provider
@@ -47,7 +48,7 @@ export class S3Provider implements IStorageProvider {
 
     async upload(file: Buffer, filename: string, contentType: string): Promise<string> {
         try {
-            const ext = this.getExtension(contentType);
+            const ext = getExtension(contentType);
             const fullFilename = `${filename}${ext}`;
             const key = `${this.folder}/${fullFilename}`;
 
@@ -96,12 +97,4 @@ export class S3Provider implements IStorageProvider {
         return `${this.publicDomain}/${this.folder}/${filename}`;
     }
 
-    private getExtension(contentType: string): string {
-        const map: Record<string, string> = {
-            'image/jpeg': '.jpg',
-            'image/png': '.png',
-            'image/webp': '.webp',
-        };
-        return map[contentType] || '.webp';
-    }
 }

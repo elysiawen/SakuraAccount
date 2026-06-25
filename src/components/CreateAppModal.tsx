@@ -6,7 +6,7 @@ import { useToast } from '@/components/ToastProvider';
 import Modal from '@/components/Modal';
 import { getErrorMessage } from '@/lib/api-error';
 import { JSON_HEADERS } from '@/lib/constants';
-import { Spinner } from '@/components/Spinner';
+import { Spinner } from '@/components/primitives';
 
 interface UserSearchResult {
   id: string;

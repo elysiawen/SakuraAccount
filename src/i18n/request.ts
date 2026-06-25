@@ -1,37 +1,13 @@
 import { getRequestConfig } from 'next-intl/server';
 import { cookies, headers } from 'next/headers';
-import { type Locale, DEFAULT_LOCALE, isLocale, normalizeLocale, getTimezone } from './locales';
+import { getTimezone } from './locales';
+import { resolveLocale } from './locale-resolver';
 
 export default getRequestConfig(async () => {
   const cookieStore = await cookies();
   const headersList = await headers();
 
-  let locale: Locale = DEFAULT_LOCALE;
-
-  const cookieLocale = cookieStore.get('NEXT_LOCALE')?.value;
-  if (cookieLocale && isLocale(cookieLocale)) {
-    locale = normalizeLocale(cookieLocale) ?? DEFAULT_LOCALE;
-  } else {
-    const acceptLanguage = headersList.get('accept-language');
-    if (acceptLanguage) {
-      const candidates = acceptLanguage
-        .split(',')
-        .map(part => part.split(';')[0].trim());
-      for (const candidate of candidates) {
-        const fullMatch = normalizeLocale(candidate);
-        if (fullMatch) {
-          locale = fullMatch;
-          break;
-        }
-        const base = candidate.split('-')[0];
-        const baseMatch = normalizeLocale(base);
-        if (baseMatch) {
-          locale = baseMatch;
-          break;
-        }
-      }
-    }
-  }
+  const locale = await resolveLocale(cookieStore, headersList);
 
   return {
     locale,

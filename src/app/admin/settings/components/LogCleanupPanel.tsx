@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import { Spinner } from '@/components/Spinner';
+import { Spinner } from '@/components/primitives';
 import { JSON_HEADERS } from '@/lib/constants';
 
 const CATEGORIES = ['access', 'auth', 'operation'] as const;

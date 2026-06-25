@@ -163,7 +163,7 @@ npm run dev
 ## Security
 
 - **SQL Injection** — All database queries use parameterized statements
-- **XSS Protection** — HTML output is escaped; CSP headers configured
+- **XSS Protection** — HTML output is escaped; CSP headers configured (no `unsafe-eval`)
 - **CSRF Protection** — Origin/Referer header validation on state-changing requests
 - **Password Hashing** — bcrypt with cost factor 12
 - **Session Security** — HttpOnly, Secure, SameSite=Lax cookies (Lax allows OAuth cross-site redirects while blocking CSRF)
@@ -172,6 +172,7 @@ npm run dev
 - **Path Traversal Prevention** — Local storage delete verifies resolved paths stay within storage directory
 - **Open Redirect Prevention** — Logout callback URL validated against protocol schemes
 - **Rate Limiting** — Login, register, and WebAuthn endpoints are rate-limited in production
+- **No Sensitive Logging** — Debug logs removed from production; authorization codes and tokens are never logged
 
 ## Tech Stack
 
@@ -195,8 +196,21 @@ src/
 │   ├── dashboard/      # User dashboard
 │   └── oauth/          # OAuth/OIDC endpoints
 ├── components/         # React components
+│   ├── theme.tsx       # ThemeProvider + ThemeToggle
+│   ├── primitives.tsx  # Spinner, BrowserIcon, NavLink
+│   ├── avatar.tsx      # AvatarCropper + AvatarUpload
+│   ├── Analytics.tsx   # Analytics + PageLogger
+│   ├── avatar-context.tsx  # Shared user state (avatar, nickname)
+│   └── ...
+├── hooks/              # Custom React hooks
+│   └── useSessionCheck.ts  # Session validity polling
 ├── i18n/               # Internationalization
+│   ├── locale-resolver.ts  # Unified locale detection
+│   └── ...
 ├── lib/                # Utilities
+│   ├── secret.ts       # Shared APP_SECRET initialization
+│   └── storage/
+│       └── utils.ts    # Shared storage utilities
 └── messages/           # Translations (en/zh)
     ├── common.json     # Shared UI (theme, confirm, pagination)
     ├── auth.json       # Login, register, consent

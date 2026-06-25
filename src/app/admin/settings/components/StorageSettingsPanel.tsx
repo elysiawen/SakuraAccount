@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage } from '@/lib/api-error';
 import { S3_PRESETS, buildS3Endpoint } from '@/lib/storage/utils';
-import { Spinner } from '@/components/Spinner';
+import { Spinner } from '@/components/primitives';
 import { JSON_HEADERS } from '@/lib/constants';
 
 export default function StorageSettingsPanel() {

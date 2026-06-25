@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ThemeToggle } from './ThemeToggle';
+import { ThemeToggle } from './theme';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { BRAND_NAME } from '@/lib/constants';
 

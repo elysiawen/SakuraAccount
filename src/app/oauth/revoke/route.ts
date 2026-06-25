@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
     const revoked = await revokeTokenByValue(token, client.nanoId, tokenTypeHint || undefined);
 
     // RFC 7009 §2.2: Always return 200 OK
-    console.log(`[Revoke] Token revoked=${revoked} hint=${tokenTypeHint || 'none'}`);
     return new NextResponse(null, {
       status: 200,
       headers: NO_STORE_HEADERS,
