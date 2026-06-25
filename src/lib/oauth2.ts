@@ -464,7 +464,7 @@ export async function getConsentedScopes(userId: string, nanoId: string): Promis
 }
 
 export async function saveConsent(userId: string, nanoId: string, scopes: string[]): Promise<void> {
-  const scopesJson = JSON.stringify(scopes);
+  const scopesJson = JSON.stringify([...new Set(scopes)]);
   await db.execute(
     'DELETE FROM oauth2_consents WHERE user_id = ? AND client_id = ?',
     [userId, nanoId]

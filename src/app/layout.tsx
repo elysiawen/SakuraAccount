@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import Script from 'next/script';
 import './globals.css';
 import ProgressBar from '@/components/ProgressBar';
 import Analytics from '@/components/Analytics';
@@ -40,15 +39,14 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <head />
-      <body className="min-h-screen">
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
+      <head>
+        <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var m=localStorage.getItem('sakura-theme-mode')||'auto';var h=new Date().getHours();if(m==='dark'||(m==='auto'&&(h>=19||h<7)))document.documentElement.classList.add('dark')}catch(e){}})()`,
           }}
         />
+      </head>
+      <body className="min-h-screen">
         <Providers locale={locale} messages={messages} timeZone={timeZone}>
           <Suspense fallback={null}>
             <ProgressBar />

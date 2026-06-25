@@ -351,6 +351,16 @@ button {
   animation: shake 0.5s;
 }
 
+@keyframes checkIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-check-in {
+  animation: checkIn 0.3s ease-out;
+}
+
 /* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -367,4 +377,15 @@ button {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--muted-foreground);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

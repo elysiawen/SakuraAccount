@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       return htmlError(401, 'Login Required', 'You must be logged in to authorize an application.');
     }
 
-    const scopes = scope ? scope.split(/[,\s]+/) : ['openid', 'profile'];
+    const scopes = scope ? [...new Set(scope.split(/[,\s]+/))] : ['openid', 'profile'];
 
     // Save consent so future requests can skip the consent page (store nanoId as FK)
     await saveConsent(result.user.id, client.nanoId, scopes);

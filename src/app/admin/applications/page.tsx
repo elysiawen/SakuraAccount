@@ -7,12 +7,9 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ToastProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import Search from '@/components/Search';
-import Modal from '@/components/Modal';
+import CreateAppModal from '@/components/CreateAppModal';
 import { Plus, Trash2, Edit, Box } from 'lucide-react';
-import { getErrorMessage } from '@/lib/api-error';
 import { AppIcon } from '@/components/AppIcon';
-import { JSON_HEADERS } from '@/lib/constants';
-import { Spinner } from '@/components/Spinner';
 
 import type { OAuth2Client } from '@/types';
 
@@ -35,15 +32,6 @@ function AdminApplicationsContent() {
   const [clients, setClients] = useState<AdminClientSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [newClient, setNewClient] = useState({
-    name: '',
-    description: '',
-    appUrl: '',
-    redirectUris: '',
-    scopes: 'profile email',
-    grants: ['authorization_code', 'refresh_token'] as string[],
-  });
 
   const fetchClients = useCallback(async () => {
     try {
@@ -72,45 +60,6 @@ function AdminApplicationsContent() {
       client.nanoId.toLowerCase().includes(q)
     );
   });
-
-  const handleCreateClient = async () => {
-    if (!newClient.name || !newClient.redirectUris) {
-      error(t('fillRequired'));
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const res = await fetch('/api/admin/applications', {
-        method: 'POST',
-        credentials: 'include',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({
-          name: newClient.name,
-          description: newClient.description,
-          appUrl: newClient.appUrl || null,
-          redirectUris: newClient.redirectUris.split('\n').map(u => u.trim()).filter(Boolean),
-          grants: newClient.grants,
-          scopes: newClient.scopes.split(' ').filter(Boolean),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        success(t('appCreated'));
-        setShowCreateModal(false);
-        setNewClient({ name: '', description: '', appUrl: '', redirectUris: '', scopes: 'profile email', grants: ['authorization_code', 'refresh_token'] });
-        fetchClients();
-      } else {
-        error(getErrorMessage(data, t('createFailed')));
-      }
-    } catch {
-      error(t('createFailed'));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDeleteClient = async (nanoId: string, clientName: string) => {
     confirm(t('deleteConfirm', { name: clientName }), {
@@ -305,126 +254,14 @@ function AdminApplicationsContent() {
       </div>
 
       {/* Create Modal */}
-      <Modal
+      <CreateAppModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title={t('createApp')}
-        footer={
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 p-3 sm:p-4 border-t border-border">
-            <button
-              onClick={() => setShowCreateModal(false)}
-              className="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
-            >
-              {t('cancel')}
-            </button>
-            <button
-              onClick={handleCreateClient}
-              disabled={saving}
-              className="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-sm text-white bg-accent-button rounded-xl hover:bg-accent-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {saving && <Spinner className="h-4 w-4" />}
-              {saving ? t('saving') : t('save')}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('appNameLabel')} *</label>
-            <input
-              type="text"
-              value={newClient.name}
-              onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors text-sm"
-              placeholder={t('appNamePlaceholder')}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('description')}</label>
-            <input
-              type="text"
-              value={newClient.description}
-              onChange={(e) => setNewClient({ ...newClient, description: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors text-sm"
-              placeholder={t('descriptionPlaceholder')}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('appUrl')}</label>
-            <input
-              type="url"
-              value={newClient.appUrl}
-              onChange={(e) => setNewClient({ ...newClient, appUrl: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors text-sm"
-              placeholder="https://example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('redirectUri')} *</label>
-            <textarea
-              value={newClient.redirectUris}
-              onChange={(e) => setNewClient({ ...newClient, redirectUris: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 border border-border-input rounded-xl bg-card text-text-primary focus:outline-none focus:border-accent-foreground focus:ring-1 focus:ring-accent-foreground transition-colors h-20 sm:h-24 resize-none text-sm"
-              placeholder={t('redirectUriPlaceholder')}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('grantTypes')}</label>
-              <div className="space-y-2">
-                {[
-                  { value: 'authorization_code', label: t('grantAuthCode') },
-                  { value: 'client_credentials', label: t('grantClientCredentials') },
-                  { value: 'refresh_token', label: 'refresh_token' },
-                ].map((grant) => (
-                  <label key={grant.value} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newClient.grants.includes(grant.value)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setNewClient({ ...newClient, grants: [...newClient.grants, grant.value] });
-                        } else {
-                          setNewClient({ ...newClient, grants: newClient.grants.filter(g => g !== grant.value) });
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm text-text-primary">{grant.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('scopes')}</label>
-              <div className="space-y-2">
-                {[
-                  { value: 'openid', label: t('scopeOpenid') },
-                  { value: 'profile', label: t('scopeProfile') },
-                  { value: 'email', label: t('scopeEmail') },
-                ].map((scope) => (
-                  <label key={scope.value} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newClient.scopes.split(' ').includes(scope.value)}
-                      onChange={(e) => {
-                        const current = newClient.scopes.split(' ').filter(Boolean);
-                        if (e.target.checked) {
-                          setNewClient({ ...newClient, scopes: [...current, scope.value].join(' ') });
-                        } else {
-                          setNewClient({ ...newClient, scopes: current.filter(s => s !== scope.value).join(' ') });
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm text-text-primary">{scope.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
+        onCreated={fetchClients}
+        apiPath="/api/admin/applications"
+        t={t}
+        showUserSelect
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, getUserByUsername, logAudit, getRequestMetadata } from '@/lib/auth';
+import { getAllUsers, deleteUser, updateUserRole, updateUser, updateUserPassword, getUserByUsername, logAudit, getRequestMetadata, searchUsers } from '@/lib/auth';
 import { requireAdmin } from '@/lib/require-session';
 import { isValidEmail, validatePassword, validateNickname, VALIDATION_KEY_MAP } from '@/lib/utils';
 import {
@@ -23,6 +23,13 @@ export async function GET(request: NextRequest) {
     if ('error' in result) return result.error;
 
     const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search');
+
+    if (search) {
+      const users = await searchUsers(search);
+      return NextResponse.json({ users, total: users.length });
+    }
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || String(DEFAULT_PAGE_SIZE)), 100);
 

@@ -71,14 +71,21 @@ export default function SessionsPage() {
     });
   };
 
-  const filtered = sessions.filter(s => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      s.ip?.toLowerCase().includes(term) ||
-      s.user_agent?.toLowerCase().includes(term)
-    );
-  });
+  const filtered = sessions
+    .filter(s => {
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase();
+      return (
+        s.ip?.toLowerCase().includes(term) ||
+        s.user_agent?.toLowerCase().includes(term)
+      );
+    })
+    // 当前会话置顶
+    .sort((a, b) => {
+      if (a.id === currentSessionId) return -1;
+      if (b.id === currentSessionId) return 1;
+      return 0;
+    });
 
   return (
     <div className="space-y-6">

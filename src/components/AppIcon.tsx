@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import Image from 'next/image';
 import { resolveAppIcon } from '@/lib/app-icon';
 
@@ -32,7 +32,7 @@ const SIZE_CLASSES = {
   lg: 'w-16 h-16 text-xl',
 };
 
-export function AppIcon({ name, icon, size = 'md', className }: AppIconProps) {
+export const AppIcon = memo(function AppIcon({ name, icon, size = 'md', className }: AppIconProps) {
   const [errored, setErrored] = useState(false);
   const iconUrl = resolveAppIcon(icon);
   const sizeClass = className ?? SIZE_CLASSES[size];
@@ -57,4 +57,4 @@ export function AppIcon({ name, icon, size = 'md', className }: AppIconProps) {
       {name.charAt(0).toUpperCase()}
     </div>
   );
-}
+});

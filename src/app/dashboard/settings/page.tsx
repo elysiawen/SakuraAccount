@@ -354,31 +354,29 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-3xl mx-auto">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-muted rounded w-48"></div>
-          <div className="h-64 bg-muted rounded-xl"></div>
-          <div className="h-48 bg-muted rounded-xl"></div>
-        </div>
+      <div className="animate-pulse space-y-4 sm:space-y-6">
+        <div className="h-8 bg-muted rounded w-48"></div>
+        <div className="h-64 bg-muted rounded-xl"></div>
+        <div className="h-48 bg-muted rounded-xl"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold text-text-primary">{t('title')}</h1>
 
       {/* Profile Section */}
-      <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="bg-card rounded-xl p-5 sm:p-6 shadow-sm border border-border">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <span className="text-2xl">👤</span>
-          <h2 className="text-lg font-semibold text-text-primary">{t('profile')}</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-text-primary">{t('profile')}</h2>
         </div>
 
-        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
+        <div className="flex items-start gap-3 sm:gap-4 mb-5 pb-5 sm:mb-6 sm:pb-6 border-b border-border">
           {/* Avatar Preview */}
-          <div className="relative">
-            <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
+          <div className="relative shrink-0">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
               {avatar ? (
                 <Image src={avatar} alt={t('avatar')} fill className="object-cover" unoptimized />
               ) : (
@@ -427,7 +425,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <form onSubmit={handleUpdateProfile} className="space-y-4">
+        <form onSubmit={handleUpdateProfile} className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('username')}</label>
             <input
@@ -463,7 +461,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={savingProfile}
-              className="px-6 py-2.5 bg-accent-button text-white rounded-xl font-medium hover:bg-accent-button-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="w-full sm:w-auto px-6 py-2.5 bg-accent-button text-white rounded-xl font-medium hover:bg-accent-button-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {savingProfile && <Spinner className="h-4 w-4" />}
               {savingProfile ? t('saving') : t('saveProfile')}
@@ -473,13 +471,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Password Section */}
-      <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="bg-card rounded-xl p-5 sm:p-6 shadow-sm border border-border">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <span className="text-2xl">🔑</span>
-          <h2 className="text-lg font-semibold text-text-primary">{t('changePassword')}</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-text-primary">{t('changePassword')}</h2>
         </div>
 
-        <form onSubmit={handleChangePassword} className="space-y-4">
+        <form onSubmit={handleChangePassword} className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('currentPassword')}</label>
             <input
@@ -517,7 +515,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={changingPassword}
-              className="px-6 py-2.5 bg-accent-button text-white rounded-xl font-medium hover:bg-accent-button-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="w-full sm:w-auto px-6 py-2.5 bg-accent-button text-white rounded-xl font-medium hover:bg-accent-button-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {changingPassword && <Spinner className="h-4 w-4" />}
               {changingPassword ? t('changing') : t('changePasswordBtn')}
@@ -527,18 +525,18 @@ export default function SettingsPage() {
       </div>
 
       {/* Passkey Section */}
-      <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+      <div className="bg-card rounded-xl p-5 sm:p-6 shadow-sm border border-border">
+        <div className="flex items-center justify-between mb-4 sm:mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl">🔐</span>
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Passkey</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-text-primary">Passkey</h2>
               <p className="text-sm text-text-tertiary">{t('passwordlessLogin')}</p>
             </div>
           </div>
           <button
             onClick={startAddPasskey}
-            className="px-4 py-2 bg-accent-button text-white rounded-xl text-sm font-medium hover:bg-accent-button-hover transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-accent-button text-white rounded-xl text-sm font-medium hover:bg-accent-button-hover transition-colors flex items-center gap-2 shrink-0"
           >
             <span>+</span>
             <span>{t('addPasskey')}</span>
@@ -599,13 +597,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-card rounded-xl p-6 shadow-sm border border-destructive/30">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="bg-card rounded-xl p-5 sm:p-6 shadow-sm border border-destructive/30">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <span className="text-2xl">⚠️</span>
-          <h2 className="text-lg font-semibold text-destructive">{t('dangerZone')}</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-destructive">{t('dangerZone')}</h2>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="font-medium text-text-primary">{t('deleteAccount')}</p>
             <p className="text-sm text-text-tertiary">{t('deleteAccountDesc')}</p>
@@ -613,7 +611,7 @@ export default function SettingsPage() {
           <button
             onClick={handleDeleteAccount}
             disabled={user?.role === 'admin'}
-            className="px-4 py-2 text-sm text-destructive border border-destructive/30 rounded-xl hover:bg-error transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            className="w-full sm:w-auto px-4 py-2 text-sm text-destructive border border-destructive/30 rounded-xl hover:bg-error transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           >
             {t('deleteAccountBtn')}
           </button>

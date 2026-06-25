@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,6 +17,7 @@ import {
   Trash2,
   Edit,
   Copy,
+  Check,
   Key,
   Lock,
   RefreshCw,
@@ -69,19 +70,32 @@ function getOAuthEndpoints(t: (key: string) => string) {
 function CopyButton({ text }: { text: string }) {
   const t = useTranslations('admin.applications');
   const { success } = useToast();
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
     success(t('copied'));
+    // 清除旧定时器，重新开始 1.5s 倒计时
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setCopied(true);
+    timerRef.current = setTimeout(() => {
+      setCopied(false);
+      timerRef.current = undefined;
+    }, 1500);
   };
 
   return (
     <button
       onClick={handleCopy}
-      className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
+      className="p-2 rounded-lg border border-border hover:bg-muted transition-colors relative"
       title={t('copySecret')}
     >
-      <Copy className="w-4 h-4 text-text-tertiary" />
+      {copied ? (
+        <Check className="w-4 h-4 text-emerald-500 shrink-0 animate-check-in" />
+      ) : (
+        <Copy className="w-4 h-4 text-text-tertiary shrink-0" />
+      )}
     </button>
   );
 }
@@ -996,7 +1010,7 @@ if __name__ == '__main__':
         onClose={() => setShowEditModal(false)}
         title={t('editApp')}
         footer={
-          <div className="flex justify-end gap-3 p-4 border-t border-border">
+          <div className="flex justify-end gap-3 py-3 px-5 sm:px-6 border-t border-border">
             <button
               onClick={() => setShowEditModal(false)}
               className="px-4 py-2 text-sm text-text-secondary bg-muted rounded-xl hover:bg-border-strong transition-colors"
@@ -1014,10 +1028,10 @@ if __name__ == '__main__':
           </div>
         }
       >
-        <div className="space-y-4 p-4">
+        <div className="space-y-3">
           {/* Icon Config */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">{t('icon')}</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('icon')}</label>
             <div className="flex items-start gap-4">
               <div className="shrink-0">
                 {iconMode === 'custom' && iconUrl ? (
@@ -1181,55 +1195,81 @@ if __name__ == '__main__':
           </div>
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('grantTypes')}</label>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
-                { value: 'authorization_code', label: t('grantAuthorizationCode') },
-                { value: 'client_credentials', label: t('grantClientCredentials') },
-                { value: 'refresh_token', label: t('grantRefreshToken') },
-              ].map((grant) => (
-                <label key={grant.value} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editForm.grants.includes(grant.value)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setEditForm({ ...editForm, grants: [...editForm.grants, grant.value] });
-                      } else {
-                        setEditForm({ ...editForm, grants: editForm.grants.filter(g => g !== grant.value) });
-                      }
-                    }}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-text-primary">{grant.label}</span>
-                </label>
-              ))}
+                { value: 'authorization_code', label: t('grantAuthorizationCode'), icon: Key },
+                { value: 'client_credentials', label: t('grantClientCredentials'), icon: Lock },
+                { value: 'refresh_token', label: t('grantRefreshToken'), icon: RefreshCw },
+              ].map((grant) => {
+                const checked = editForm.grants.includes(grant.value);
+                const Icon = grant.icon;
+                return (
+                  <label
+                    key={grant.value}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-200 ${
+                      checked
+                        ? 'bg-accent-button/10 border-accent-button/40 text-accent-button'
+                        : 'border-border-input bg-card text-text-tertiary hover:border-accent-foreground/30 hover:text-text-secondary'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditForm({ ...editForm, grants: [...editForm.grants, grant.value] });
+                        } else {
+                          setEditForm({ ...editForm, grants: editForm.grants.filter(g => g !== grant.value) });
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <Icon className={`w-4 h-4 shrink-0 transition-colors duration-200 ${checked ? 'text-accent-button' : ''}`} />
+                    <span className={`text-xs font-medium leading-tight transition-colors duration-200 ${checked ? 'text-accent-button' : ''}`}>{grant.label}</span>
+                    <Check className={`w-3.5 h-3.5 ml-auto shrink-0 transition-all duration-200 ${checked ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
+                  </label>
+                );
+              })}
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('scopes')}</label>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
-                { value: 'openid', label: t('scopeOpenid') },
-                { value: 'profile', label: t('scopeProfile') },
-                { value: 'email', label: t('scopeEmail') },
-              ].map((scope) => (
-                <label key={scope.value} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editForm.scopes.split(' ').includes(scope.value)}
-                    onChange={(e) => {
-                      const current = editForm.scopes.split(' ').filter(Boolean);
-                      if (e.target.checked) {
-                        setEditForm({ ...editForm, scopes: [...current, scope.value].join(' ') });
-                      } else {
-                        setEditForm({ ...editForm, scopes: current.filter(s => s !== scope.value).join(' ') });
-                      }
-                    }}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-text-primary">{scope.label}</span>
-                </label>
-              ))}
+                { value: 'openid', label: t('scopeOpenid'), icon: Fingerprint },
+                { value: 'profile', label: t('scopeProfile'), icon: User },
+                { value: 'email', label: t('scopeEmail'), icon: Mail },
+              ].map((scope) => {
+                const checked = editForm.scopes.split(' ').includes(scope.value);
+                const Icon = scope.icon;
+                return (
+                  <label
+                    key={scope.value}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-200 ${
+                      checked
+                        ? 'bg-accent-button/10 border-accent-button/40 text-accent-button'
+                        : 'border-border-input bg-card text-text-tertiary hover:border-accent-foreground/30 hover:text-text-secondary'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const current = editForm.scopes.split(' ').filter(Boolean);
+                        if (e.target.checked) {
+                          setEditForm({ ...editForm, scopes: [...current, scope.value].join(' ') });
+                        } else {
+                          setEditForm({ ...editForm, scopes: current.filter(s => s !== scope.value).join(' ') });
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <Icon className={`w-4 h-4 shrink-0 transition-colors duration-200 ${checked ? 'text-accent-button' : ''}`} />
+                    <span className={`text-xs font-medium leading-tight transition-colors duration-200 ${checked ? 'text-accent-button' : ''}`}>{scope.label}</span>
+                    <Check className={`w-3.5 h-3.5 ml-auto shrink-0 transition-all duration-200 ${checked ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
+                  </label>
+                );
+              })}
             </div>
           </div>
           <div>

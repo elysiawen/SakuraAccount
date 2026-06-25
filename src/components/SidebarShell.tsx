@@ -100,7 +100,7 @@ export default function SidebarShell({
       {/* Main Content */}
       <div className={`flex-1 flex flex-col ${sidebarPadding} h-full min-w-0`}>
         {/* Mobile Header */}
-        <div className={`${mobileOnly} bg-card/80 backdrop-blur-md border-b border-border py-2 px-4 flex items-center sticky top-0 z-30`}>
+        <div className={`${mobileOnly} bg-card/90 backdrop-blur-lg border-b border-border py-2.5 px-5 flex items-center sticky top-0 z-30`}>
           <button
             onClick={() => setSidebarPath(pathname)}
             className="p-2 -ml-2 text-text-secondary hover:bg-muted rounded-lg"

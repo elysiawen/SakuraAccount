@@ -49,7 +49,7 @@ export default function Modal({
       <div
         className={`bg-card rounded-xl shadow-2xl w-full ${maxWidth} flex flex-col relative z-20 animate-zoom-in max-h-[90vh] ${className}`}
       >
-        <div className="flex justify-between items-center p-6 border-b border-border shrink-0">
+        <div className="flex justify-between items-center px-5 py-4 sm:px-6 sm:py-5 border-b border-border shrink-0">
           <div className="text-lg font-bold text-text-primary">{title}</div>
           <button
             onClick={onClose}
@@ -61,7 +61,7 @@ export default function Modal({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto custom-scrollbar">{children}</div>
+        <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar">{children}</div>
 
         {footer && <div className="shrink-0 rounded-b-xl overflow-hidden">{footer}</div>}
       </div>

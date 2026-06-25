@@ -14,7 +14,7 @@ export default async function Home() {
     <main className="min-h-screen relative overflow-hidden bg-background">
       <div className="absolute inset-0">
         <div
-          className="absolute w-[600px] h-[600px] rounded-full blur-[200px] opacity-30 dark:opacity-20"
+          className="hero-blur absolute w-[600px] h-[600px] rounded-full blur-[200px] opacity-30 dark:opacity-20"
           style={{
             background: 'radial-gradient(circle, var(--accent-button) 0%, transparent 70%)',
             left: '15%',
@@ -23,7 +23,7 @@ export default async function Home() {
           }}
         />
         <div
-          className="absolute w-[500px] h-[500px] rounded-full blur-[180px] opacity-20 dark:opacity-15"
+          className="hero-blur absolute w-[500px] h-[500px] rounded-full blur-[180px] opacity-20 dark:opacity-15"
           style={{
             background: 'radial-gradient(circle, #f472b6 0%, transparent 70%)',
             right: '5%',
@@ -40,13 +40,11 @@ export default async function Home() {
           }}
         />
 
-        <SakuraPetal delay={0} left="8%" size={10} duration={14} />
-        <SakuraPetal delay={3} left="20%" size={8} duration={16} />
-        <SakuraPetal delay={6} left="35%" size={12} duration={12} />
-        <SakuraPetal delay={2} left="50%" size={9} duration={15} />
-        <SakuraPetal delay={8} left="65%" size={11} duration={13} />
-        <SakuraPetal delay={4} left="78%" size={7} duration={17} />
-        <SakuraPetal delay={10} left="90%" size={10} duration={14} />
+        <SakuraPetal delay={0} left="10%" size={10} duration={14} />
+        <SakuraPetal delay={3} left="25%" size={8} duration={16} />
+        <SakuraPetal delay={6} left="45%" size={12} duration={12} />
+        <SakuraPetal delay={2} left="65%" size={9} duration={15} />
+        <SakuraPetal delay={8} left="85%" size={11} duration={13} />
       </div>
 
       <div className="relative z-10 min-h-screen flex flex-col">
@@ -70,27 +68,27 @@ export default async function Home() {
           />
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-5 sm:px-8 md:px-16 pt-32 sm:pt-0">
+        <div className="flex-1 flex items-center justify-center px-4 xs:px-5 sm:px-8 md:px-16 pt-24 xs:pt-28 sm:pt-0">
           <div className="max-w-4xl w-full">
             <div className="animate-slide-in-up" style={{ animationDelay: '0.25s' }}>
-              <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-light text-foreground leading-[0.95] tracking-tight mb-2">
+              <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-light text-foreground leading-[0.95] tracking-tight mb-2">
                 {t('title1')}
               </h1>
-              <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-light leading-[0.95] tracking-tight mb-6 sm:mb-8">
+              <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-light leading-[0.95] tracking-tight mb-4 xs:mb-6 sm:mb-8">
                 <span className="text-foreground">{t('title2')}</span>
-                <span className="text-muted-foreground/30 ml-2 sm:ml-4">{t('title3')}</span>
+                <span className="text-muted-foreground/30 ml-1.5 xs:ml-2 sm:ml-4">{t('title3')}</span>
               </h1>
             </div>
 
-            <p className="text-base md:text-lg text-muted-foreground max-w-lg mb-8 sm:mb-12 leading-relaxed animate-slide-in-up" style={{ animationDelay: '0.35s' }}>
+            <p className="text-sm xs:text-base md:text-lg text-muted-foreground max-w-lg mb-6 xs:mb-8 sm:mb-12 leading-relaxed animate-slide-in-up" style={{ animationDelay: '0.35s' }}>
               {t('subtitle')}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 mb-12 sm:mb-20 animate-slide-in-up" style={{ animationDelay: '0.45s' }}>
+            <div className="flex flex-col sm:flex-row gap-2.5 xs:gap-3 mb-10 xs:mb-12 sm:mb-20 animate-slide-in-up" style={{ animationDelay: '0.45s' }}>
               {user ? (
                 <Link
                   href="/dashboard"
-                  className="group inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-accent-button text-white rounded-lg font-medium text-sm hover:bg-accent-button-hover transition-all duration-200"
+                  className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 xs:px-8 py-3 xs:py-3.5 bg-accent-button text-white rounded-lg font-medium text-sm hover:bg-accent-button-hover transition-all duration-200 active:scale-[0.98]"
                 >
                   <span>{t('enterConsole')}</span>
                   <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -101,7 +99,7 @@ export default async function Home() {
                 <>
                   <Link
                     href="/auth/register"
-                    className="group inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-accent-button text-white rounded-lg font-medium text-sm hover:bg-accent-button-hover transition-all duration-200"
+                    className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 xs:px-8 py-3 xs:py-3.5 bg-accent-button text-white rounded-lg font-medium text-sm hover:bg-accent-button-hover transition-all duration-200 active:scale-[0.98]"
                   >
                     <span>{t('getStarted')}</span>
                     <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -110,7 +108,7 @@ export default async function Home() {
                   </Link>
                   <Link
                     href="/auth/login"
-                    className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-muted-foreground hover:text-foreground bg-card/60 hover:bg-card border border-border hover:border-border-strong rounded-lg text-sm transition-all duration-200"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 xs:px-8 py-3 xs:py-3.5 text-muted-foreground hover:text-foreground bg-card/60 hover:bg-card border border-border hover:border-border-strong rounded-lg text-sm transition-all duration-200 active:scale-[0.98]"
                   >
                     {t('loginAccount')}
                   </Link>
@@ -118,7 +116,7 @@ export default async function Home() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden animate-slide-in-up" style={{ animationDelay: '0.55s' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden animate-slide-in-up" style={{ animationDelay: '0.55s' }}>
               {[
                 {
                   icon: (
@@ -154,7 +152,7 @@ export default async function Home() {
               ].map((feature, i) => (
                 <div
                   key={i}
-                  className="group bg-card hover:bg-muted/50 p-5 sm:p-6 md:p-8 transition-colors duration-300"
+                  className="group bg-card hover:bg-muted/50 p-4 xs:p-5 sm:p-6 md:p-8 transition-colors duration-300"
                 >
                   <div className="text-muted-foreground/50 group-hover:text-accent-button transition-colors duration-300 mb-4">
                     {feature.icon}
@@ -167,7 +165,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <footer className="px-5 sm:px-8 md:px-16 py-6 flex items-center justify-between animate-slide-in-up" style={{ animationDelay: '0.7s' }}>
+        <footer className="px-4 xs:px-5 sm:px-8 md:px-16 py-5 xs:py-6 flex flex-col xs:flex-row items-center xs:items-start justify-between gap-2 animate-slide-in-up" style={{ animationDelay: '0.7s' }}>
           <span className="text-xs text-muted-foreground/50">&copy; {new Date().getFullYear()} {BRAND_NAME}</span>
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-1 rounded-full bg-emerald-500/60" />

@@ -24,11 +24,14 @@ export async function POST(request: NextRequest) {
     const { user: admin } = result;
 
     const body = await request.json();
-    const { name, description, appUrl, redirectUris, grants, scopes } = body;
+    const { name, description, appUrl, redirectUris, grants, scopes, userId } = body;
 
     if (!name || !redirectUris || !redirectUris.length) {
       return paramInvalid(await tApi('app.fieldsRequired'));
     }
+
+    // Admin can create apps under any user; defaults to self
+    const targetUserId = userId || admin.id;
 
     const client = await createClient({
       name,
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
       redirectUris,
       grants: grants || ['authorization_code', 'refresh_token'],
       scopes: scopes || ['profile', 'email'],
-      userId: admin.id,
+      userId: targetUserId,
     });
 
     return NextResponse.json({ client });

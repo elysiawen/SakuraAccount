@@ -17,16 +17,20 @@ interface TokenAppRow extends Record<string, unknown> {
 }
 
 function parseScopes(value: TokenAppRow['consented_scopes']): string[] {
-  if (Array.isArray(value)) return value.filter((scope): scope is string => typeof scope === 'string');
-  if (typeof value === 'string') {
+  let arr: string[];
+  if (Array.isArray(value)) {
+    arr = value.filter((scope): scope is string => typeof scope === 'string');
+  } else if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed.filter((scope): scope is string => typeof scope === 'string') : [];
+      arr = Array.isArray(parsed) ? parsed.filter((scope): scope is string => typeof scope === 'string') : [];
     } catch {
       return [];
     }
+  } else {
+    return [];
   }
-  return [];
+  return [...new Set(arr)];
 }
 
 export async function GET() {

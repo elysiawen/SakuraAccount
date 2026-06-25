@@ -151,7 +151,7 @@ export default function AuthorizedAppsPage() {
                     </p>
                     <span className="text-xs text-text-quaternary shrink-0">·</span>
                     <div className="flex items-center gap-1 shrink-0">
-                      {app.scopes.map((scope) => (
+                      {[...new Set(app.scopes)].map((scope) => (
                         <span key={scope} className="text-xs px-1.5 py-0.5 bg-muted text-text-secondary rounded">
                           {SCOPE_KEYS[scope] ? t(SCOPE_KEYS[scope]) : scope}
                         </span>
