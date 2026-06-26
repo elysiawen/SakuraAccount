@@ -14,7 +14,7 @@ export function Analytics() {
   return (
     <>
       {umamiWebsiteId && umamiScriptUrl && (
-        <Script defer src={umamiScriptUrl} data-website-id={umamiWebsiteId} strategy="afterInteractive" />
+        <script defer src={umamiScriptUrl} data-website-id={umamiWebsiteId} dangerouslySetInnerHTML={{ __html: '' }} />
       )}
       {gaId && (
         <>
