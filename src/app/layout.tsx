@@ -45,6 +45,7 @@ export default async function RootLayout({
             __html: `(function(){try{var m=localStorage.getItem('sakura-theme-mode')||'auto';var h=new Date().getHours();if(m==='dark'||(m==='auto'&&(h>=19||h<7)))document.documentElement.classList.add('dark')}catch(e){}})()`,
           }}
         />
+        <Analytics />
       </head>
       <body className="min-h-screen">
         <Providers locale={locale} messages={messages} timeZone={timeZone}>
@@ -53,7 +54,6 @@ export default async function RootLayout({
           </Suspense>
           {children}
         </Providers>
-        <Analytics />
       </body>
     </html>
   );
