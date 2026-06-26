@@ -5,7 +5,7 @@ import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useConfirm } from '@/components/ConfirmProvider';
 import SidebarShell from '@/components/SidebarShell';
-import { PageLogger } from '@/components/Analytics';
+import { PageLogger } from '@/components/PageLogger';
 import { NavLink } from '@/components/primitives';
 import { UserProvider, useUser } from '@/components/avatar-context';
 import { useSessionCheck } from '@/hooks/useSessionCheck';

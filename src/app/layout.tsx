@@ -53,12 +53,7 @@ export default async function RootLayout({
           </Suspense>
           {children}
         </Providers>
-        <Analytics
-          umamiWebsiteId={process.env.UMAMI_WEBSITE_ID}
-          umamiScriptUrl={process.env.UMAMI_SCRIPT_URL}
-          gaId={process.env.GOOGLE_ANALYTICS_ID}
-          clarityId={process.env.CLARITY_ID}
-        />
+        <Analytics />
       </body>
     </html>
   );

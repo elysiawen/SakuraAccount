@@ -1,20 +1,13 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
 import Script from 'next/script';
-import { usePathname } from 'next/navigation';
-import { JSON_HEADERS } from '@/lib/constants';
 
-// ── Analytics ────────────────────────────────────────────────────
+// ── Analytics (Server Component) ─────────────────────────────────
 
-interface AnalyticsProps {
-  umamiWebsiteId?: string;
-  umamiScriptUrl?: string;
-  gaId?: string;
-  clarityId?: string;
-}
+export function Analytics() {
+  const umamiWebsiteId = process.env.UMAMI_WEBSITE_ID;
+  const umamiScriptUrl = process.env.UMAMI_SCRIPT_URL;
+  const gaId = process.env.GOOGLE_ANALYTICS_ID;
+  const clarityId = process.env.CLARITY_ID;
 
-export function Analytics({ umamiWebsiteId, umamiScriptUrl, gaId, clarityId }: AnalyticsProps) {
   const hasAny = (umamiWebsiteId && umamiScriptUrl) || gaId || clarityId;
   if (!hasAny) return null;
 
@@ -38,25 +31,4 @@ export function Analytics({ umamiWebsiteId, umamiScriptUrl, gaId, clarityId }: A
       )}
     </>
   );
-}
-
-// ── PageLogger ───────────────────────────────────────────────────
-
-export function PageLogger() {
-  const pathname = usePathname();
-  const lastPath = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (pathname === lastPath.current) return;
-    lastPath.current = pathname;
-
-    fetch('/api/user/log-visit', {
-      method: 'POST',
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ path: pathname }),
-      keepalive: true,
-    }).catch(() => {});
-  }, [pathname]);
-
-  return null;
 }
