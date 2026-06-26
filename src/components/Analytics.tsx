@@ -7,12 +7,14 @@ import { JSON_HEADERS } from '@/lib/constants';
 
 // ── Analytics ────────────────────────────────────────────────────
 
-export function Analytics() {
-  const umamiWebsiteId = process.env.UMAMI_WEBSITE_ID;
-  const umamiScriptUrl = process.env.UMAMI_SCRIPT_URL;
-  const gaId = process.env.GOOGLE_ANALYTICS_ID;
-  const clarityId = process.env.CLARITY_ID;
+interface AnalyticsProps {
+  umamiWebsiteId?: string;
+  umamiScriptUrl?: string;
+  gaId?: string;
+  clarityId?: string;
+}
 
+export function Analytics({ umamiWebsiteId, umamiScriptUrl, gaId, clarityId }: AnalyticsProps) {
   const hasAny = (umamiWebsiteId && umamiScriptUrl) || gaId || clarityId;
   if (!hasAny) return null;
 
