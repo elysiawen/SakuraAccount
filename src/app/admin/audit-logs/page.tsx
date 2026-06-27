@@ -179,7 +179,7 @@ function AuditLogsContent() {
                           {getActionLabel(log.action)}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-text-secondary font-mono">
+                      <td className="px-5 py-3.5 text-sm text-text-secondary font-mono max-w-[180px] truncate" title={log.ip}>
                         {log.ip || '-'}
                       </td>
                       <td className="px-5 py-3.5 text-sm text-text-tertiary max-w-xs truncate">
@@ -209,7 +209,7 @@ function AuditLogsContent() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-text-quaternary">
-                    <span className="font-mono">{log.ip || '-'}</span>
+                    <span className="font-mono truncate max-w-[140px]" title={log.ip}>{log.ip || '-'}</span>
                     <span className="shrink-0">·</span>
                     <span className="shrink-0">{new Date(log.created_at).toLocaleString('zh-CN')}</span>
                   </div>
@@ -250,9 +250,9 @@ function AuditLogsContent() {
                   {getActionLabel(selectedLog.action)}
                 </span>
               </div>
-              <div>
+              <div className="col-span-2">
                 <p className="text-xs text-text-quaternary mb-1">{t('ip')}</p>
-                <p className="text-sm text-text-primary font-mono">{selectedLog.ip || '-'}</p>
+                <p className="text-sm text-text-primary font-mono break-all">{selectedLog.ip || '-'}</p>
               </div>
               <div>
                 <p className="text-xs text-text-quaternary mb-1">{t('timestamp')}</p>
