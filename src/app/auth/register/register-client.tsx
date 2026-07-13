@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -21,12 +21,52 @@ export default function RegisterClient() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [nickname, setNickname] = useState('');
+  const [code, setCode] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sendLoading, setSendLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const [focused, setFocused] = useState<string | null>(null);
+  const codeRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown(prev => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  const handleSendCode = useCallback(async () => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      error(t('invalidEmail'));
+      return;
+    }
+    setSendLoading(true);
+    try {
+      const res = await fetch('/api/auth/verify-email', {
+        method: 'POST', headers: JSON_HEADERS,
+        body: JSON.stringify({ email, registration: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        success(data.message || t('codeSent'));
+        setCountdown(60);
+        setCode('');
+        codeRef.current?.focus();
+      } else {
+        error(getErrorMessage(data, t('sendFailed')));
+      }
+    } catch {
+      error(t('networkError'));
+    } finally {
+      setSendLoading(false);
+    }
+  }, [email, success, error, t]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !code) {
       error(t('fillRequired'));
       return;
     }
@@ -38,12 +78,20 @@ export default function RegisterClient() {
       error(t('passwordTooShort'));
       return;
     }
+    if (code.length !== 6) {
+      error(t('invalidCode'));
+      return;
+    }
+    if (!agreed) {
+      error(t('agreeRequired'));
+      return;
+    }
     setLoading(true);
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: JSON_HEADERS,
-        body: JSON.stringify({ username, email, password, nickname: nickname || username }),
+        body: JSON.stringify({ username, email, password, nickname: nickname || username, code }),
       });
       const data = await response.json();
       if (response.ok) {
@@ -57,7 +105,7 @@ export default function RegisterClient() {
     } finally {
       setLoading(false);
     }
-  }, [username, email, password, confirmPassword, nickname, router, success, error, t]);
+  }, [username, email, password, confirmPassword, nickname, code, agreed, router, success, error, t]);
 
   const inputStyle = (field: string) => ({
     borderColor: focused === field ? 'var(--accent-button)' : 'var(--border-input)',
@@ -193,6 +241,61 @@ export default function RegisterClient() {
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+                  {t('verifyCode')} <span className="text-pink-400">*</span>
+                </label>
+                <div className="flex gap-3">
+                  <input
+                    ref={codeRef}
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onFocus={() => setFocused('code')}
+                    onBlur={() => setFocused(null)}
+                    className="flex-1 px-4 py-2.5 bg-background border rounded-lg text-sm text-foreground placeholder-muted-foreground/50 outline-none transition-all duration-200"
+                    style={inputStyle('code')}
+                    placeholder={t('codePlaceholder')}
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={sendLoading || countdown > 0 || loading}
+                    className="shrink-0 px-4 py-2.5 bg-accent-button text-white rounded-lg text-sm font-medium hover:bg-accent-button-hover transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {sendLoading ? t('sending') : countdown > 0 ? `${countdown}s` : t('sendCode')}
+                  </button>
+                </div>
+              </div>
+
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div className="relative mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="sr-only peer"
+                    disabled={loading}
+                  />
+                  <div className="w-4 h-4 border border-border rounded transition-all peer-checked:bg-accent-button peer-checked:border-accent-button flex items-center justify-center">
+                    {agreed && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="1,4 4,7 9,1" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground leading-relaxed">
+                  {t('agreeText')}{' '}
+                  <a target="_blank" className="text-accent-button hover:text-accent-button-hover transition-colors underline" href="/auth/terms">
+                    {t('termsOfService')}
+                  </a>
+                </span>
+              </label>
 
               <button
                 type="submit"

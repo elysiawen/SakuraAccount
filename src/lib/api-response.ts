@@ -285,6 +285,12 @@ export async function oauthAccessDenied() {
   return errorResponse('OAUTH_ACCESS_DENIED', await tApi('oauth.accessDenied'), 400);
 }
 
+// ===== EMAIL_ 邮件验证错误 =====
+
+export async function emailNotVerified(email?: string) {
+  return errorResponse('EMAIL_NOT_VERIFIED', await tApi('email.emailNotVerified'), 403);
+}
+
 // ===== APP_ 应用图标错误 =====
 
 export async function appIconSizeLimit() {

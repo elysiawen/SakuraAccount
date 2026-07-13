@@ -156,7 +156,12 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">{t('password')}</label>
+                <label className="flex items-baseline justify-between text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
+                  <span>{t('password')}</span>
+                  <Link href="/auth/forgot-password" className="font-normal normal-case tracking-normal text-muted-foreground hover:text-accent-button transition-colors">
+                    {t('forgotPassword')}
+                  </Link>
+                </label>
                 <input
                   type="password"
                   value={password}

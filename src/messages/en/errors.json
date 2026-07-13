@@ -46,6 +46,19 @@
     "invalidRequest": "Invalid request",
     "invalidOperation": "Invalid operation"
   },
+  "email": {
+    "sendFailed": "Failed to send email, please try again later",
+    "verificationSent": "Verification code sent, please check your inbox",
+    "alreadyVerified": "This email is already verified",
+    "verifyFailed": "Invalid or expired verification code, please request a new one",
+    "verifySuccess": "Email verified successfully",
+    "verifyRequired": "Registration successful! Please verify your email before logging in",
+    "emailNotVerified": "Email not verified. Please verify your email before logging in",
+    "invalidCode": "Invalid code format, please enter a 6-digit verification code",
+    "resetPasswordSent": "If the email is registered, you will receive a password reset email",
+    "resetTokenInvalid": "Reset link is invalid or expired, please request a new one",
+    "resetPasswordSuccess": "Password reset successfully, please login with your new password"
+  },
   "admin": {
     "permissionDenied": "Access denied",
     "userListFailed": "Failed to fetch user list",

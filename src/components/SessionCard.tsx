@@ -86,7 +86,7 @@ export function SessionCard({
             <div className="flex items-center gap-1.5 flex-wrap">
               <div className="flex items-center gap-1.5 shrink-0">
                 <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-button/60" />
-                <span className="font-mono font-medium text-[11px] sm:text-xs truncate max-w-[120px] sm:max-w-[160px]" title={session.ip || undefined}>{session.ip || t('unknown')}</span>
+                <span className="font-mono font-medium text-[11px] sm:text-xs">{session.ip || t('unknown')}</span>
               </div>
               {session.ip_location && (
                 <span className="px-1.5 py-0.5 text-[9px] sm:text-[10px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-md font-sans border border-indigo-100 dark:border-indigo-800/30 whitespace-nowrap">

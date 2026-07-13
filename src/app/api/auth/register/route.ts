@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createUser, getUserByUsername, getUserByEmail, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
+import { getUserByEmail, getUserByUsername, completeUserRegistration, verifyEmailCode, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
 import { isValidEmail, isValidUsername, validatePassword, validateNickname, VALIDATION_KEY_MAP } from '@/lib/utils';
 import { paramInvalid, authUsernameExists, authWeakPassword, internalError } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
@@ -13,9 +13,9 @@ async function translateValidationKey(key: string): Promise<string> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, email, password, nickname } = body;
+    const { username, email, password, nickname, code } = body;
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !code) {
       return paramInvalid(await tApi('sys.paramInvalid'));
     }
 
@@ -25,6 +25,10 @@ export async function POST(request: NextRequest) {
 
     if (!isValidEmail(email)) {
       return paramInvalid(await tApi('sys.paramInvalid'));
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      return paramInvalid(await tApi('email.invalidCode'));
     }
 
     const passwordError = validatePassword(password);
@@ -37,27 +41,49 @@ export async function POST(request: NextRequest) {
       return paramInvalid(await translateValidationKey(nicknameError));
     }
 
-    const existingUser = await getUserByUsername(username);
-    const existingEmail = await getUserByEmail(email);
-    if (existingUser || existingEmail) {
-      // Return the same error for both cases to prevent user enumeration
+    // Check username uniqueness (excluding the pending user)
+    const existingUsername = await getUserByUsername(username);
+    const existingUser = await getUserByEmail(email);
+
+    if (!existingUser) {
       return authUsernameExists();
     }
 
-    const user = await createUser(username, email, password, nickname?.trim());
+    if (existingUsername && existingUsername.id !== existingUser.id) {
+      return authUsernameExists();
+    }
+
+    // If already verified and has password, this is a duplicate registration
+    if (existingUser.email_verified && existingUser.password_hash) {
+      return authUsernameExists();
+    }
+
+    // Verify the code (matches by code + email)
+    const verifiedUserId = await verifyEmailCode(code, email);
+    if (!verifiedUserId || verifiedUserId !== existingUser.id) {
+      return NextResponse.json({
+        success: false,
+        message: await tApi('email.verifyFailed'),
+      }, { status: 400 });
+    }
+
+    // Complete registration: set username, password, nickname, mark verified
+    await completeUserRegistration(existingUser.id, username, password, nickname?.trim());
+
+    // Create session and login
     const { ip, userAgent } = getRequestMetadata(request);
-    const sessionId = await createSession(user.id, ip, userAgent);
+    const sessionId = await createSession(existingUser.id, ip, userAgent);
     await setSessionCookie(sessionId);
-    await logAudit(user.id, 'register', { username, email }, ip, userAgent, 'access');
+    await logAudit(existingUser.id, 'register', { username, email }, ip, userAgent, 'access');
 
     return NextResponse.json({
       success: true,
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        nickname: user.nickname,
-        role: user.role,
+        id: existingUser.id,
+        username,
+        email: existingUser.email,
+        nickname: nickname?.trim() || username,
+        role: existingUser.role,
       },
     });
   } catch (error) {

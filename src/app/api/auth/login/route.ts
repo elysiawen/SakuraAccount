@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByUsername, getUserByEmail, verifyPassword, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
 import { paramInvalid, authLoginFailed, internalError } from '@/lib/api-response';
+import { emailNotVerified } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
 
 export async function POST(request: NextRequest) {
@@ -27,6 +28,12 @@ export async function POST(request: NextRequest) {
     if (!isValid) {
       await logAudit(user.id, 'login_failed', { reason: 'invalid_password' }, ip, userAgent, 'access');
       return authLoginFailed();
+    }
+
+    // 检查邮箱是否已验证
+    if (!user.email_verified) {
+      await logAudit(user.id, 'login_failed', { reason: 'email_not_verified' }, ip, userAgent, 'access');
+      return emailNotVerified(user.email);
     }
 
     const sessionId = await createSession(user.id, ip, userAgent);

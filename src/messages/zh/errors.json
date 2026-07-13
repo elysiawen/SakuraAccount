@@ -46,6 +46,19 @@
     "invalidRequest": "无效的请求",
     "invalidOperation": "无效的操作"
   },
+  "email": {
+    "sendFailed": "邮件发送失败，请稍后重试",
+    "verificationSent": "验证码已发送，请查收邮箱",
+    "alreadyVerified": "该邮箱已验证",
+    "verifyFailed": "验证码错误或已过期，请重新获取",
+    "verifySuccess": "邮箱验证成功",
+    "verifyRequired": "注册成功！请查收验证码完成邮箱验证后登录",
+    "emailNotVerified": "邮箱尚未验证，请先验证邮箱后再登录",
+    "invalidCode": "验证码格式不正确，请输入6位数字验证码",
+    "resetPasswordSent": "如果该邮箱已注册，您将收到密码重置邮件",
+    "resetTokenInvalid": "重置链接无效或已过期，请重新申请",
+    "resetPasswordSuccess": "密码重置成功，请使用新密码登录"
+  },
   "admin": {
     "permissionDenied": "无权限访问",
     "userListFailed": "获取用户列表失败",

@@ -413,6 +413,34 @@ export async function createUser(username: string, email: string, password: stri
   };
 }
 
+/**
+ * 创建待验证用户（仅邮箱，无用户名和密码，用于注册前发验证码）
+ */
+export async function createPendingUser(email: string): Promise<{ id: string; email: string }> {
+  const userId = uuidv7();
+  const tempUsername = `user_${nanoid(12)}`;
+
+  await db.execute(
+    'INSERT INTO users (id, username, email, password_hash, nickname, email_verified) VALUES (?, ?, ?, NULL, ?, FALSE)',
+    [userId, tempUsername, email, email.split('@')[0] || email]
+  );
+
+  return { id: userId, email };
+}
+
+/**
+ * 完善用户注册信息（用户名、密码、昵称）并标记已验证
+ */
+export async function completeUserRegistration(userId: string, username: string, password: string, nickname?: string): Promise<void> {
+  const passwordHash = await hashPassword(password);
+  const displayNickname = nickname || username;
+
+  await db.execute(
+    'UPDATE users SET username = ?, password_hash = ?, nickname = ?, email_verified = TRUE WHERE id = ?',
+    [username, passwordHash, displayNickname, userId]
+  );
+}
+
 export async function getUserByUsername(username: string): Promise<DbUserRow | null> {
   return db.getOne<DbUserRow>('SELECT * FROM users WHERE username = ?', [username]);
 }
@@ -494,4 +522,99 @@ export async function searchUsers(query: string): Promise<UserSearchItem[]> {
      LIMIT 10`,
     [`%${query}%`, `%${query}%`, `%${query}%`]
   );
+}
+
+// ===== Email Verification =====
+
+const EMAIL_VERIFICATION_EXPIRY = parseInt(process.env.EMAIL_VERIFICATION_EXPIRY || '600'); // 10 minutes for code
+const PASSWORD_RESET_EXPIRY = parseInt(process.env.PASSWORD_RESET_EXPIRY || '1800'); // 30 minutes
+
+/**
+ * 生成 6 位数字邮箱验证码并存入数据库
+ */
+export async function createEmailVerificationCode(userId: string): Promise<string> {
+  // 先删除该用户旧的验证码
+  await db.execute('DELETE FROM email_verifications WHERE user_id = ?', [userId]);
+
+  const code = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit code
+  const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY * 1000);
+
+  await db.execute(
+    'INSERT INTO email_verifications (user_id, token, expires_at) VALUES (?, ?, ?)',
+    [userId, code, expiresAt]
+  );
+
+  return code;
+}
+
+/**
+ * 验证邮箱验证码，成功后返回 userId 并删除验证码
+ */
+export async function verifyEmailCode(code: string, email: string): Promise<string | null> {
+  // 通过邮箱 + 验证码双重匹配，防止验证码滥用
+  const row = await db.getOne<{ user_id: string }>(
+    `SELECT ev.user_id
+     FROM email_verifications ev
+     JOIN users u ON ev.user_id = u.id
+     WHERE ev.token = ? AND u.email = ? AND ev.expires_at > NOW()`,
+    [code, email]
+  );
+
+  if (!row) return null;
+
+  const userId = row.user_id;
+
+  // 标记邮箱为已验证
+  await db.execute('UPDATE users SET email_verified = TRUE WHERE id = ?', [userId]);
+
+  // 删除已使用的验证码及过期记录
+  await db.execute('DELETE FROM email_verifications WHERE user_id = ? OR expires_at <= NOW()', [userId]);
+
+  return userId;
+}
+
+/**
+ * 生成密码重置 Token 并存入数据库
+ */
+export async function createPasswordResetToken(userId: string): Promise<string> {
+  const token = nanoid(48);
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY * 1000);
+
+  // 删除旧的密码重置 Token
+  await db.execute('DELETE FROM password_resets WHERE user_id = ?', [userId]);
+
+  await db.execute(
+    'INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)',
+    [userId, token, expiresAt]
+  );
+
+  return token;
+}
+
+/**
+ * 验证密码重置 Token，成功后返回 userId 并删除 Token
+ */
+export async function verifyPasswordResetToken(token: string): Promise<string | null> {
+  const row = await db.getOne<{ user_id: string }>(
+    'SELECT user_id FROM password_resets WHERE token = ? AND expires_at > NOW()',
+    [token]
+  );
+
+  if (!row) return null;
+
+  // 删除已使用的 Token
+  await db.execute('DELETE FROM password_resets WHERE token = ?', [token]);
+
+  return row.user_id;
+}
+
+/**
+ * 检查邮箱是否已被验证
+ */
+export async function isEmailVerified(userId: string): Promise<boolean> {
+  const user = await db.getOne<{ email_verified: boolean }>(
+    'SELECT email_verified FROM users WHERE id = ?',
+    [userId]
+  );
+  return user?.email_verified || false;
 }
