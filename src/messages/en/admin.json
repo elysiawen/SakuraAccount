@@ -140,6 +140,15 @@
   "settings": {
     "title": "System Settings",
     "subtitle": "Configure system parameters",
+    "registration": {
+      "title": "Registration Settings",
+      "label": "Email Verification Code",
+      "desc": "When enabled, users must enter a verification code during registration. When disabled, registration completes without verification.",
+      "enabled": "Email verification enabled",
+      "disabled": "Email verification disabled",
+      "saveFailed": "Save failed, please try again later",
+      "smtpRequired": "Please configure SMTP in .env before enabling this feature"
+    },
     "storage": "Storage Configuration",
     "storageType": "Storage Type",
     "localStorage": "Local Storage",

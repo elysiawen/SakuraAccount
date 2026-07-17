@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByEmail, createPendingUser, createEmailVerificationCode } from '@/lib/auth';
+import { getUserByEmail, createEmailVerificationCode, storePendingCode } from '@/lib/auth';
 import { sendEmail } from '@/lib/email';
 import { emailVerificationTemplate } from '@/lib/email-templates';
 import { isValidEmail } from '@/lib/utils';
@@ -49,10 +49,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // No existing user - create a pending user for registration flow
+    // No existing user - store code directly (no user creation)
     if (registration) {
-      const pendingUser = await createPendingUser(email);
-      const code = await createEmailVerificationCode(pendingUser.id);
+      const code = await storePendingCode(email);
       const expiryMinutes = Math.floor(parseInt(process.env.EMAIL_VERIFICATION_EXPIRY || '600') / 60);
       const { subject, html } = emailVerificationTemplate(code, expiryMinutes);
       const result = await sendEmail({ to: email, subject, html });

@@ -13,9 +13,10 @@ import { SakuraBackground } from '@/components/SakuraPetal';
 
 interface LoginClientProps {
   callbackUrl?: string;
+  smtpConfigured?: boolean;
 }
 
-export default function LoginClient({ callbackUrl }: LoginClientProps) {
+export default function LoginClient({ callbackUrl, smtpConfigured = false }: LoginClientProps) {
   const t = useTranslations('auth.login');
   const router = useRouter();
   const { success, error } = useToast();
@@ -158,9 +159,11 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
               <div>
                 <label className="flex items-baseline justify-between text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
                   <span>{t('password')}</span>
-                  <Link href="/auth/forgot-password" className="font-normal normal-case tracking-normal text-muted-foreground hover:text-accent-button transition-colors">
-                    {t('forgotPassword')}
-                  </Link>
+                  {smtpConfigured && (
+                    <Link href="/auth/forgot-password" className="font-normal normal-case tracking-normal text-muted-foreground hover:text-accent-button transition-colors">
+                      {t('forgotPassword')}
+                    </Link>
+                  )}
                 </label>
                 <input
                   type="password"

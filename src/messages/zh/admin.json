@@ -140,6 +140,15 @@
   "settings": {
     "title": "系统设置",
     "subtitle": "配置系统参数",
+    "registration": {
+      "title": "注册设置",
+      "label": "邮箱验证码注册",
+      "desc": "开启后用户注册时需要输入邮箱验证码，关闭则无需验证码直接注册",
+      "enabled": "验证码注册已开启",
+      "disabled": "验证码注册已关闭",
+      "saveFailed": "保存失败，请稍后重试",
+      "smtpRequired": "请先在 .env 中配置 SMTP 邮件服务后再开启此功能"
+    },
     "storage": "存储配置",
     "storageType": "存储类型",
     "localStorage": "本地存储",

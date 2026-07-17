@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { requireSession } from '@/lib/require-session';
+import { isEmailConfigured } from '@/lib/email';
 import LoginClient from './login-client';
 
 type SearchParamValue = string | string[] | undefined;
@@ -22,5 +23,5 @@ export default async function LoginPage(props: {
     }
   }
 
-  return <LoginClient callbackUrl={callbackUrl} />;
+  return <LoginClient callbackUrl={callbackUrl} smtpConfigured={isEmailConfigured()} />;
 }

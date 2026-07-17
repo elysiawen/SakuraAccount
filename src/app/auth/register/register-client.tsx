@@ -11,7 +11,11 @@ import { getErrorMessage } from '@/lib/api-error';
 import { Spinner } from '@/components/primitives';
 import { JSON_HEADERS, LOGIN_PATH } from '@/lib/constants';
 
-export default function RegisterClient() {
+interface RegisterClientProps {
+  requireCode?: boolean;
+}
+
+export default function RegisterClient({ requireCode = true }: RegisterClientProps) {
   const t = useTranslations('auth.register');
   const router = useRouter();
   const { success, error } = useToast();
@@ -66,7 +70,7 @@ export default function RegisterClient() {
 
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!username || !email || !password || !code) {
+    if (!username || !email || !password) {
       error(t('fillRequired'));
       return;
     }
@@ -78,7 +82,7 @@ export default function RegisterClient() {
       error(t('passwordTooShort'));
       return;
     }
-    if (code.length !== 6) {
+    if (requireCode && code.length !== 6) {
       error(t('invalidCode'));
       return;
     }
@@ -91,7 +95,7 @@ export default function RegisterClient() {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: JSON_HEADERS,
-        body: JSON.stringify({ username, email, password, nickname: nickname || username, code }),
+        body: JSON.stringify({ username, email, password, nickname: nickname || username, code: requireCode ? code : '000000' }),
       });
       const data = await response.json();
       if (response.ok) {
@@ -105,7 +109,8 @@ export default function RegisterClient() {
     } finally {
       setLoading(false);
     }
-  }, [username, email, password, confirmPassword, nickname, code, agreed, router, success, error, t]);
+  }, [username, email, password, confirmPassword, nickname, code, requireCode, agreed, router, success, error, t]);
+
 
   const inputStyle = (field: string) => ({
     borderColor: focused === field ? 'var(--accent-button)' : 'var(--border-input)',
@@ -242,6 +247,7 @@ export default function RegisterClient() {
                 </div>
               </div>
 
+              {requireCode && (
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-2 tracking-wide uppercase">
                   {t('verifyCode')} <span className="text-pink-400">*</span>
@@ -271,6 +277,7 @@ export default function RegisterClient() {
                   </button>
                 </div>
               </div>
+              )}
 
               <label className="flex items-start gap-3 cursor-pointer group">
                 <div className="relative mt-0.5">

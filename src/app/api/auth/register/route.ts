@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByEmail, getUserByUsername, completeUserRegistration, verifyEmailCode, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
+import { createUser, getUserByEmail, getUserByUsername, verifyPendingCode, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { isValidEmail, isValidUsername, validatePassword, validateNickname, VALIDATION_KEY_MAP } from '@/lib/utils';
 import { paramInvalid, authUsernameExists, authWeakPassword, internalError } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
@@ -41,49 +42,63 @@ export async function POST(request: NextRequest) {
       return paramInvalid(await translateValidationKey(nicknameError));
     }
 
-    // Check username uniqueness (excluding the pending user)
+    // Check username already taken
     const existingUsername = await getUserByUsername(username);
+    if (existingUsername) {
+      return authUsernameExists();
+    }
+
+    // Check email already registered (as completed user)
     const existingUser = await getUserByEmail(email);
-
-    if (!existingUser) {
+    if (existingUser && existingUser.password_hash) {
       return authUsernameExists();
     }
 
-    if (existingUsername && existingUsername.id !== existingUser.id) {
-      return authUsernameExists();
+    // Clean up legacy pending user from old flow (no password = incomplete registration)
+    if (existingUser && !existingUser.password_hash) {
+      await db.execute('DELETE FROM email_verifications WHERE user_id = ?', [existingUser.id]);
+      await db.execute('DELETE FROM users WHERE id = ?', [existingUser.id]);
     }
 
-    // If already verified and has password, this is a duplicate registration
-    if (existingUser.email_verified && existingUser.password_hash) {
-      return authUsernameExists();
+    // Check if email verification is required
+    const requireVerification = await db.getGlobalConfigValue('require_email_verification');
+    const needVerification = requireVerification !== false; // default true (enabled)
+
+    // Verify the pending code (skip if verification is disabled)
+    if (needVerification) {
+      if (!code || !/^\d{6}$/.test(code)) {
+        return paramInvalid(await tApi('email.invalidCode'));
+      }
+      const verified = await verifyPendingCode(code, email);
+      if (!verified) {
+        return NextResponse.json({
+          success: false,
+          message: await tApi('email.verifyFailed'),
+        }, { status: 400 });
+      }
     }
 
-    // Verify the code (matches by code + email)
-    const verifiedUserId = await verifyEmailCode(code, email);
-    if (!verifiedUserId || verifiedUserId !== existingUser.id) {
-      return NextResponse.json({
-        success: false,
-        message: await tApi('email.verifyFailed'),
-      }, { status: 400 });
+    // Create user. If verification is disabled, email_verified stays false (default)
+    const user = await createUser(username, email, password, nickname?.trim());
+    if (needVerification) {
+      await db.execute('UPDATE users SET email_verified = TRUE WHERE id = ?', [user.id]);
     }
-
-    // Complete registration: set username, password, nickname, mark verified
-    await completeUserRegistration(existingUser.id, username, password, nickname?.trim());
 
     // Create session and login
     const { ip, userAgent } = getRequestMetadata(request);
-    const sessionId = await createSession(existingUser.id, ip, userAgent);
+    const sessionId = await createSession(user.id, ip, userAgent);
     await setSessionCookie(sessionId);
-    await logAudit(existingUser.id, 'register', { username, email }, ip, userAgent, 'access');
+    await logAudit(user.id, 'register', { username, email }, ip, userAgent, 'access');
 
     return NextResponse.json({
       success: true,
       user: {
-        id: existingUser.id,
+        id: user.id,
         username,
-        email: existingUser.email,
+        email,
         nickname: nickname?.trim() || username,
-        role: existingUser.role,
+        role: user.role,
+        emailVerified: needVerification,
       },
     });
   } catch (error) {

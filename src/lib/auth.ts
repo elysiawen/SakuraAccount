@@ -414,18 +414,38 @@ export async function createUser(username: string, email: string, password: stri
 }
 
 /**
- * 创建待验证用户（仅邮箱，无用户名和密码，用于注册前发验证码）
+ * 存储注册验证码（关联邮箱，不创建用户）
  */
-export async function createPendingUser(email: string): Promise<{ id: string; email: string }> {
-  const userId = uuidv7();
-  const tempUsername = `user_${nanoid(12)}`;
+export async function storePendingCode(email: string): Promise<string> {
+  // 先删除该邮箱旧的验证码
+  await db.execute('DELETE FROM pending_codes WHERE email = ?', [email]);
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY * 1000);
 
   await db.execute(
-    'INSERT INTO users (id, username, email, password_hash, nickname, email_verified) VALUES (?, ?, ?, NULL, ?, FALSE)',
-    [userId, tempUsername, email, email.split('@')[0] || email]
+    'INSERT INTO pending_codes (email, code, expires_at) VALUES (?, ?, ?)',
+    [email, code, expiresAt]
   );
 
-  return { id: userId, email };
+  return code;
+}
+
+/**
+ * 验证注册验证码（验证码+邮箱双重匹配，不创建用户，仅返回是否匹配）
+ */
+export async function verifyPendingCode(code: string, email: string): Promise<boolean> {
+  const row = await db.getOne<{ email: string }>(
+    'SELECT email FROM pending_codes WHERE code = ? AND email = ? AND expires_at > NOW()',
+    [code, email]
+  );
+
+  if (!row) return false;
+
+  // 删除已使用的验证码
+  await db.execute('DELETE FROM pending_codes WHERE code = ? AND email = ?', [code, email]);
+
+  return true;
 }
 
 /**

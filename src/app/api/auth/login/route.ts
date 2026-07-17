@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByUsername, getUserByEmail, verifyPassword, createSession, setSessionCookie, getRequestMetadata, logAudit } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { paramInvalid, authLoginFailed, internalError } from '@/lib/api-response';
 import { emailNotVerified } from '@/lib/api-response';
 import { tApi } from '@/i18n/api-i18n';
@@ -30,8 +31,9 @@ export async function POST(request: NextRequest) {
       return authLoginFailed();
     }
 
-    // 检查邮箱是否已验证
-    if (!user.email_verified) {
+    // 检查邮箱是否已验证（仅当系统要求验证时才拦截）
+    const requireVerification = await db.getGlobalConfigValue('require_email_verification');
+    if (requireVerification !== false && !user.email_verified) {
       await logAudit(user.id, 'login_failed', { reason: 'email_not_verified' }, ip, userAgent, 'access');
       return emailNotVerified(user.email);
     }

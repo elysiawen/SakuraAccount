@@ -329,6 +329,17 @@ class Database {
       )
     `);
 
+    // Pre-registration verification codes (no user yet)
+    await this.executeRaw(`
+      CREATE TABLE IF NOT EXISTS pending_codes (
+        id SERIAL PRIMARY KEY,
+        email ${varcharType(255)} NOT NULL,
+        code ${varcharType(6)} NOT NULL,
+        expires_at ${timestampType} NOT NULL,
+        created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Password reset tokens table
     await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS password_resets (
