@@ -296,9 +296,15 @@ export default function AdminUsersPage() {
             <span className="text-sm text-text-tertiary">{t('pendingCount', { count: pendingCodes.length })}</span>
             {pendingCodes.length > 0 && (
               <button
-                onClick={() => {
-                  fetch('/api/admin/pending-codes', { method: 'DELETE', headers: JSON_HEADERS })
-                    .then(() => fetchPendingCodes());
+                onClick={async () => {
+                  const res = await fetch('/api/admin/pending-codes', { method: 'DELETE', headers: JSON_HEADERS });
+                  const data = await res.json();
+                  if (res.ok) {
+                    success(data.deleted > 0 ? t('cleanedCount', { count: data.deleted }) : t('cleanNone'));
+                    fetchPendingCodes();
+                  } else {
+                    error(t('cleanFailed'));
+                  }
                 }}
                 className="text-xs text-text-tertiary hover:text-red-500 transition-colors"
               >

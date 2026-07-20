@@ -32,10 +32,16 @@ export async function DELETE() {
     const result = await requireAdmin();
     if ('error' in result) return result.error;
 
+    // Count expired before cleaning
+    const countResult = await db.query<{ cnt: number }>(
+      'SELECT COUNT(*) as cnt FROM pending_codes WHERE expires_at <= NOW()'
+    );
+    const deleted = Number(countResult[0]?.cnt ?? 0);
+
     // Clean up expired codes
     await db.execute('DELETE FROM pending_codes WHERE expires_at <= NOW()');
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, deleted });
   } catch (error) {
     console.error('Clean pending codes error:', error);
     return internalError();
