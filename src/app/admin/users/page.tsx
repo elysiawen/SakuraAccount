@@ -91,6 +91,22 @@ export default function AdminUsersPage() {
   const [focused, setFocused] = useState<string | null>(null);
   const [userPasskeys, setUserPasskeys] = useState<UserPasskey[]>([]);
   const [loadingPasskeys, setLoadingPasskeys] = useState(false);
+  const [activeTab, setActiveTab] = useState<'users' | 'pending'>('users');
+  const [pendingCodes, setPendingCodes] = useState<{ id: number; email: string; expires_at: string; created_at: string }[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+
+  const fetchPendingCodes = useCallback(() => {
+    setLoadingPending(true);
+    fetch('/api/admin/pending-codes', { headers: JSON_HEADERS })
+      .then(r => r.json())
+      .then(data => setPendingCodes(data.codes || []))
+      .catch(() => {})
+      .finally(() => setLoadingPending(false));
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'pending') fetchPendingCodes();
+  }, [activeTab, fetchPendingCodes]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -241,9 +257,107 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">{t('title')}</h1>
+        <h1 className="text-2xl font-bold text-text-primary">
+          {activeTab === 'users' ? t('title') : t('pendingTitle')}
+        </h1>
+        <div className="flex gap-1 p-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-xl shrink-0">
+          {([
+            { key: 'users' as const, label: t('title') },
+            { key: 'pending' as const, label: t('pendingTab') },
+          ]).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+                activeTab === tab.key
+                  ? 'bg-card text-text-primary shadow-sm'
+                  : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {tab.label}
+              {tab.key === 'pending' && pendingCodes.length > 0 && (
+                <span className="ml-1.5 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full">
+                  {pendingCodes.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
+      <div className="relative overflow-hidden">
+        <div className={`transition-all duration-300 ease-out ${
+          activeTab === 'pending'
+            ? 'opacity-100 translate-x-0'
+            : 'opacity-0 translate-x-6 absolute inset-0 pointer-events-none'
+        }`}>
+        <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <span className="text-sm text-text-tertiary">{t('pendingCount', { count: pendingCodes.length })}</span>
+            {pendingCodes.length > 0 && (
+              <button
+                onClick={() => {
+                  fetch('/api/admin/pending-codes', { method: 'DELETE', headers: JSON_HEADERS })
+                    .then(() => fetchPendingCodes());
+                }}
+                className="text-xs text-text-tertiary hover:text-red-500 transition-colors"
+              >
+                {t('cleanExpired')}
+              </button>
+            )}
+          </div>
+          {loadingPending ? (
+            <div className="p-4 space-y-3">
+              {[1, 2, 3].map(i => <div key={i} className="animate-pulse h-12 bg-muted rounded-lg" />)}
+            </div>
+          ) : pendingCodes.length === 0 ? (
+            <div className="p-8 text-center text-sm text-text-tertiary">{t('pendingEmpty')}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-text-tertiary border-b border-border">
+                    <th className="text-left py-3 px-4 font-medium">{t('email')}</th>
+                    <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">{t('sendTime')}</th>
+                    <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">{t('expiresAt')}</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('status')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingCodes.map(c => {
+                    const expired = new Date(c.expires_at) < new Date();
+                    return (
+                      <tr key={c.id} className="border-b border-border/50">
+                        <td className="py-3 px-4 text-text-primary font-mono text-xs">{c.email}</td>
+                        <td className="py-3 px-4 text-text-tertiary hidden sm:table-cell">{new Date(c.created_at).toLocaleString()}</td>
+                        <td className="py-3 px-4 hidden sm:table-cell">
+                          <span className={expired ? 'text-red-400' : 'text-text-tertiary'}>
+                            {new Date(c.expires_at).toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            expired
+                              ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                              : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                          }`}>
+                            {expired ? t('expired') : t('active')}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+        <div className={`transition-all duration-300 ease-out ${
+          activeTab === 'users'
+            ? 'opacity-100 translate-x-0'
+            : 'opacity-0 -translate-x-6 absolute inset-0 pointer-events-none'
+        }`}>
       <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         <div className="p-4 border-b border-border">
           <Search placeholder={t('searchPlaceholder')} />
@@ -455,6 +569,8 @@ export default function AdminUsersPage() {
             <p className="text-sm text-text-quaternary mt-1">{t('noUsers')}</p>
           </div>
         )}
+      </div>
+        </div>
       </div>
 
       {/* Edit User Modal */}

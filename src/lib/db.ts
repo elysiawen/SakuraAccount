@@ -329,7 +329,7 @@ class Database {
       )
     `);
 
-    // Pre-registration verification codes (no user yet)
+    // Pre-registration verification codes
     await this.executeRaw(`
       CREATE TABLE IF NOT EXISTS pending_codes (
         id SERIAL PRIMARY KEY,
@@ -339,6 +339,8 @@ class Database {
         created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+
 
     // Password reset tokens table
     await this.executeRaw(`
